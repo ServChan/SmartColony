@@ -282,6 +282,10 @@ public final class Colony {
     }
 
     public boolean isProtected(BlockPos pos) {
+        return isProtected(pos, true);
+    }
+
+    public boolean isProtected(BlockPos pos, boolean includeFarms) {
         Pos p = WorldUtil.pos(pos);
         if (p.horizontalDistSq(data.depot) < 36 || p.horizontalDistSq(data.center) < 16) {
             return true;
@@ -298,7 +302,7 @@ public final class Colony {
                 && p.z() >= data.pen.min.z() - 2 && p.z() <= data.pen.max.z() + 2) {
             return true;
         }
-        for (Pos farm : data.farms) {
+        for (Pos farm : includeFarms ? data.farms : List.<Pos>of()) {
             if (p.horizontalDistSq(farm) <= 36 && Math.abs(p.y() - farm.y()) < 4) {
                 return true;
             }
@@ -316,8 +320,8 @@ public final class Colony {
         if (data.pen == null) {
             return false;
         }
-        return animal.getX() >= data.pen.min.x() - 1 && animal.getX() <= data.pen.max.x() + 2
-                && animal.getZ() >= data.pen.min.z() - 1 && animal.getZ() <= data.pen.max.z() + 2;
+        return animal.getX() >= data.pen.min.x() && animal.getX() < data.pen.max.x() + 1
+                && animal.getZ() >= data.pen.min.z() && animal.getZ() < data.pen.max.z() + 1;
     }
 
     public void rememberPlanted(BlockPos pos) {
@@ -334,7 +338,7 @@ public final class Colony {
 
     public ColonyData.Mine ensureMine(ServerLevel level) {
         if (data.mine == null) {
-            data.mine = sites.mineSite(level, 0);
+            data.mine = sites.mineSite(level, 0, null);
             if (data.mine != null) {
                 journal(level, "mine entrance marked at " + data.mine.entrance);
                 markDirty();
@@ -345,7 +349,7 @@ public final class Colony {
 
     public void mineExhausted(ServerLevel level) {
         int generation = data.mine == null ? 1 : data.mine.generation + 1;
-        ColonyData.Mine next = sites.mineSite(level, generation);
+        ColonyData.Mine next = sites.mineSite(level, generation, data.mine);
         if (next != null) {
             next.generation = generation;
             data.mine = next;

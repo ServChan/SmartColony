@@ -65,6 +65,7 @@ public final class HerderJob extends Job {
     private Animal partner;
     private boolean leading;
     private int gateStep;
+    private int pullTicks;
     private long lastCullDay = -1;
     private long captureCooldownUntil;
 
@@ -78,13 +79,18 @@ public final class HerderJob extends Job {
         return Role.HERDER;
     }
 
+    @Override
+    protected java.util.function.Predicate<ItemStack> tools() {
+        return Tools.SHEARS;
+    }
+
     public boolean isLeading() {
         return leading;
     }
 
     @Override
     protected boolean keep(ItemStack stack) {
-        return Tools.ANY_TOOL.test(stack) || isBait(stack);
+        return tools().test(stack) || isBait(stack);
     }
 
     private static boolean isBait(ItemStack stack) {
@@ -202,7 +208,7 @@ public final class HerderJob extends Job {
         }
         Map<Species, List<Animal>> herd = census(level, pen);
         int cap = SmartColonyConfig.get().animalsPerSpecies;
-        if (Tools.SHEARS.test(villager.getMainHandItem())) {
+        if (Tools.SHEARS.test(villager.getMainHandItem()) || !Inv.find(villager, Tools.SHEARS).isEmpty()) {
             for (Animal sheep : herd.get(Species.SHEEP)) {
                 if (sheep instanceof Sheep s && s.readyForShearing()) {
                     action = Action.SHEAR;
@@ -271,16 +277,19 @@ public final class HerderJob extends Job {
         BlockPos center = colony().center();
         AABB area = new AABB(center).inflate(radius, 24, radius);
         return level.getEntitiesOfClass(Animal.class, area, a -> a.isAlive() && Species.of(a) == species && !a.isLeashed()
-                        && !inside(pen, a.getX(), a.getZ()) && !colony().isProtectedAnimal(a) && !enclosed(level, a)
+                        && !inside(pen, a.getX(), a.getZ()) && !colony().isProtectedAnimal(a) && !enclosed(level, a, pen)
                         && !a.isInWater() && level.getFluidState(a.blockPosition().below()).isEmpty())
                 .stream()
                 .min(Comparator.comparingDouble(a -> a.distanceToSqr(villager)))
                 .orElse(null);
     }
 
-    private static boolean enclosed(ServerLevel level, Animal animal) {
+    private static boolean enclosed(ServerLevel level, Animal animal, ColonyData.Pen pen) {
         BlockPos feet = animal.blockPosition();
         for (BlockPos pos : BlockPos.betweenClosed(feet.offset(-5, -1, -5), feet.offset(5, 1, 5))) {
+            if (pos.getX() >= pen.min.x() - 1 && pos.getX() <= pen.max.x() + 1 && pos.getZ() >= pen.min.z() - 1 && pos.getZ() <= pen.max.z() + 1) {
+                continue;
+            }
             BlockState state = level.getBlockState(pos);
             if (state.is(net.minecraft.tags.BlockTags.FENCES) || state.is(net.minecraft.tags.BlockTags.FENCE_GATES)) {
                 return true;
@@ -293,44 +302,17 @@ public final class HerderJob extends Job {
         return !Inv.find(villager, animal::isFood).isEmpty();
     }
 
-    private boolean enter(ServerLevel level, Villager villager, ColonyData.Pen pen) {
-        if (inside(pen, villager.getX(), villager.getZ())) {
-            setGate(level, pen, false);
-            return true;
-        }
-        BlockPos outside = WorldUtil.bp(pen.outside);
-        if (Mover.distance(villager, outside) > 1.5) {
-            if (move(level, villager, outside, 1.2) == Mover.Result.FAILED) {
-                action = null;
-                phase = "start";
-                wait = 100;
-            }
-            return false;
-        }
-        setGate(level, pen, true);
-        if (move(level, villager, WorldUtil.bp(pen.inside), 1.2) == Mover.Result.FAILED) {
-            setGate(level, pen, false);
-            phase = "start";
-            wait = 100;
-        }
-        return false;
-    }
-
     private boolean exit(ServerLevel level, Villager villager, ColonyData.Pen pen) {
         if (!inside(pen, villager.getX(), villager.getZ())) {
-            if (Mover.distance(villager, WorldUtil.bp(pen.outside)) > 2.5) {
-                return true;
-            }
             setGate(level, pen, false);
             return true;
         }
-        BlockPos inner = WorldUtil.bp(pen.inside);
-        if (Mover.distance(villager, inner) > 1.5 && villager.distanceToSqr(pen.gate.x() + 0.5, villager.getY(), pen.gate.z() + 0.5) > 4) {
-            move(level, villager, inner, 1.2);
-            return false;
-        }
         setGate(level, pen, true);
-        move(level, villager, WorldUtil.bp(pen.outside), 1.2);
+        status = "leaving the pen";
+        BlockPos beyond = new BlockPos(pen.outside.x() * 2 - pen.gate.x(), pen.outside.y(), pen.outside.z() * 2 - pen.gate.z());
+        if (move(level, villager, beyond, 1.0) == Mover.Result.FAILED) {
+            Mover.rescue(level, villager, beyond);
+        }
         return false;
     }
 
@@ -361,6 +343,7 @@ public final class HerderJob extends Job {
     }
 
     private void done(ServerLevel level, Villager villager, ColonyData.Pen pen) {
+        status = "finishing at the gate";
         if (exit(level, villager, pen)) {
             action = null;
             target = null;
@@ -371,7 +354,7 @@ public final class HerderJob extends Job {
     }
 
     private void collect(ServerLevel level, Villager villager, ColonyData.Pen pen) {
-        if (!enter(level, villager, pen)) {
+        if (!exit(level, villager, pen)) {
             return;
         }
         List<ItemEntity> items = level.getEntitiesOfClass(ItemEntity.class, penBox(pen), ItemEntity::isAlive);
@@ -380,10 +363,10 @@ public final class HerderJob extends Job {
             return;
         }
         ItemEntity item = items.stream().min(Comparator.comparingDouble(i -> i.distanceToSqr(villager))).get();
-        if (item.distanceTo(villager) < 1.6) {
+        if (item.distanceTo(villager) < 4.0) {
             pickUp(villager, item);
-        } else {
-            move(level, villager, item.blockPosition(), 1.0);
+        } else if (move(level, villager, item.blockPosition(), 3.5) == Mover.Result.FAILED) {
+            done(level, villager, pen);
         }
     }
 
@@ -396,25 +379,60 @@ public final class HerderJob extends Job {
             villager.getLookControl().setLookAt(animal);
             return true;
         }
-        if (move(level, villager, animal.blockPosition(), reach) == Mover.Result.FAILED) {
+        ColonyData.Pen pen = colony().data().pen;
+        BlockPos goal = animal.blockPosition();
+        double moveReach = reach;
+        if (pen != null && inside(pen, animal.getX(), animal.getZ())) {
+            goal = ringPoint(pen, animal);
+            moveReach = 1.0;
+        }
+        if (move(level, villager, goal, moveReach) == Mover.Result.FAILED) {
             target = null;
         }
         return false;
     }
 
+    private static BlockPos ringPoint(ColonyData.Pen pen, Animal animal) {
+        int x = animal.getBlockX();
+        int z = animal.getBlockZ();
+        int toWest = x - pen.min.x();
+        int toEast = pen.max.x() - x;
+        int toNorth = z - pen.min.z();
+        int toSouth = pen.max.z() - z;
+        int best = Math.min(Math.min(toWest, toEast), Math.min(toNorth, toSouth));
+        if (best == toWest) {
+            return new BlockPos(pen.min.x() - 2, pen.min.y(), z);
+        }
+        if (best == toEast) {
+            return new BlockPos(pen.max.x() + 2, pen.min.y(), z);
+        }
+        if (best == toNorth) {
+            return new BlockPos(x, pen.min.y(), pen.min.z() - 2);
+        }
+        return new BlockPos(x, pen.min.y(), pen.max.z() + 2);
+    }
+
     private void shear(ServerLevel level, Villager villager, ColonyData.Pen pen) {
-        if (!enter(level, villager, pen)) {
+        if (!exit(level, villager, pen)) {
             return;
         }
         if (!(target instanceof Sheep sheep) || !sheep.isAlive() || !sheep.readyForShearing()) {
             done(level, villager, pen);
             return;
         }
-        if (!approach(level, villager, sheep, 2.0)) {
+        if (!approach(level, villager, sheep, 4.0)) {
             if (target == null) {
                 done(level, villager, pen);
             }
             return;
+        }
+        if (!Tools.SHEARS.test(villager.getMainHandItem())) {
+            ItemStack carried = Inv.takeFirst(villager, Tools.SHEARS);
+            if (carried.isEmpty()) {
+                done(level, villager, pen);
+                return;
+            }
+            holdInHand(villager, carried);
         }
         ItemStack shears = villager.getMainHandItem();
         sheep.shear(level, SoundSource.NEUTRAL, shears);
@@ -424,14 +442,14 @@ public final class HerderJob extends Job {
     }
 
     private void cull(ServerLevel level, Villager villager, ColonyData.Pen pen) {
-        if (!enter(level, villager, pen)) {
+        if (!exit(level, villager, pen)) {
             return;
         }
         if (target == null || !target.isAlive()) {
             action = Action.COLLECT;
             return;
         }
-        if (!approach(level, villager, target, 2.0)) {
+        if (!approach(level, villager, target, 4.0)) {
             if (target == null) {
                 done(level, villager, pen);
             }
@@ -445,7 +463,7 @@ public final class HerderJob extends Job {
     }
 
     private void breed(ServerLevel level, Villager villager, ColonyData.Pen pen) {
-        if (!enter(level, villager, pen)) {
+        if (!exit(level, villager, pen)) {
             return;
         }
         Animal current = target != null && target.isAlive() && !target.isInLove() ? target : partner;
@@ -453,7 +471,7 @@ public final class HerderJob extends Job {
             done(level, villager, pen);
             return;
         }
-        if (!approach(level, villager, current, 2.0)) {
+        if (!approach(level, villager, current, 4.0)) {
             if (target == null) {
                 done(level, villager, pen);
             }
@@ -477,6 +495,10 @@ public final class HerderJob extends Job {
     }
 
     private void capture(ServerLevel level, Villager villager, ColonyData.Pen pen) {
+        if (gateStep == 2) {
+            done(level, villager, pen);
+            return;
+        }
         if (target == null || !target.isAlive()) {
             leading = false;
             action = null;
@@ -509,8 +531,12 @@ public final class HerderJob extends Job {
             phase = "start";
             return;
         }
-        status = "leading a " + Species.of(target).name().toLowerCase(java.util.Locale.ROOT) + " to the pen";
+        status = "leading a " + Species.of(target).name().toLowerCase(java.util.Locale.ROOT) + " to the pen, step " + gateStep
+                + ", animal at " + target.blockPosition().toShortString();
         if (gateStep == 0) {
+            if (inside(pen, villager.getX(), villager.getZ())) {
+                setGate(level, pen, true);
+            }
             BlockPos outside = WorldUtil.bp(pen.outside);
             Mover.Result result = colonist.mover().tick(level, villager, outside, 1.3, 0.55, false);
             if (result == Mover.Result.ARRIVED) {
@@ -524,12 +550,23 @@ public final class HerderJob extends Job {
             return;
         }
         if (gateStep == 1) {
-            BlockPos far = WorldUtil.bp(pen.inside);
+            BlockPos far = new BlockPos(pen.inside.x() + (pen.inside.x() - pen.gate.x()) * 2, pen.inside.y(),
+                    pen.inside.z() + (pen.inside.z() - pen.gate.z()) * 2);
             Mover.Result result = colonist.mover().tick(level, villager, far, 1.3, 0.55, false);
-            if (result != Mover.Result.MOVING && inside(pen, target.getX(), target.getZ())) {
+            if (result == Mover.Result.ARRIVED && !inside(pen, target.getX(), target.getZ()) && ++pullTicks > 120) {
+                target.removeLeash();
+                leading = false;
+                pullTicks = 0;
+                captureCooldownUntil = level.getGameTime() + 1200;
+                gateStep = 2;
+                return;
+            }
+            if (inside(pen, target.getX(), target.getZ()) && target.distanceToSqr(pen.gate.x() + 0.5, target.getY(), pen.gate.z() + 0.5) > 2.25) {
+                pullTicks = 0;
                 target.removeLeash();
                 leading = false;
                 colony().data().bump("animals_captured", 1);
+                captureCooldownUntil = level.getGameTime() + 1200;
                 colony().journal(level, "herder brought a " + Species.of(target).name().toLowerCase(java.util.Locale.ROOT) + " to the pen");
                 gateStep = 2;
             } else if (result == Mover.Result.FAILED) {

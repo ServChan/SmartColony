@@ -29,6 +29,7 @@
   "smartcolony.chat.prefix": "[%s]",
   "smartcolony.chat.founded": "Colony %s founded: %s villagers joined, the storage stands next to the bell.",
   "smartcolony.chat.death": "A %s of the colony has died.",
+  "smartcolony.chat.birth": "A child was born in the colony.",
   "smartcolony.chat.golem": "The colony forged an iron golem from %s ingots.",
   "smartcolony.chat.market": "The market closed %s deals with the colony traders.",
   "smartcolony.chat.build_start": "Construction started: %s.",

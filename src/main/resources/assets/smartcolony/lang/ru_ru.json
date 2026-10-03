@@ -29,6 +29,7 @@
   "smartcolony.chat.prefix": "[%s]",
   "smartcolony.chat.founded": "Основана колония %s: присоединилось жителей — %s, склад стоит у колокола.",
   "smartcolony.chat.death": "Погиб житель колонии: %s.",
+  "smartcolony.chat.birth": "В колонии родился ребёнок.",
   "smartcolony.chat.golem": "Колония выковала железного голема из %s слитков.",
   "smartcolony.chat.market": "Рынок провёл сделок с торговцами колонии: %s.",
   "smartcolony.chat.build_start": "Началось строительство: %s.",

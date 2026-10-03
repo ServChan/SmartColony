@@ -40,8 +40,13 @@ public final class BuilderJob extends Job {
     }
 
     @Override
+    protected java.util.function.Predicate<ItemStack> tools() {
+        return Tools.SHOVEL;
+    }
+
+    @Override
     protected boolean keep(ItemStack stack) {
-        return Tools.ANY_TOOL.test(stack) || stack.is(Items.TORCH) || stack.is(net.minecraft.tags.ItemTags.WOODEN_FENCES);
+        return tools().test(stack) || stack.is(Items.TORCH) || stack.is(net.minecraft.tags.ItemTags.WOODEN_FENCES);
     }
 
     @Override

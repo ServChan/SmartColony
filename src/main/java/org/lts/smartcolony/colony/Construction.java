@@ -370,7 +370,7 @@ public final class Construction {
                     continue;
                 }
                 SiteEvaluator.Result result = SiteEvaluator.evaluate(ground, blocked);
-                if (!result.ok()) {
+                if (!result.ok() || !accessible(level, blueprint, rotation, ox, oz, result.baseY())) {
                     continue;
                 }
                 double score = result.score() + distance * 0.6;
@@ -384,6 +384,23 @@ public final class Construction {
             }
         }
         return best;
+    }
+
+    private boolean accessible(ServerLevel level, Blueprint blueprint, int rotation, int ox, int oz, int base) {
+        for (int step = 1; step <= 2; step++) {
+            int[] front = Blueprint.rotate(blueprint.doorX(), blueprint.doorZ() - step, blueprint.sizeX(), blueprint.sizeZ(), rotation);
+            int x = ox + front[0];
+            int z = oz + front[1];
+            if (!WorldUtil.loaded(level, new BlockPos(x, 0, z))) {
+                return false;
+            }
+            int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z) - 1;
+            BlockPos top = new BlockPos(x, y, z);
+            if (Math.abs(y - base) > 1 || !level.getFluidState(top).isEmpty() || colony.warehouse().contains(top.above())) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private boolean blockedColumn(ServerLevel level, BlockPos top) {

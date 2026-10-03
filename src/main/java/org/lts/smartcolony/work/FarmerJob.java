@@ -53,8 +53,13 @@ public final class FarmerJob extends Job {
     }
 
     @Override
+    protected java.util.function.Predicate<ItemStack> tools() {
+        return Tools.HOE;
+    }
+
+    @Override
     protected boolean keep(ItemStack stack) {
-        return Tools.ANY_TOOL.test(stack) || stack.is(Items.BUCKET) || stack.is(Items.WATER_BUCKET);
+        return tools().test(stack) || stack.is(Items.BUCKET) || stack.is(Items.WATER_BUCKET);
     }
 
     @Override
@@ -201,7 +206,7 @@ public final class FarmerJob extends Job {
             return null;
         }
         if (canTill && (state.is(Blocks.GRASS_BLOCK) || state.is(Blocks.DIRT)) && WorldUtil.isAirLike(level.getBlockState(pos.above()))
-                && nearWater(level, pos) && nextToFarmland(level, pos) && !colony().isProtected(pos.above())) {
+                && nearWater(level, pos) && nextToFarmland(level, pos) && !colony().isProtected(pos.above(), false)) {
             return Kind.TILL;
         }
         return null;

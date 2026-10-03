@@ -75,7 +75,7 @@ public final class Sites {
         return colony.data().roads.contains(WorldUtil.pos(ground));
     }
 
-    public ColonyData.Mine mineSite(ServerLevel level, int generation) {
+    public ColonyData.Mine mineSite(ServerLevel level, int generation, ColonyData.Mine previous) {
         int targetY = SmartColonyConfig.get().mineTargetY;
         double offset = generation * Math.PI / 4.0;
         for (int distance = 12; distance <= 30; distance += 4) {
@@ -96,6 +96,10 @@ public final class Sites {
                 int dirZ = dirX == 0 ? Integer.signum(dz) : 0;
                 if (dirX == 0 && dirZ == 0) {
                     dirX = 1;
+                }
+                if (previous != null && dirX == previous.dirX && dirZ == previous.dirZ
+                        && WorldUtil.pos(feet).horizontalDistSq(previous.entrance) < 40 * 40) {
+                    continue;
                 }
                 int depth = Math.max(4, Math.min(90, MinePlan.depthFor(feet.getY(), targetY)));
                 MinePlan plan = new MinePlan(WorldUtil.pos(feet), dirX, dirZ, depth);
@@ -175,7 +179,7 @@ public final class Sites {
                 continue;
             }
             BlockPos water = new BlockPos(x, level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z) - 1, z);
-            if (!level.getFluidState(water).isSourceOfType(Fluids.WATER) || colony.isProtected(water.above())) {
+            if (!level.getFluidState(water).isSourceOfType(Fluids.WATER) || colony.isProtected(water.above(), false)) {
                 continue;
             }
             int land = 0;

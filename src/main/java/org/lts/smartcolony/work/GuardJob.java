@@ -59,8 +59,13 @@ public final class GuardJob extends Job {
     }
 
     @Override
+    protected java.util.function.Predicate<ItemStack> tools() {
+        return Tools.SWORD.or(Tools.BOW);
+    }
+
+    @Override
     protected boolean keep(ItemStack stack) {
-        return Tools.ANY_TOOL.test(stack) || Tools.ARROW.test(stack) || stack.has(DataComponents.EQUIPPABLE);
+        return tools().test(stack) || Tools.ARROW.test(stack) || stack.has(DataComponents.EQUIPPABLE);
     }
 
     @Override

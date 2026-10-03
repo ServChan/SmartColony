@@ -42,8 +42,13 @@ public final class LumberjackJob extends Job {
     }
 
     @Override
+    protected java.util.function.Predicate<ItemStack> tools() {
+        return Tools.AXE;
+    }
+
+    @Override
     protected boolean keep(ItemStack stack) {
-        return Tools.ANY_TOOL.test(stack);
+        return tools().test(stack);
     }
 
     @Override

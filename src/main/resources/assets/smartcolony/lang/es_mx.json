@@ -29,6 +29,7 @@
   "smartcolony.chat.prefix": "[%s]",
   "smartcolony.chat.founded": "Colonia %s fundada: %s aldeanos se unieron, el almacén está junto a la campana.",
   "smartcolony.chat.death": "Ha muerto un %s de la colonia.",
+  "smartcolony.chat.birth": "Ha nacido un niño en la colonia.",
   "smartcolony.chat.golem": "La colonia forjó un gólem de hierro con %s lingotes.",
   "smartcolony.chat.market": "El mercado cerró %s tratos con los comerciantes de la colonia.",
   "smartcolony.chat.build_start": "Comenzó la construcción: %s.",

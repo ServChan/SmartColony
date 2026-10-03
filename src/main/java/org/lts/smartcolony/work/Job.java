@@ -55,8 +55,12 @@ public abstract class Job {
         return Inv.count(villager, stack -> !keep(stack) && !ration(stack)) > 0;
     }
 
+    protected Predicate<ItemStack> tools() {
+        return Tools.ANY_TOOL;
+    }
+
     protected boolean keep(ItemStack stack) {
-        return Tools.ANY_TOOL.test(stack) || stack.is(net.minecraft.world.item.Items.BREAD);
+        return tools().test(stack);
     }
 
     protected boolean ration(ItemStack stack) {

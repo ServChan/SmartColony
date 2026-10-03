@@ -81,6 +81,9 @@ public final class Economy {
             feed(level);
             cook(level);
         }
+        if (ticks % 3000 == 1517) {
+            births(level);
+        }
         if (ticks % SmartColonyConfig.get().marketIntervalTicks == 307) {
             market.run(level);
         }
@@ -160,6 +163,42 @@ public final class Economy {
         colony.data().bump("golems_built", 1);
         colony.journal(level, "iron golem forged from " + cost + " ingots");
         colony.notify(level, Component.translatable("smartcolony.chat.golem", cost));
+    }
+
+    private void births(ServerLevel level) {
+        int radius = colony.data().radius + 8;
+        List<BlockPos> free = level.getPoiManager().findAll(type -> type.is(PoiTypes.HOME), pos -> true, colony.center(), radius,
+                PoiManager.Occupancy.HAS_SPACE).limit(4).toList();
+        long beds = level.getPoiManager().getCountInRange(type -> type.is(PoiTypes.HOME), colony.center(), radius, PoiManager.Occupancy.ANY);
+        if (free.isEmpty() || colony.colonists().size() >= beds || foodPoints(colony.warehouse().stock(level)) < 100) {
+            return;
+        }
+        List<Villager> parents = colony.loadedVillagers(level).stream()
+                .filter(v -> !v.isBaby() && v.getAge() == 0 && v.canBreed() && !v.isSleeping())
+                .limit(2).toList();
+        if (parents.size() < 2) {
+            return;
+        }
+        Villager mother = parents.get(0);
+        Villager father = parents.get(1);
+        Villager baby = mother.getBreedOffspring(level, father);
+        if (baby == null) {
+            return;
+        }
+        BlockPos bed = free.getFirst();
+        BlockPos spot = mother.blockPosition();
+        baby.setAge(-24000);
+        baby.snapTo(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5, 0.0F, 0.0F);
+        level.addFreshEntity(baby);
+        mother.setAge(6000);
+        father.setAge(6000);
+        for (Villager parent : parents) {
+            org.lts.smartcolony.work.Inv.remove(parent, stack -> stack.is(net.minecraft.world.item.Items.BREAD), 3);
+            level.sendParticles(ParticleTypes.HEART, parent.getX(), parent.getY() + 2.0, parent.getZ(), 4, 0.3, 0.3, 0.3, 0.0);
+        }
+        colony.data().bump("births", 1);
+        colony.journal(level, "a child was born, free bed at " + bed.toShortString());
+        colony.notify(level, Component.translatable("smartcolony.chat.birth"));
     }
 
     private void feed(ServerLevel level) {

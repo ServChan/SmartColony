@@ -36,6 +36,11 @@ public final class FishermanJob extends Job {
     }
 
     @Override
+    protected java.util.function.Predicate<ItemStack> tools() {
+        return Tools.ROD;
+    }
+
+    @Override
     public void tick(ServerLevel level, Villager villager) {
         if (wait > 0) {
             wait--;

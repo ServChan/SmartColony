@@ -34,6 +34,10 @@ public final class MinerJob extends Job {
     private int veinIndex;
     private int stuck;
     private boolean returning;
+    private int fluidFights;
+    private int cellIndex = -1;
+    private int cellTicks;
+    private int skippedInRow;
 
     public MinerJob(Colonist colonist) {
         super(colonist);
@@ -46,8 +50,13 @@ public final class MinerJob extends Job {
     }
 
     @Override
+    protected java.util.function.Predicate<ItemStack> tools() {
+        return Tools.PICKAXE;
+    }
+
+    @Override
     protected boolean keep(ItemStack stack) {
-        return Tools.ANY_TOOL.test(stack) || stack.is(Items.TORCH);
+        return tools().test(stack) || stack.is(Items.TORCH);
     }
 
     @Override
@@ -227,8 +236,26 @@ public final class MinerJob extends Job {
             beginReturn();
             return;
         }
+        if (mine.progress != cellIndex) {
+            cellIndex = mine.progress;
+            cellTicks = 0;
+        }
+        if (++cellTicks > 1200) {
+            colony().journal(level, "miner gave up on section " + mine.progress + " (flooded or blocked)");
+            colony().data().bump("mine_sections_skipped", 1);
+            mine.progress++;
+            skippedInRow++;
+            colony().markDirty();
+            if (skippedInRow >= 8) {
+                skippedInRow = 0;
+                colony().mineExhausted(level);
+                beginReturn();
+            }
+            return;
+        }
         MinePlan.Cell cell = plan.cell(mine.progress);
         BlockPos stand = WorldUtil.bp(plan.standFor(mine.progress));
+        status = "section " + mine.progress + " at " + cell.feet();
         if (Mover.distance(villager, stand) > 1.6) {
             Mover.Result result = move(level, villager, stand, 1.2);
             if (result == Mover.Result.FAILED && !Mover.rescue(level, villager, stand)) {
@@ -254,7 +281,16 @@ public final class MinerJob extends Job {
             }
             BlockState state = level.getBlockState(block);
             if (!state.getFluidState().isEmpty()) {
-                level.setBlock(block, Blocks.AIR.defaultBlockState(), 3);
+                if (++fluidFights > 30) {
+                    colony().journal(level, "miner skipped a flooded section at " + block.toShortString());
+                    fluidFights = 0;
+                    mine.progress++;
+                    colony().markDirty();
+                    return;
+                }
+                if (!fillWithCobble(level, villager, block)) {
+                    level.setBlock(block, Blocks.AIR.defaultBlockState(), 3);
+                }
                 return;
             }
             if (!WorldUtil.isAirLike(state) || (!state.isAir() && !state.getCollisionShape(level, block).isEmpty())) {
@@ -301,6 +337,8 @@ public final class MinerJob extends Job {
             Inv.remove(villager, stack -> stack.is(Items.TORCH), 1);
             colony().data().bump("torches_mine", 1);
         }
+        fluidFights = 0;
+        skippedInRow = 0;
         vein = findOres(level, cellBlocks, villager);
         veinIndex = 0;
         mine.progress++;
