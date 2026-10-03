@@ -82,7 +82,9 @@ public final class LumberjackJob extends Job {
     }
 
     private void start(ServerLevel level, Villager villager) {
-        if (cargoFull(villager) || (!colony().workTime(level) && hasCargo(villager))) {
+        int carried = Inv.count(villager, stack -> stack.is(ItemTags.LOGS));
+        boolean storageHungry = colony().stockOf(level, Ids::isLog) < 16 && carried >= 8;
+        if (cargoFull(villager) || carried >= 64 || storageHungry || (!colony().workTime(level) && hasCargo(villager))) {
             phase = "deposit";
             return;
         }
@@ -92,7 +94,7 @@ public final class LumberjackJob extends Job {
                 return;
             }
             if (equip == Equip.MISSING) {
-                noAxeUntil = level.getGameTime() + 2400;
+                noAxeUntil = level.getGameTime() + 600;
             }
         }
         if (colony().forest().count() < SmartColonyConfig.get().treeTarget && planted < 8
@@ -103,6 +105,10 @@ public final class LumberjackJob extends Job {
         tree = colony().forest().claim(level, colonist.uuid(), villager.blockPosition());
         if (tree == null) {
             status = "looking for natural trees";
+            if (hasCargo(villager)) {
+                phase = "deposit";
+                return;
+            }
             wait = 100;
             return;
         }

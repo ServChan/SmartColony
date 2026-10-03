@@ -88,7 +88,7 @@ public final class FarmerJob extends Job {
                 return;
             }
             if (equip == Equip.MISSING) {
-                noHoeUntil = level.getGameTime() + 2400;
+                noHoeUntil = level.getGameTime() + 600;
             }
         }
         if (seedCount(villager) < 8) {
@@ -243,7 +243,9 @@ public final class FarmerJob extends Job {
             case PLANT -> plant(level, villager, pos);
             case TILL -> till(level, villager, pos);
             case GATHER_SEEDS -> {
-                colonist.digger().breakNow(level, villager, pos, true);
+                if (WorldUtil.isAirLike(level.getBlockState(pos.above())) && !level.getBlockState(pos.above()).isAir()) {
+                    colonist.digger().breakNow(level, villager, pos.above(), true);
+                }
                 stash(level, villager, colonist.digger().takeDrops());
             }
         }
@@ -376,7 +378,7 @@ public final class FarmerJob extends Job {
 
     @Override
     protected boolean hasCargo(Villager villager) {
-        return Inv.count(villager, stack -> !keep(stack) && !isSeed(stack)) > 0;
+        return Inv.count(villager, stack -> !keep(stack) && !isSeed(stack) && !ration(stack)) > 0;
     }
 
     private static boolean isSeed(ItemStack stack) {

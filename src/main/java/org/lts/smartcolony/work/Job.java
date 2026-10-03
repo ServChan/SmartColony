@@ -52,11 +52,15 @@ public abstract class Job {
     }
 
     protected boolean hasCargo(Villager villager) {
-        return Inv.count(villager, stack -> !keep(stack)) > 0;
+        return Inv.count(villager, stack -> !keep(stack) && !ration(stack)) > 0;
     }
 
     protected boolean keep(ItemStack stack) {
-        return Tools.ANY_TOOL.test(stack);
+        return Tools.ANY_TOOL.test(stack) || stack.is(net.minecraft.world.item.Items.BREAD);
+    }
+
+    protected boolean ration(ItemStack stack) {
+        return stack.is(net.minecraft.world.item.Items.BREAD);
     }
 
     protected boolean cargoFull(Villager villager) {
@@ -84,7 +88,7 @@ public abstract class Job {
         boolean everything = true;
         for (int slot = 0; slot < inventory.getContainerSize(); slot++) {
             ItemStack stack = inventory.getItem(slot);
-            if (stack.isEmpty() || keep(stack)) {
+            if (stack.isEmpty() || keep(stack) || ration(stack)) {
                 continue;
             }
             int before = stack.getCount();
@@ -134,7 +138,7 @@ public abstract class Job {
         }
         if (best.isEmpty()) {
             if (!craftOrder.isEmpty()) {
-                colony().request(craftOrder.getLast());
+                colony().request(craftOrder.stream().filter(id -> id.contains("wooden_")).findFirst().orElse(craftOrder.getLast()));
             }
             status = "no tool in storage";
             return Equip.MISSING;

@@ -61,6 +61,10 @@ public final class Mover {
     }
 
     public Result tick(ServerLevel level, Villager villager, BlockPos goal, double reach, double speed) {
+        return tick(level, villager, goal, reach, speed, true);
+    }
+
+    public Result tick(ServerLevel level, Villager villager, BlockPos goal, double reach, double speed, boolean allowRescue) {
         if (target == null || !target.equals(goal)) {
             reset();
             target = goal.immutable();
@@ -95,14 +99,11 @@ public final class Mover {
             } else {
                 villager.getNavigation().moveTo(path, speed);
                 note = path.canReach() ? "path" : "partial path";
-                if (!path.canReach()) {
-                    failedPaths++;
-                }
             }
             repath = 30;
         }
         if (noProgress > 200 || failedPaths > 8 || total > 3000) {
-            if (teleportAllowed(level, villager) && rescue(level, villager, goal)) {
+            if (allowRescue && teleportAllowed(level, villager) && rescue(level, villager, goal)) {
                 reset();
                 return Result.ARRIVED;
             }

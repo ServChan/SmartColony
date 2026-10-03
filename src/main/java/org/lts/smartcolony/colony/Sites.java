@@ -159,7 +159,7 @@ public final class Sites {
                 return;
             }
         }
-        if (colony.data().farms.size() < 12) {
+        if (colony.data().farms.size() < 24) {
             colony.data().farms.add(p);
             colony.markDirty();
         }
@@ -247,8 +247,8 @@ public final class Sites {
             }
             BlockPos ground = WorldUtil.surface(level, x, z).below();
             boolean flat = true;
-            for (int dx = -4; dx <= 4 && flat; dx++) {
-                for (int dz = -4; dz <= 4 && flat; dz++) {
+            for (int dx = -2; dx <= 2 && flat; dx++) {
+                for (int dz = -2; dz <= 2 && flat; dz++) {
                     BlockPos column = WorldUtil.surface(level, x + dx, z + dz).below();
                     BlockState state = level.getBlockState(column);
                     if (column.getY() != ground.getY() || !(state.is(Blocks.GRASS_BLOCK) || state.is(Blocks.DIRT))

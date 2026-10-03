@@ -83,8 +83,7 @@ public final class Construction {
 
     public boolean hasWork(ServerLevel level) {
         ColonyData.Project project = data().project;
-        return (project != null && !project.phase.equals("reserve")) || !data().pendingRoad.isEmpty() || !data().pendingTorches.isEmpty()
-                || (project != null && missing.isEmpty());
+        return (project != null && !project.phase.equals("reserve")) || !data().pendingRoad.isEmpty() || !data().pendingTorches.isEmpty();
     }
 
     public void tick(ServerLevel level) {
@@ -104,7 +103,7 @@ public final class Construction {
         }
     }
 
-    private String decideNeed(ServerLevel level) {
+    private List<String> decideNeeds(ServerLevel level) {
         long now = level.getGameTime();
         Map<Category, Double> fill = colony.fill(level);
         double fullest = fill.values().stream().mapToDouble(Double::doubleValue).max().orElse(0);
@@ -131,23 +130,53 @@ public final class Construction {
         if (guards >= 2 && posts < Math.min(3, guards - 1)) {
             order.add("guard_post");
         }
+        List<String> ready = new ArrayList<>();
         for (String id : order) {
-            if (cooldown.getOrDefault(id, Long.MIN_VALUE) <= now) {
-                return id;
+            if (cooldown.getOrDefault(id, Long.MIN_VALUE) <= now && !ready.contains(id)) {
+                ready.add(id);
             }
         }
-        return null;
+        return ready;
+    }
+
+    private boolean satisfiable(ServerLevel level, String blueprintId, String wood) {
+        Map<String, Integer> materials = new TreeMap<>(Blueprints.get(blueprintId).materials(wood));
+        materials.remove(Ids.mc("glass_pane"));
+        Stock stock = colony.warehouse().stock(level);
+        for (String key : new ArrayList<>(materials.keySet())) {
+            if (Ids.path(key).endsWith("_bed")) {
+                int beds = materials.remove(key);
+                boolean any = false;
+                for (String color : Ids.COLORS) {
+                    if (CraftPlanner.plan(stock, Ids.mc(color + "_bed"), beds).isPresent()) {
+                        any = true;
+                        break;
+                    }
+                }
+                if (!any) {
+                    return false;
+                }
+            }
+        }
+        return CraftPlanner.plan(stock, materials).isPresent();
     }
 
     private void plan(ServerLevel level) {
-        String need = decideNeed(level);
-        if (need == null) {
+        List<String> needs = decideNeeds(level);
+        if (needs.isEmpty()) {
             status = "nothing to build";
             missing = new TreeMap<>();
             return;
         }
-        Blueprint blueprint = Blueprints.get(need);
         String wood = chooseWood(level);
+        String need = needs.getFirst();
+        for (String candidate : needs) {
+            if (satisfiable(level, candidate, wood)) {
+                need = candidate;
+                break;
+            }
+        }
+        Blueprint blueprint = Blueprints.get(need);
         ColonyData.Project project = findSite(level, blueprint, wood);
         if (project == null) {
             status = "no flat land for " + need;
@@ -248,6 +277,20 @@ public final class Construction {
         missing = lack;
         status = "waiting for materials: " + lack;
         long waited = level.getGameTime() - project.waitingSince;
+        if (waited > 3000) {
+            String wood = chooseWood(level);
+            for (String candidate : decideNeeds(level)) {
+                if (!candidate.equals(project.building.blueprint) && satisfiable(level, candidate, wood)) {
+                    colony.journal(level, "postponed " + project.building.blueprint + ", " + candidate + " can be built now");
+                    cooldown.put(project.building.blueprint, level.getGameTime() + 6000);
+                    data().project = null;
+                    missing = new TreeMap<>();
+                    lastPlan = -100000;
+                    colony.markDirty();
+                    return;
+                }
+            }
+        }
         if (waited > 24000L * 3 && !project.building.kind.equals("house")) {
             colony.journal(level, "gave up waiting for " + project.building.blueprint);
             cooldown.put(project.building.blueprint, level.getGameTime() + 24000L);

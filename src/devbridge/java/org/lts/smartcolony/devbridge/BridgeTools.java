@@ -93,6 +93,8 @@ public final class BridgeTools {
         tools.add(tool("colony", "Full debug dump of a colony (data, stock, members with job status, construction, defense).",
                 props("id", "string", "colony id, default first colony",
                         "section", "string", "optional top-level key: data, stock, fill, members, construction, defense, requests, desiredRoles")));
+        tools.add(tool("brief", "Compact text overview of a colony: one line per member, stock, construction, mine, stats. Optionally waits N ticks first.",
+                props("id", "string", "colony id", "ticks", "integer", "ticks to wait first (max 200000)")));
         tools.add(tool("command", "Run server commands as console and capture their output.",
                 props("commands", "array", "commands without leading slash"), "commands"));
         tools.add(tool("wait", "Wait until N more server ticks have passed (use with /tick sprint), then return status.",
@@ -121,6 +123,7 @@ public final class BridgeTools {
         return switch (name) {
             case "status" -> onMain(this::status);
             case "colony" -> onMain(() -> colony(args));
+            case "brief" -> brief(args);
             case "command" -> command(args);
             case "wait" -> waitTicks(args);
             case "blocks" -> onMain(() -> blocks(args));
@@ -220,6 +223,49 @@ public final class BridgeTools {
         }
         dump.getAsJsonObject("data").remove("journal");
         return json(dump);
+    }
+
+    private JsonObject brief(JsonObject args) throws Exception {
+        int ticks = Math.min(200000, Math.max(0, integer(args, "ticks", 0)));
+        if (ticks > 0) {
+            long start = DevBridge.serverTicks();
+            long deadline = System.currentTimeMillis() + 105_000L;
+            while (DevBridge.serverTicks() - start < ticks && System.currentTimeMillis() < deadline) {
+                Thread.sleep(50);
+            }
+        }
+        return onMain(() -> {
+            Colony colony = pick(args);
+            if (colony == null) {
+                return text("no colony", true);
+            }
+            ServerLevel level = ColonyManager.levelOf(colony);
+            JsonObject dump = colony.debugJson(level);
+            StringBuilder out = new StringBuilder();
+            out.append("t=").append(level.getGameTime()).append(" day=").append(Math.floorMod(level.getDefaultClockTime(), 24000L))
+                    .append(" mspt=").append(Math.round(server.getCurrentSmoothedTickTime() * 100) / 100.0).append('\n');
+            for (JsonElement element : dump.getAsJsonArray("members")) {
+                JsonObject m = element.getAsJsonObject();
+                out.append(String.format("%-10s %s %-14s %s | %s | hand=%s inv=%s%n", m.get("role").getAsString(),
+                        m.get("uuid").getAsString().substring(0, 4), m.has("pos") ? m.get("pos").getAsString() : "-",
+                        m.has("status") ? m.get("status").getAsString() : "unloaded", m.has("mover") ? m.get("mover").getAsString() : "",
+                        m.has("hand") ? m.get("hand").getAsString().replace("minecraft:", "") : "",
+                        m.has("inventory") ? m.get("inventory").toString().replace("minecraft:", "") : ""));
+            }
+            out.append("stock: ").append(dump.get("stock").toString().replace("minecraft:", "")).append('\n');
+            out.append("construction: ").append(dump.get("construction")).append('\n');
+            out.append("desired: ").append(dump.get("desiredRoles")).append(" requests: ").append(dump.get("requests")).append('\n');
+            out.append("food=").append(dump.get("foodPoints")).append(" forest=").append(dump.get("forestTrees"))
+                    .append(" threat=").append(dump.get("threat")).append('\n');
+            JsonObject data = dump.getAsJsonObject("data");
+            out.append("mine: ").append(data.has("mine") ? data.get("mine") : "none").append('\n');
+            out.append("stats: ").append(data.get("stats")).append('\n');
+            JsonArray journal = data.getAsJsonArray("journal");
+            for (int i = Math.max(0, journal.size() - 6); i < journal.size(); i++) {
+                out.append("  > ").append(journal.get(i).getAsString()).append('\n');
+            }
+            return text(out.toString(), false);
+        });
     }
 
     private JsonObject command(JsonObject args) throws Exception {

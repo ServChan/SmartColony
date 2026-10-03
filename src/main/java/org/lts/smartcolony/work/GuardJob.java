@@ -44,6 +44,9 @@ public final class GuardJob extends Job {
     private boolean strafeLeft;
     private int eatCooldown;
     private boolean healing;
+    private int engageTicks;
+    private double bestGap = Double.MAX_VALUE;
+    private final java.util.Map<java.util.UUID, Long> ignored = new java.util.HashMap<>();
 
     public GuardJob(Colonist colonist) {
         super(colonist);
@@ -97,29 +100,68 @@ public final class GuardJob extends Job {
             heal(level, villager, health);
             return;
         }
-        if (--retargetIn <= 0) {
-            retargetIn = 10;
-            target = pickTarget(level, villager);
-        }
-        if (target != null && (!target.isAlive() || target.distanceTo(villager) > 40 || !valid(target))) {
+        ignored.values().removeIf(until -> until < level.getGameTime());
+        boolean attacked = villager.getLastHurtByMob() != null && villager.tickCount - villager.getLastHurtByMobTimestamp() < 60;
+        if (!armed(villager) && !attacked && level.getGameTime() >= nextGear - 2400 + 200) {
             target = null;
-        }
-        if (target != null) {
-            fight(level, villager, health);
-            return;
-        }
-        if (level.getGameTime() >= nextGear) {
             if (gear(level, villager)) {
                 nextGear = level.getGameTime() + 2400;
             }
             return;
         }
-        if (Inv.used(villager) >= depositThreshold && hasCargo(villager)) {
+        if (--retargetIn <= 0) {
+            retargetIn = 10;
+            LivingEntity picked = pickTarget(level, villager);
+            if (picked != target) {
+                engageTicks = 0;
+                bestGap = Double.MAX_VALUE;
+            }
+            target = picked;
+        }
+        if (target != null && (!target.isAlive() || target.distanceTo(villager) > 40 || !valid(target) || outOfBounds(target))) {
+            target = null;
+        }
+        if (target != null) {
+            double gap = target.distanceTo(villager);
+            if (gap < bestGap - 0.5 || gap < 3.0 || (Tools.BOW.test(villager.getMainHandItem()) && hasArrows(villager) && villager.hasLineOfSight(target))) {
+                bestGap = Math.min(gap, bestGap);
+                engageTicks = 0;
+            } else if (++engageTicks > 160) {
+                ignored.put(target.getUUID(), level.getGameTime() + 600);
+                status = "target out of reach";
+                target = null;
+                engageTicks = 0;
+                bestGap = Double.MAX_VALUE;
+                return;
+            }
+            fight(level, villager, health);
+            return;
+        }
+        if (level.getGameTime() >= nextGear || (Tools.BOW.test(villager.getMainHandItem()) || !Inv.find(villager, Tools.BOW).isEmpty())
+                && Inv.count(villager, Tools.ARROW) < 4 && level.getGameTime() >= nextGear - 1800) {
+            if (gear(level, villager)) {
+                nextGear = level.getGameTime() + 2400;
+            }
+            return;
+        }
+        if (Inv.used(villager) >= 4 && hasCargo(villager)) {
             if (!atDepot(level, villager)) {
                 goDepot(level, villager);
                 return;
             }
             depositAll(level, villager);
+        }
+        if (Inv.free(villager) > 1) {
+            net.minecraft.world.entity.item.ItemEntity loot = nearestLoot(level, villager, 10.0, stack -> !stack.isEmpty());
+            if (loot != null && colony().contains(loot.blockPosition())) {
+                status = "collecting loot";
+                if (loot.distanceTo(villager) < 1.6) {
+                    pickUp(villager, loot);
+                } else if (move(level, villager, loot.blockPosition(), 1.0) == Mover.Result.FAILED) {
+                    loot.setPickUpDelay(200);
+                }
+                return;
+            }
         }
         if (colony().workTime(level)) {
             patrol(level, villager);
@@ -143,11 +185,23 @@ public final class GuardJob extends Job {
         for (Villager member : colony().loadedVillagers(level)) {
             LivingEntity threat = member.getLastHurtByMob();
             if (threat != null && threat.isAlive() && valid(threat) && member.tickCount - member.getLastHurtByMobTimestamp() < 200
-                    && threat.distanceTo(villager) < 32) {
+                    && threat.distanceTo(villager) < 32 && !ignored.containsKey(threat.getUUID()) && !outOfBounds(threat)) {
                 return threat;
             }
         }
-        return colony().defense().nearestEnemy(villager, 24);
+        LivingEntity nearest = colony().defense().nearestEnemy(villager, 24, ignored.keySet());
+        return nearest == null || outOfBounds(nearest) ? null : nearest;
+    }
+
+    private boolean outOfBounds(LivingEntity entity) {
+        double limit = colony().data().radius + 20;
+        return entity.blockPosition().distSqr(colony().center()) > limit * limit;
+    }
+
+    private boolean armed(Villager villager) {
+        boolean sword = Tools.SWORD.test(villager.getMainHandItem()) || !Inv.find(villager, Tools.SWORD).isEmpty();
+        boolean bow = (Tools.BOW.test(villager.getMainHandItem()) || !Inv.find(villager, Tools.BOW).isEmpty()) && hasArrows(villager);
+        return sword || bow;
     }
 
     private boolean gear(ServerLevel level, Villager villager) {

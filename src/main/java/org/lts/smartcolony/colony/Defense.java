@@ -77,8 +77,9 @@ public final class Defense {
         return enemies;
     }
 
-    public LivingEntity nearestEnemy(Villager guard, double range) {
+    public LivingEntity nearestEnemy(Villager guard, double range, java.util.Set<java.util.UUID> ignored) {
         return enemies().stream()
+                .filter(entity -> !ignored.contains(entity.getUUID()))
                 .filter(entity -> entity.distanceTo(guard) <= range)
                 .filter(entity -> !(entity instanceof ServerPlayer player) || isEnemyPlayer(player))
                 .min(Comparator.comparingDouble(entity -> entity.distanceToSqr(guard)))

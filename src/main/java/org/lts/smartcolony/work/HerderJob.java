@@ -166,6 +166,7 @@ public final class HerderJob extends Job {
             return;
         }
         gateStep = 0;
+        status = action.name().toLowerCase(java.util.Locale.ROOT) + (target == null ? "" : " " + target.blockPosition().toShortString());
         phase = "act";
     }
 
@@ -270,10 +271,22 @@ public final class HerderJob extends Job {
         BlockPos center = colony().center();
         AABB area = new AABB(center).inflate(radius, 24, radius);
         return level.getEntitiesOfClass(Animal.class, area, a -> a.isAlive() && Species.of(a) == species && !a.isLeashed()
-                        && !inside(pen, a.getX(), a.getZ()) && !colony().isProtectedAnimal(a))
+                        && !inside(pen, a.getX(), a.getZ()) && !colony().isProtectedAnimal(a) && !enclosed(level, a)
+                        && !a.isInWater() && level.getFluidState(a.blockPosition().below()).isEmpty())
                 .stream()
                 .min(Comparator.comparingDouble(a -> a.distanceToSqr(villager)))
                 .orElse(null);
+    }
+
+    private static boolean enclosed(ServerLevel level, Animal animal) {
+        BlockPos feet = animal.blockPosition();
+        for (BlockPos pos : BlockPos.betweenClosed(feet.offset(-5, -1, -5), feet.offset(5, 1, 5))) {
+            BlockState state = level.getBlockState(pos);
+            if (state.is(net.minecraft.tags.BlockTags.FENCES) || state.is(net.minecraft.tags.BlockTags.FENCE_GATES)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private boolean hasBaitFor(Villager villager, Animal animal) {
@@ -488,13 +501,18 @@ public final class HerderJob extends Job {
             return;
         }
         if (!target.isLeashed() || target.getLeashHolder() != villager) {
+            for (ItemEntity lead : level.getEntitiesOfClass(ItemEntity.class, target.getBoundingBox().inflate(4.0),
+                    item -> item.getItem().is(Items.LEAD) && item.getAge() < 40)) {
+                lead.discard();
+            }
             leading = false;
             phase = "start";
             return;
         }
+        status = "leading a " + Species.of(target).name().toLowerCase(java.util.Locale.ROOT) + " to the pen";
         if (gateStep == 0) {
             BlockPos outside = WorldUtil.bp(pen.outside);
-            Mover.Result result = colonist.mover().tick(level, villager, outside, 1.3, 0.5);
+            Mover.Result result = colonist.mover().tick(level, villager, outside, 1.3, 0.55, false);
             if (result == Mover.Result.ARRIVED) {
                 setGate(level, pen, true);
                 gateStep = 1;
@@ -507,7 +525,7 @@ public final class HerderJob extends Job {
         }
         if (gateStep == 1) {
             BlockPos far = WorldUtil.bp(pen.inside);
-            Mover.Result result = colonist.mover().tick(level, villager, far, 1.3, 0.5);
+            Mover.Result result = colonist.mover().tick(level, villager, far, 1.3, 0.55, false);
             if (result != Mover.Result.MOVING && inside(pen, target.getX(), target.getZ())) {
                 target.removeLeash();
                 leading = false;
@@ -542,6 +560,6 @@ public final class HerderJob extends Job {
 
     @Override
     protected boolean hasCargo(Villager villager) {
-        return Inv.count(villager, stack -> !keep(stack)) > 0;
+        return Inv.count(villager, stack -> !keep(stack) && !ration(stack)) > 0;
     }
 }

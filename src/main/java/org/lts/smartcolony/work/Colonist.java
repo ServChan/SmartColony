@@ -106,6 +106,9 @@ public final class Colonist {
             job = Jobs.create(role, this);
         }
         long now = level.getGameTime();
+        if (villager.isUnderWater() && villager.getAirSupply() < villager.getMaxAirSupply() / 3) {
+            surface(level, villager);
+        }
         if (role != Role.GUARD && now - lastDangerCheck >= 10) {
             lastDangerCheck = now;
             if (inDanger(level, villager)) {
@@ -133,6 +136,26 @@ public final class Colonist {
                 villager.stopSleeping();
             }
             job.tick(level, villager);
+        }
+    }
+
+    private void surface(ServerLevel level, Villager villager) {
+        net.minecraft.core.BlockPos at = villager.blockPosition();
+        for (int r = 0; r <= 8; r++) {
+            for (int dx = -r; dx <= r; dx++) {
+                for (int dz = -r; dz <= r; dz++) {
+                    if (Math.abs(dx) != r && Math.abs(dz) != r) {
+                        continue;
+                    }
+                    net.minecraft.core.BlockPos column = org.lts.smartcolony.util.WorldUtil.surface(level, at.getX() + dx, at.getZ() + dz);
+                    if (org.lts.smartcolony.util.WorldUtil.standable(level, column) && level.getFluidState(column.below()).isEmpty()) {
+                        villager.getNavigation().stop();
+                        villager.teleportTo(column.getX() + 0.5, column.getY(), column.getZ() + 0.5);
+                        colony.data().bump("drowning_rescues", 1);
+                        return;
+                    }
+                }
+            }
         }
     }
 

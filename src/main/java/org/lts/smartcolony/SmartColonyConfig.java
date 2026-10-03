@@ -29,7 +29,7 @@ public final class SmartColonyConfig {
     public int blockPlaceTicks = 6;
     public int mineTargetY = 12;
     public int treeTarget = 12;
-    public int forestRadius = 44;
+    public int forestRadius = 64;
     public int golemIronCost = 20;
     public int maxGolems = 4;
     public int villagersPerGolem = 6;

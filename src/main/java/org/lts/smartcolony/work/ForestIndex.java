@@ -18,8 +18,8 @@ import org.lts.smartcolony.colony.Colony;
 import org.lts.smartcolony.util.WorldUtil;
 
 public final class ForestIndex {
-    private static final int STEP = 2;
-    private static final int COLUMNS_PER_TICK = 48;
+    private static final int STEP = 1;
+    private static final int COLUMNS_PER_TICK = 72;
 
     private final Colony colony;
     private final Set<BlockPos> trees = new HashSet<>();

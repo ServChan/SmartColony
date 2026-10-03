@@ -100,6 +100,14 @@ public final class Economy {
                 stock = colony.warehouse().stock(level);
             }
         }
+        for (String raw : List.of("raw_iron", "raw_copper", "raw_gold")) {
+            int have = stock.get(Ids.mc(raw));
+            if (have > 0) {
+                String ingot = Ids.mc(raw.substring(4) + "_ingot");
+                colony.craft(level, ingot, stock.get(ingot) + have);
+                stock = colony.warehouse().stock(level);
+            }
+        }
         int wheat = stock.get(Ids.mc("wheat"));
         if (wheat > 30) {
             int loaves = (wheat - 30) / 3;

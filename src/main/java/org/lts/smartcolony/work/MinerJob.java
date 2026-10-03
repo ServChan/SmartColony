@@ -47,12 +47,12 @@ public final class MinerJob extends Job {
 
     @Override
     protected boolean keep(ItemStack stack) {
-        return Tools.ANY_TOOL.test(stack) || stack.is(Items.TORCH) || (stack.is(Items.COBBLESTONE) && stack.getCount() <= 32);
+        return Tools.ANY_TOOL.test(stack) || stack.is(Items.TORCH);
     }
 
     @Override
     protected boolean hasCargo(Villager villager) {
-        return Inv.count(villager, stack -> !Tools.ANY_TOOL.test(stack) && !stack.is(Items.TORCH) && !stack.is(Items.COBBLESTONE)) > 0;
+        return Inv.count(villager, stack -> !Tools.ANY_TOOL.test(stack) && !stack.is(Items.TORCH) && !stack.is(Items.COBBLESTONE) && !ration(stack)) > 0;
     }
 
     public boolean underground(Villager villager) {
@@ -403,6 +403,24 @@ public final class MinerJob extends Job {
         } else if (result == Digger.Result.FAILED) {
             veinIndex++;
         }
+    }
+
+    @Override
+    protected void stash(ServerLevel level, Villager villager, List<ItemStack> drops) {
+        List<ItemStack> kept = new ArrayList<>();
+        for (ItemStack drop : drops) {
+            String path = Ids.path(ItemIds.id(drop));
+            boolean stone = path.equals("cobblestone") || path.equals("cobbled_deepslate");
+            boolean junk = path.equals("diorite") || path.equals("granite") || path.equals("andesite") || path.equals("tuff")
+                    || path.equals("dirt") || path.equals("calcite") || path.equals("dripstone_block") || path.equals("netherrack")
+                    || path.equals("pointed_dripstone") || path.equals("smooth_basalt");
+            if (junk || (stone && Inv.count(villager, ItemIds.id(drop)) >= 96)) {
+                colony().data().bump("rubble_discarded", drop.getCount());
+                continue;
+            }
+            kept.add(drop);
+        }
+        super.stash(level, villager, kept);
     }
 
     private void deposit(ServerLevel level, Villager villager) {

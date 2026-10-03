@@ -574,7 +574,7 @@ public final class Colony {
             current.put(key, entry.getValue().role());
             affinity.put(key, Role.affinity(villager.getVillagerData().profession().unwrapKey()
                     .map(k -> k.identifier().getPath()).orElse("none")));
-            if (member != null && member.locked) {
+            if (member != null && (member.locked || (member.role() != Role.IDLE && level.getGameTime() - member.since < 1200))) {
                 locked.add(key);
             }
             loaded.put(key, villager);

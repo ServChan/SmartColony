@@ -21,10 +21,10 @@ public final class Tools {
     public static final Predicate<ItemStack> TORCH = stack -> stack.is(Items.TORCH);
     public static final Predicate<ItemStack> ANY_TOOL = PICKAXE.or(AXE).or(HOE).or(SHOVEL).or(SWORD).or(BOW).or(ROD).or(SHEARS);
 
-    public static final List<String> PICKAXES = List.of(Ids.mc("iron_pickaxe"), Ids.mc("stone_pickaxe"), Ids.mc("wooden_pickaxe"));
-    public static final List<String> AXES = List.of(Ids.mc("iron_axe"), Ids.mc("stone_axe"), Ids.mc("wooden_axe"));
-    public static final List<String> HOES = List.of(Ids.mc("stone_hoe"), Ids.mc("wooden_hoe"), Ids.mc("iron_hoe"));
-    public static final List<String> SHOVELS = List.of(Ids.mc("stone_shovel"), Ids.mc("wooden_shovel"), Ids.mc("iron_shovel"));
+    public static final List<String> PICKAXES = List.of(Ids.mc("stone_pickaxe"), Ids.mc("wooden_pickaxe"));
+    public static final List<String> AXES = List.of(Ids.mc("stone_axe"), Ids.mc("wooden_axe"));
+    public static final List<String> HOES = List.of(Ids.mc("stone_hoe"), Ids.mc("wooden_hoe"));
+    public static final List<String> SHOVELS = List.of(Ids.mc("stone_shovel"), Ids.mc("wooden_shovel"));
     public static final List<String> SWORDS = List.of(Ids.mc("iron_sword"), Ids.mc("stone_sword"), Ids.mc("wooden_sword"));
 
     private Tools() {
