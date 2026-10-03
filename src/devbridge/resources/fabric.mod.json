@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "smartcolony_devbridge",
+  "version": "${version}",
+  "name": "Smart Colony Dev Bridge",
+  "description": "Development-only MCP bridge for inspecting and driving Smart Colony from an AI assistant. Not shipped in the release jar.",
+  "authors": ["LTS_Server"],
+  "license": "MIT",
+  "environment": "*",
+  "entrypoints": {
+    "main": ["org.lts.smartcolony.devbridge.DevBridge"]
+  },
+  "depends": {
+    "smartcolony": "*",
+    "fabric-lifecycle-events-v1": "*"
+  }
+}

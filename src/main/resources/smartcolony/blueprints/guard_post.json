@@ -1,0 +1,16 @@
+{
+  "id": "guard_post",
+  "kind": "guard_post",
+  "beds": 0,
+  "door": [2, 0],
+  "palette": {
+    "C": "minecraft:cobblestone",
+    "F": "minecraft:$wood_fence",
+    "T": "minecraft:torch"
+  },
+  "layers": [
+    ["CCCCC", "CCCCC", "CCCCC", "CCCCC", "CCCCC"],
+    ["FF.FF", "F...F", "F...F", "F...F", "FFFFF"],
+    ["T...T", ".....", ".....", ".....", "T...T"]
+  ]
+}

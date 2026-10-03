@@ -1,0 +1,26 @@
+{
+  "id": "house_small",
+  "kind": "house",
+  "beds": 1,
+  "door": [2, 0],
+  "palette": {
+    "C": "minecraft:cobblestone",
+    "L": "minecraft:$wood_log",
+    "P": "minecraft:$wood_planks",
+    "D": "minecraft:$wood_door[facing=south,half=lower,hinge=left,open=false]",
+    "U": "minecraft:$wood_door[facing=south,half=upper,hinge=left,open=false]",
+    "G": "minecraft:glass_pane",
+    "B": "minecraft:white_bed[facing=south,part=foot]",
+    "H": "minecraft:white_bed[facing=south,part=head]",
+    "W": "minecraft:wall_torch[facing=south]",
+    "S": "minecraft:$wood_slab[type=bottom]"
+  },
+  "layers": [
+    ["CCCCC", "CCCCC", "CCCCC", "CCCCC", "CCCCC"],
+    ["LPDPL", "P...P", "PB..P", "PH..P", "LPPPL"],
+    ["LPUPL", "P...P", "G...G", "P...P", "LPGPL"],
+    ["LPPPL", "P.W.P", "P...P", "P...P", "LPPPL"],
+    ["PPPPP", "PPPPP", "PPPPP", "PPPPP", "PPPPP"],
+    ["SSSSS", "SSSSS", "SSSSS", "SSSSS", "SSSSS"]
+  ]
+}

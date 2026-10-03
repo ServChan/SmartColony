@@ -1,0 +1,26 @@
+{
+  "id": "house_family",
+  "kind": "house",
+  "beds": 2,
+  "door": [3, 0],
+  "palette": {
+    "C": "minecraft:cobblestone",
+    "L": "minecraft:$wood_log",
+    "P": "minecraft:$wood_planks",
+    "D": "minecraft:$wood_door[facing=south,half=lower,hinge=left,open=false]",
+    "U": "minecraft:$wood_door[facing=south,half=upper,hinge=left,open=false]",
+    "G": "minecraft:glass_pane",
+    "B": "minecraft:white_bed[facing=south,part=foot]",
+    "H": "minecraft:white_bed[facing=south,part=head]",
+    "W": "minecraft:wall_torch[facing=south]",
+    "S": "minecraft:$wood_slab[type=bottom]"
+  },
+  "layers": [
+    ["CCCCCCC", "CCCCCCC", "CCCCCCC", "CCCCCCC", "CCCCCCC", "CCCCCCC", "CCCCCCC"],
+    ["LPPDPPL", "P.....P", "P.....P", "P.....P", "PB...BP", "PH...HP", "LPPPPPL"],
+    ["LPPUPPL", "P.....P", "G.....G", "P.....P", "G.....G", "P.....P", "LPGPGPL"],
+    ["LPPPPPL", "P..W..P", "P.....P", "P.....P", "P.....P", "P.....P", "LPPPPPL"],
+    ["PPPPPPP", "PPPPPPP", "PPPPPPP", "PPPPPPP", "PPPPPPP", "PPPPPPP", "PPPPPPP"],
+    ["SSSSSSS", "SSSSSSS", "SSSSSSS", "SSSSSSS", "SSSSSSS", "SSSSSSS", "SSSSSSS"]
+  ]
+}

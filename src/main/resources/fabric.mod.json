@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "id": "smartcolony",
+  "version": "${version}",
+  "name": "Smart Colony",
+  "description": "Turns a vanilla village into a self-managing colony: categorized storage, lumberjacks, miners, farmers, fishermen, herders, builders, roads, torches, guards, golems, an internal market and theft detection. Singleplayer.",
+  "authors": ["LTS_Server"],
+  "license": "MIT",
+  "environment": "*",
+  "entrypoints": {
+    "main": ["org.lts.smartcolony.SmartColony"]
+  },
+  "mixins": ["smartcolony.mixins.json"],
+  "depends": {
+    "fabricloader": ">=0.19.3",
+    "minecraft": "~26.3",
+    "java": ">=25",
+    "fabric-api-base": "*",
+    "fabric-lifecycle-events-v1": "*",
+    "fabric-command-api-v2": "*",
+    "fabric-entity-events-v1": "*",
+    "fabric-events-interaction-v0": "*"
+  }
+}

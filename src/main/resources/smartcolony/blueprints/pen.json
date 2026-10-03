@@ -1,0 +1,16 @@
+{
+  "id": "pen",
+  "kind": "pen",
+  "beds": 0,
+  "door": [4, 0],
+  "palette": {
+    "F": "minecraft:$wood_fence",
+    "G": "minecraft:$wood_fence_gate[facing=north,open=false,in_wall=false,powered=false]",
+    "T": "minecraft:torch"
+  },
+  "layers": [
+    ["         ", "         ", "         ", "         ", "         ", "         ", "         ", "         ", "         "],
+    ["FFFFGFFFF", "F.......F", "F.......F", "F.......F", "F.......F", "F.......F", "F.......F", "F.......F", "FFFFFFFFF"],
+    ["T.......T", ".........", ".........", ".........", ".........", ".........", ".........", ".........", "T.......T"]
+  ]
+}
