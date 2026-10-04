@@ -636,7 +636,7 @@ public final class Colony {
             }
         }
         RoleAllocator.Needs needs = new RoleAllocator.Needs(adults, wood, stone, iron, economy.foodPoints(stock), animal,
-                construction.hasWork(level), data.pen != null, equippable, defense.threatLevel());
+                construction.backlog(level), data.pen != null, equippable, defense.threatLevel());
         desired = RoleAllocator.desired(needs);
         Map<String, Role> current = new LinkedHashMap<>();
         Map<String, Role> affinity = new HashMap<>();

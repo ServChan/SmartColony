@@ -511,7 +511,9 @@ public final class MinerJob extends Job {
         for (ItemStack drop : drops) {
             String path = Ids.path(ItemIds.id(drop));
             boolean stone = path.equals("cobblestone") || path.equals("cobbled_deepslate");
-            boolean junk = path.equals("diorite") || path.equals("granite") || path.equals("andesite") || path.equals("tuff")
+            boolean building = path.equals("diorite") || path.equals("granite") || path.equals("andesite") || path.equals("tuff");
+            String id = ItemIds.id(drop);
+            boolean junk = building && (Inv.count(villager, id) >= 64 || colony().stockOf(level, found -> found.equals(id)) >= 128)
                     || path.equals("dirt") || path.equals("calcite") || path.equals("dripstone_block") || path.equals("netherrack")
                     || path.equals("pointed_dripstone") || path.equals("smooth_basalt");
             if (junk || (stone && Inv.count(villager, ItemIds.id(drop)) >= 96)) {

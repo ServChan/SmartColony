@@ -8,7 +8,7 @@ import java.util.Map;
 import java.util.Set;
 
 public final class RoleAllocator {
-    public record Needs(int adults, int wood, int stone, int iron, int foodPoints, int animal, boolean builderWork,
+    public record Needs(int adults, int wood, int stone, int iron, int foodPoints, int animal, int builderBacklog,
                         boolean penReady, Set<Role> equippable, double threat) {
     }
 
@@ -35,8 +35,11 @@ public final class RoleAllocator {
             guards = Math.max(1, Math.min(guards, Math.max(1, adults / 3)));
         }
         int builders = 0;
-        if (needs.builderWork() && adults >= 4) {
+        if (needs.builderBacklog() > 0 && adults >= 4) {
             builders = adults >= 12 ? 2 : 1;
+            if (adults >= 16) {
+                builders = Math.min(5, builders + Math.min(adults / 8 - 1, needs.builderBacklog() / 250));
+            }
         }
         int workers = adults - guards - builders;
         result.put(Role.GUARD, guards);

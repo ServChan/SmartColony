@@ -53,7 +53,7 @@ public final class Construction {
     public record Task(Kind kind, BlockPos pos, BlockState state, BlockPos partner, BlockState partnerState, BlockPos stand) {
     }
 
-    private static final List<String> OVERWORLD_WOODS = List.of(
+    static final List<String> OVERWORLD_WOODS = List.of(
             "oak", "spruce", "birch", "jungle", "acacia", "dark_oak", "mangrove", "cherry", "pale_oak");
 
     private final Colony colony;
@@ -86,6 +86,19 @@ public final class Construction {
         ColonyData.Project project = data().project;
         return (project != null && !project.phase.equals("reserve")) || !data().pendingRoad.isEmpty() || !data().pendingTorches.isEmpty()
                 || colony.improvements().hasWork(level);
+    }
+
+    public int backlog(ServerLevel level) {
+        if (!hasWork(level)) {
+            return 0;
+        }
+        ColonyData.Project project = data().project;
+        int work = project != null && !project.phase.equals("reserve") ? 100 : 0;
+        work += data().pendingRoad.size() + data().pendingTorches.size();
+        if (colony.improvements().hasWork(level)) {
+            work += data().orders.size();
+        }
+        return Math.max(1, work);
     }
 
     public void tick(ServerLevel level) {

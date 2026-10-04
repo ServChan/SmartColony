@@ -19,6 +19,7 @@ import net.minecraft.world.phys.AABB;
 import org.lts.smartcolony.SmartColonyConfig;
 import net.minecraft.core.registries.BuiltInRegistries;
 import org.lts.smartcolony.colony.Construction;
+import org.lts.smartcolony.colony.Improvements;
 import org.lts.smartcolony.core.Blueprint;
 import org.lts.smartcolony.core.Ids;
 import org.lts.smartcolony.core.Role;
@@ -201,7 +202,25 @@ public final class BuilderJob extends Job {
                     return false;
                 }
                 if (!level.getBlockState(pos).isAir()) {
-                    colonist.digger().breakNow(level, villager, pos, false);
+                    colonist.digger().breakNow(level, villager, pos, true);
+                    stash(level, villager, colonist.digger().takeDrops());
+                }
+                if (task.state().getBlock() instanceof net.minecraft.world.level.block.DoorBlock) {
+                    BlockPos upper = pos.above();
+                    BlockState above = level.getBlockState(upper);
+                    if (!above.isAir() && Improvements.wallMaterial(above)) {
+                        colonist.digger().breakNow(level, villager, upper, true);
+                        stash(level, villager, colonist.digger().takeDrops());
+                    }
+                    if (WorldUtil.isAirLike(level.getBlockState(upper))) {
+                        int flags = Block.UPDATE_ALL | Block.UPDATE_KNOWN_SHAPE;
+                        level.setBlock(pos, task.state(), flags);
+                        level.setBlock(upper, task.state().setValue(net.minecraft.world.level.block.DoorBlock.HALF,
+                                net.minecraft.world.level.block.state.properties.DoubleBlockHalf.UPPER), flags);
+                        level.playSound(null, pos, task.state().getSoundType().getPlaceSound(), SoundSource.BLOCKS, 1.0F, 0.8F);
+                    }
+                    colony().data().bump("improvements_placed", 1);
+                    return true;
                 }
                 Placer.place(level, villager, pos, task.state());
                 colony().data().bump("improvements_placed", 1);

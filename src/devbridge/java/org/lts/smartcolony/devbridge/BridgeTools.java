@@ -148,7 +148,9 @@ public final class BridgeTools {
                 if (colony == null) {
                     return text("no colony", true);
                 }
-                colony.improvements().replanWall(ColonyManager.levelOf(colony), string(args, "material", "stone"));
+                if (!colony.improvements().replanWall(ColonyManager.levelOf(colony), string(args, "material", "stone"))) {
+                    return text("wall line is not fully loaded", true);
+                }
                 return text("wall: " + colony.data().wall.columns.size() + " columns, " + colony.data().wall.total + " blocks, "
                         + colony.data().wall.gates.size() + " gates", false);
             });
