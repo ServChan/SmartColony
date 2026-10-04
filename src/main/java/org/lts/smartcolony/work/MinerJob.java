@@ -67,7 +67,17 @@ public final class MinerJob extends Job {
 
     public boolean underground(Villager villager) {
         ColonyData.Mine mine = colony().data().mine;
-        return mine != null && villager.getY() < mine.entrance.y() - 2;
+        if (mine == null || villager.getY() >= mine.entrance.y() - 2) {
+            return false;
+        }
+        BlockPos feet = villager.blockPosition();
+        if (mine.quarry()) {
+            return feet.getX() >= mine.corner.x() - 1 && feet.getX() <= mine.corner.x() + mine.width
+                    && feet.getZ() >= mine.corner.z() - 1 && feet.getZ() <= mine.corner.z() + mine.width;
+        }
+        double dx = feet.getX() - mine.entrance.x();
+        double dz = feet.getZ() - mine.entrance.z();
+        return dx * dx + dz * dz <= (double) (mine.depth + 6) * (mine.depth + 6) && !villager.level().canSeeSky(feet);
     }
 
     @Override
@@ -261,14 +271,15 @@ public final class MinerJob extends Job {
             beginReturn();
             return;
         }
-        if (mine.progress != cellIndex) {
-            cellIndex = mine.progress;
+        int index = pickCell(level, mine, plan);
+        if (index != cellIndex) {
+            cellIndex = index;
             cellTicks = 0;
         }
         if (++cellTicks > 1200) {
-            colony().journal(level, "miner gave up on section " + mine.progress + " (flooded or blocked)");
+            colony().journal(level, "miner gave up on section " + index + " (flooded or blocked)");
             colony().data().bump("mine_sections_skipped", 1);
-            mine.progress++;
+            finishCell(mine, index);
             skippedInRow++;
             colony().markDirty();
             if (skippedInRow >= 8) {
@@ -278,9 +289,9 @@ public final class MinerJob extends Job {
             }
             return;
         }
-        MinePlan.Cell cell = plan.cell(mine.progress);
-        BlockPos stand = WorldUtil.bp(plan.standFor(mine.progress));
-        status = "section " + mine.progress + " at " + cell.feet();
+        MinePlan.Cell cell = plan.cell(index);
+        BlockPos stand = WorldUtil.bp(plan.standFor(index));
+        status = "section " + index + " at " + cell.feet();
         if (Mover.distance(villager, stand) > 1.6) {
             Mover.Result result = move(level, villager, stand, 1.2);
             if (result == Mover.Result.FAILED && !Mover.rescue(level, villager, stand)) {
@@ -309,8 +320,7 @@ public final class MinerJob extends Job {
                 if (++fluidFights > 30) {
                     colony().journal(level, "miner skipped a flooded section at " + block.toShortString());
                     fluidFights = 0;
-                    mine.progress++;
-                    colony().markDirty();
+                    finishCell(mine, index);
                     return;
                 }
                 if (!fillWithCobble(level, villager, block)) {
@@ -320,7 +330,7 @@ public final class MinerJob extends Job {
             }
             if (!WorldUtil.isAirLike(state) || (!state.isAir() && !state.getCollisionShape(level, block).isEmpty())) {
                 if (state.getDestroySpeed(level, block) < 0) {
-                    mine.progress++;
+                    finishCell(mine, index);
                     return;
                 }
                 Digger.Result result = colonist.digger().tick(level, villager, block, true);
@@ -330,7 +340,7 @@ public final class MinerJob extends Job {
                     gainXp(level, villager, 1);
                 }
                 if (result == Digger.Result.FAILED) {
-                    mine.progress++;
+                    finishCell(mine, index);
                 }
                 return;
             }
@@ -369,12 +379,50 @@ public final class MinerJob extends Job {
         skippedInRow = 0;
         vein = findOres(level, cellBlocks, villager);
         veinIndex = 0;
-        mine.progress++;
+        finishCell(mine, index);
         cellsThisTrip++;
         colony().markDirty();
         if (!vein.isEmpty()) {
             phase = "vein";
         }
+    }
+
+    private int claimed = -1;
+
+    private int pickCell(ServerLevel level, ColonyData.Mine mine, DigPlan plan) {
+        java.util.Map<Integer, Long> claims = colony().mineClaims();
+        long now = level.getGameTime();
+        claims.values().removeIf(at -> now - at > 600);
+        if (claimed >= mine.progress && claimed < plan.size() && claims.containsKey(claimed)) {
+            claims.put(claimed, now);
+            return claimed;
+        }
+        int limit = Math.min(plan.size(), mine.progress + 6);
+        for (int i = mine.progress; i < limit; i++) {
+            if (claims.containsKey(i)) {
+                continue;
+            }
+            if (i > mine.progress) {
+                BlockPos stand = WorldUtil.bp(plan.standFor(i));
+                if (!WorldUtil.isAirLike(level.getBlockState(stand)) || !WorldUtil.isAirLike(level.getBlockState(stand.above()))) {
+                    continue;
+                }
+            }
+            claims.put(i, now);
+            claimed = i;
+            return i;
+        }
+        claimed = -1;
+        return mine.progress;
+    }
+
+    private void finishCell(ColonyData.Mine mine, int index) {
+        colony().mineClaims().remove(index);
+        claimed = -1;
+        if (index == mine.progress) {
+            mine.progress++;
+        }
+        colony().markDirty();
     }
 
     private void lightQuarry(ServerLevel level, Villager villager, ColonyData.Mine mine, MinePlan.Cell cell) {

@@ -456,6 +456,12 @@ public final class Colony {
         sites.rejectFishing(shore);
     }
 
+    private final Map<Integer, Long> mineClaims = new HashMap<>();
+
+    public Map<Integer, Long> mineClaims() {
+        return mineClaims;
+    }
+
     public int adultCount(ServerLevel level) {
         int adults = 0;
         for (UUID uuid : colonists.keySet()) {

@@ -39,8 +39,11 @@ public final class RoleAllocator {
         }
         int builders = 0;
         if (needs.builderBacklog() > 0 && adults >= 4) {
-            int cap = adults < 8 ? 1 : Math.max(2, adults / 5);
-            builders = Math.min(cap, 1 + needs.builderBacklog() / 120);
+            int cap = adults < 8 ? 1 : Math.max(2, adults / 4);
+            builders = Math.min(cap, 1 + needs.builderBacklog() / 80);
+            if (adults >= 16) {
+                builders = Math.max(builders, 2);
+            }
         }
         int workers = adults - guards - builders;
         result.put(Role.GUARD, guards);
@@ -57,7 +60,8 @@ public final class RoleAllocator {
         EnumMap<Role, Integer> caps = new EnumMap<>(Role.class);
         caps.put(Role.HERDER, 1 + adults / 20);
         caps.put(Role.FISHERMAN, 1 + adults / 8);
-        caps.put(Role.MINER, Math.max(1, Math.min(4, adults / 6)));
+        caps.put(Role.MINER, Math.max(1, Math.min(6, adults / 5)));
+        caps.put(Role.FARMER, Math.max(2, adults / 4));
         result.put(Role.LUMBERJACK, 1);
         int left = workers - 1;
         if (left > 0) {

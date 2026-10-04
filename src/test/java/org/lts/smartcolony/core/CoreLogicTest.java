@@ -205,13 +205,14 @@ class CoreLogicTest {
     @Test
     void longBuildQueuesCallMoreBuilders() {
         RoleAllocator.Needs small = new RoleAllocator.Needs(40, 300, 300, 10, 500, 0, 20, true, Set.of(Role.MINER), 0);
-        assertEquals(1, RoleAllocator.desired(small).get(Role.BUILDER));
+        assertEquals(2, RoleAllocator.desired(small).get(Role.BUILDER));
         RoleAllocator.Needs wall = new RoleAllocator.Needs(40, 300, 300, 10, 500, 0, 2000, true, Set.of(Role.MINER), 0);
-        assertEquals(8, RoleAllocator.desired(wall).get(Role.BUILDER));
+        assertEquals(10, RoleAllocator.desired(wall).get(Role.BUILDER));
         assertEquals(40, RoleAllocator.desired(wall).values().stream().mapToInt(Integer::intValue).sum());
         assertEquals(1, RoleAllocator.desired(wall).get(Role.GUARD));
         RoleAllocator.Needs site = new RoleAllocator.Needs(40, 300, 300, 10, 500, 0, 250, true, Set.of(Role.MINER, Role.GUARD), 0);
-        assertEquals(3, RoleAllocator.desired(site).get(Role.BUILDER));
+        assertEquals(4, RoleAllocator.desired(site).get(Role.BUILDER));
+        assertEquals(10, RoleAllocator.desired(site).get(Role.FARMER));
         assertEquals(8, RoleAllocator.desired(site).get(Role.GUARD));
     }
 
