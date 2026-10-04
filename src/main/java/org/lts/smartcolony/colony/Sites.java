@@ -129,6 +129,11 @@ public final class Sites {
         if (!WorldUtil.loaded(level, new BlockPos(cx - 3, 0, cz - 3)) || !WorldUtil.loaded(level, new BlockPos(cx + QUARRY_WIDTH + 2, 0, cz + QUARRY_WIDTH + 2))) {
             return Integer.MAX_VALUE;
         }
+        BlockPos middle = new BlockPos(cx + QUARRY_WIDTH / 2, 0, cz + QUARRY_WIDTH / 2);
+        if (level.getPoiManager().getInSquare(type -> true, middle.atY(level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, middle.getX(), middle.getZ())),
+                QUARRY_WIDTH / 2 + 8, net.minecraft.world.entity.ai.village.poi.PoiManager.Occupancy.ANY).findAny().isPresent()) {
+            return Integer.MAX_VALUE;
+        }
         int top = groundY(level, cx, cz);
         int entrance = groundY(level, cx - 1, cz);
         if (entrance != top || !WorldUtil.naturalGround(level.getBlockState(new BlockPos(cx - 1, top, cz)))) {
@@ -143,6 +148,10 @@ public final class Sites {
                     return Integer.MAX_VALUE;
                 }
                 if (colony.isProtected(ground.above()) || onRoad(ground)) {
+                    return Integer.MAX_VALUE;
+                }
+                BlockState groundState = level.getBlockState(ground);
+                if (!WorldUtil.naturalGround(groundState) && !groundState.is(BlockTags.LOGS) && !groundState.is(BlockTags.LEAVES)) {
                     return Integer.MAX_VALUE;
                 }
                 boolean pit = x >= cx && x < cx + QUARRY_WIDTH && z >= cz && z < cz + QUARRY_WIDTH;

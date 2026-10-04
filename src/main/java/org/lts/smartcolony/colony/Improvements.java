@@ -24,6 +24,7 @@ public final class Improvements {
     public static final String WALL = "wall";
     public static final String DECOR = "decor";
     public static final String REPAIR = "repair";
+    public static final String SALVAGE = "salvage";
     private static final int SECTORS = 36;
     private static final int WALL_HEIGHT = 3;
     private static final int GATE_SPACING = 28;
@@ -377,20 +378,138 @@ public final class Improvements {
     private String forcedMaterial;
 
     public void replanWall(ServerLevel level, String material) {
+        List<Pos> old = data().wall == null ? List.of() : new ArrayList<>(data().wall.columns);
         data().orders.removeIf(order -> WALL.equals(order.tag));
         data().wall = null;
         wallColumns = null;
         forcedMaterial = material;
         planWall(level);
         forcedMaterial = null;
+        Set<Long> keep = new HashSet<>();
+        if (data().wall != null) {
+            for (Pos column : data().wall.columns) {
+                keep.add(BlockPos.asLong(column.x(), 0, column.z()));
+            }
+        }
+        List<ColonyData.Order> salvageOrders = new ArrayList<>();
+        for (Pos column : old) {
+            if (keep.contains(BlockPos.asLong(column.x(), 0, column.z()))) {
+                continue;
+            }
+            for (int h = 6; h >= 1; h--) {
+                BlockPos pos = new BlockPos(column.x(), column.y() + h, column.z());
+                if (wallMaterial(level.getBlockState(pos))) {
+                    salvageOrders.add(new ColonyData.Order(WorldUtil.pos(pos), "minecraft:air", SALVAGE));
+                }
+            }
+        }
+        if (!salvageOrders.isEmpty()) {
+            data().orders.addAll(0, salvageOrders);
+            colony.journal(level, "taking down " + salvageOrders.size() + " blocks of the old wall line");
+        }
+    }
+
+    private static boolean wallMaterial(BlockState state) {
+        return state.is(net.minecraft.tags.BlockTags.LOGS) || state.is(net.minecraft.tags.BlockTags.PLANKS)
+                || state.is(net.minecraft.tags.BlockTags.WOODEN_FENCES) || state.is(net.minecraft.tags.BlockTags.FENCE_GATES)
+                || state.is(Blocks.COBBLESTONE) || state.is(Blocks.COBBLESTONE_WALL) || state.is(Blocks.TORCH) || state.is(Blocks.LANTERN);
+    }
+
+    private void clearOutside(ServerLevel level, BlockPos center, Pos column, List<ColonyData.Order> orders) {
+        double dx = column.x() - center.getX();
+        double dz = column.z() - center.getZ();
+        double length = Math.sqrt(dx * dx + dz * dz);
+        if (length < 1) {
+            return;
+        }
+        for (int d = 1; d <= 3; d++) {
+            int x = column.x() + (int) Math.round(dx / length * d);
+            int z = column.z() + (int) Math.round(dz / length * d);
+            BlockPos probe = new BlockPos(x, 0, z);
+            if (!WorldUtil.loaded(level, probe)) {
+                continue;
+            }
+            int ground = groundY(level, x, z);
+            if (ground <= column.y() || ground - column.y() > 5 || colony.isProtected(new BlockPos(x, ground + 1, z), false)) {
+                continue;
+            }
+            for (int y = ground; y > column.y(); y--) {
+                orders.add(new ColonyData.Order(new Pos(x, y, z), "minecraft:air", WALL));
+            }
+        }
+    }
+
+    private boolean occupiedByOther(ColonyData.Building building, BlockPos cell) {
+        Pos pos = WorldUtil.pos(cell);
+        for (ColonyData.Building other : data().buildings) {
+            if (other != building && other.contains(pos, 0)) {
+                return true;
+            }
+        }
+        return isWall(pos);
+    }
+
+    public void furnish(ServerLevel level, ColonyData.Building building) {
+        BlockPos door = WorldUtil.bp(building.door);
+        int midX = (building.min.x() + building.max.x()) / 2;
+        int midZ = (building.min.z() + building.max.z()) / 2;
+        int ox = door.getX() - midX;
+        int oz = door.getZ() - midZ;
+        Direction out = Math.abs(ox) >= Math.abs(oz) ? (ox >= 0 ? Direction.EAST : Direction.WEST) : (oz >= 0 ? Direction.SOUTH : Direction.NORTH);
+        Direction side = out.getClockWise();
+        int floor = door.getY() - 1;
+        for (int k = 0; k <= 2; k++) {
+            for (int j = -1; j <= 1; j++) {
+                BlockPos cell = door.relative(out, k).relative(side, j);
+                if (!WorldUtil.loaded(level, cell) || colony.warehouse().contains(cell) || occupiedByOther(building, cell)) {
+                    continue;
+                }
+                for (int y = floor + 3; y >= floor + 1; y--) {
+                    BlockPos pos = new BlockPos(cell.getX(), y, cell.getZ());
+                    BlockState state = level.getBlockState(pos);
+                    if (!state.isAir() && (WorldUtil.naturalGround(state) || WorldUtil.removable(level, pos))) {
+                        queue(pos, "minecraft:air");
+                    }
+                }
+                for (int y = floor; y >= floor - 2; y--) {
+                    BlockPos pos = new BlockPos(cell.getX(), y, cell.getZ());
+                    if (WorldUtil.isAirLike(level.getBlockState(pos)) && level.getFluidState(pos).isEmpty()) {
+                        queue(pos, y == floor ? "minecraft:grass_block" : "minecraft:dirt");
+                    } else {
+                        break;
+                    }
+                }
+            }
+        }
+        List<String> decor = switch (building.kind) {
+            case "house" -> List.of("minecraft:barrel[facing=up]", "minecraft:composter");
+            case "barn" -> List.of("minecraft:hay_block", "minecraft:hay_block");
+            case "workshop", "storage" -> List.of("minecraft:barrel[facing=up]", "minecraft:barrel[facing=up]");
+            case "chapel" -> List.of(Ids.mc(building.wood + "_stairs") + "[facing=" + out.getOpposite().getSerializedName() + "]",
+                    Ids.mc(building.wood + "_stairs") + "[facing=" + out.getOpposite().getSerializedName() + "]");
+            default -> List.of();
+        };
+        int sideIndex = 0;
+        for (String state : decor) {
+            int j = sideIndex++ % 2 == 0 ? -2 : 2;
+            BlockPos pos = door.relative(side, j);
+            BlockPos below = pos.below();
+            if (!WorldUtil.loaded(level, pos) || !WorldUtil.isAirLike(level.getBlockState(pos))
+                    || level.getBlockState(below).is(Blocks.DIRT_PATH) || colony.sites().onRoad(below)) {
+                continue;
+            }
+            queue(pos, state);
+        }
+        colony.markDirty();
     }
 
     private void planWall(ServerLevel level) {
         BlockPos center = colony.center();
         List<BlockPos> points = new ArrayList<>();
-        int reach = data().radius + 16;
+        int reach = data().radius + 32;
         level.getPoiManager().getInSquare(type -> true, center, reach, PoiManager.Occupancy.ANY)
                 .forEach(record -> points.add(record.getPos()));
+        int poiCount = points.size();
         for (ColonyData.Building building : data().buildings) {
             points.add(WorldUtil.bp(building.min));
             points.add(WorldUtil.bp(building.max));
@@ -407,11 +526,12 @@ public final class Improvements {
         for (int k = 0; k < SECTORS; k++) {
             radii[k] = 14;
         }
-        for (BlockPos point : points) {
+        for (int p = 0; p < points.size(); p++) {
+            BlockPos point = points.get(p);
             double dx = point.getX() - center.getX();
             double dz = point.getZ() - center.getZ();
             double distance = Math.sqrt(dx * dx + dz * dz);
-            if (distance > reach) {
+            if (p < poiCount && distance > reach) {
                 continue;
             }
             double angle = Math.atan2(dz, dx);
@@ -432,7 +552,7 @@ public final class Improvements {
         for (int k = 0; k < SECTORS; k++) {
             long hash = (seed * 31 + k) * 0x9E3779B97F4A7C15L;
             double noise = ((hash >>> 40) % 5) - 2;
-            radii[k] = Math.max(14, Math.min(data().radius + 26, Math.max(radii[k], radii[k] + noise)));
+            radii[k] = Math.max(14, Math.min(96, Math.max(radii[k], radii[k] + noise)));
         }
         List<int[]> ring = new ArrayList<>();
         for (int k = 0; k < SECTORS; k++) {
@@ -522,6 +642,7 @@ public final class Improvements {
                 tower(level, columnPos, pillar, cap, towerOrders, towerCells);
             }
             boolean post = i % POST_SPACING == 0;
+            clearOutside(level, center, columnPos, wallOrders);
             for (int h = 1; h <= WALL_HEIGHT; h++) {
                 wallOrders.add(new ColonyData.Order(new Pos(columnPos.x(), columnPos.y() + h, columnPos.z()), wallState(wall.material, h, post), WALL));
             }
@@ -543,7 +664,7 @@ public final class Improvements {
         data().orders.addAll(wallOrders);
         wall.total = towerOrders.size() + wallOrders.size();
         data().wall = wall;
-        data().wallVersion = 3;
+        data().wallVersion = 4;
         wallColumns = null;
         colony.journal(level, "planned a " + wall.material + " wall: " + wall.columns.size() + " columns, " + wall.total + " blocks");
         colony.notify(level, Component.translatable("smartcolony.chat.wall_planned", wall.columns.size()));
@@ -570,7 +691,7 @@ public final class Improvements {
 
     private void migrateWall(ServerLevel level) {
         ColonyData.Wall wall = data().wall;
-        if (wall == null || data().wallVersion >= 3) {
+        if (wall == null || data().wallVersion >= 4) {
             return;
         }
         String material = wall.material.equals("stone") ? "stone" : "wood";
@@ -674,6 +795,15 @@ public final class Improvements {
             }
             BlockState target = parse(order.state);
             BlockState current = level.getBlockState(pos);
+            if (target != null && target.isAir()) {
+                boolean salvage = SALVAGE.equals(order.tag);
+                if (current.isAir() || !diggable(level, pos, current, salvage)) {
+                    orders.removeFirst();
+                    done(order);
+                    continue;
+                }
+                return new Construction.Task(Construction.Kind.ORDER, pos, target, null, null, standFor(level, pos));
+            }
             if (target == null || current.is(target.getBlock())
                     || (!WorldUtil.isAirLike(current) && !WorldUtil.removable(level, pos))) {
                 orders.removeFirst();
@@ -688,11 +818,7 @@ public final class Improvements {
                 continue;
             }
             waitingFor = "";
-            BlockPos center = colony.center();
-            int sx = Integer.signum(center.getX() - pos.getX());
-            int sz = Integer.signum(center.getZ() - pos.getZ());
-            BlockPos stand = WorldUtil.surface(level, pos.getX() + sx * 2, pos.getZ() + sz * 2);
-            return new Construction.Task(Construction.Kind.ORDER, pos, target, null, null, stand);
+            return new Construction.Task(Construction.Kind.ORDER, pos, target, null, null, standFor(level, pos));
         }
         if (!orders.isEmpty()) {
             blockedUntil = level.getGameTime() + 1200;
@@ -700,7 +826,31 @@ public final class Improvements {
         return null;
     }
 
+    private BlockPos standFor(ServerLevel level, BlockPos pos) {
+        BlockPos center = colony.center();
+        int sx = Integer.signum(center.getX() - pos.getX());
+        int sz = Integer.signum(center.getZ() - pos.getZ());
+        return WorldUtil.surface(level, pos.getX() + sx * 2, pos.getZ() + sz * 2);
+    }
+
+    private boolean diggable(ServerLevel level, BlockPos pos, BlockState state, boolean salvage) {
+        if (level.getBlockEntity(pos) != null || !state.getFluidState().isEmpty()) {
+            return false;
+        }
+        float hardness = state.getDestroySpeed(level, pos);
+        if (hardness < 0 || hardness > 3.5F) {
+            return false;
+        }
+        if (salvage) {
+            return wallMaterial(state);
+        }
+        return WorldUtil.naturalGround(state) || WorldUtil.removable(level, pos) || state.is(net.minecraft.tags.BlockTags.LEAVES);
+    }
+
     public boolean take(ServerLevel level, BlockState state) {
+        if (state.isAir()) {
+            return true;
+        }
         String item = BuiltInRegistries.ITEM.getKey(state.getBlock().asItem()).toString();
         return colony.warehouse().take(level, item, 1) == 1;
     }

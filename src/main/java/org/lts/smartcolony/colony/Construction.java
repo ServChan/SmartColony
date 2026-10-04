@@ -403,8 +403,8 @@ public final class Construction {
                 int[][] ground = new int[sx][sz];
                 boolean[][] blocked = new boolean[sx][sz];
                 boolean ok = true;
-                for (int x = -1; x <= sx && ok; x++) {
-                    for (int z = -1; z <= sz && ok; z++) {
+                for (int x = -3; x <= sx + 2 && ok; x++) {
+                    for (int z = -3; z <= sz + 2 && ok; z++) {
                         int wx = ox + x;
                         int wz = oz + z;
                         if (!WorldUtil.loaded(level, new BlockPos(wx, 0, wz))) {
@@ -418,7 +418,7 @@ public final class Construction {
                         if (inside) {
                             ground[x][z] = y;
                             blocked[x][z] = bad;
-                        } else if (colony.isProtected(top.above())) {
+                        } else if (colony.isProtected(top.above()) || structure(level, top)) {
                             ok = false;
                         }
                     }
@@ -466,6 +466,14 @@ public final class Construction {
             }
         }
         return true;
+    }
+
+    private static boolean structure(ServerLevel level, BlockPos top) {
+        BlockState state = level.getBlockState(top);
+        if (!level.getFluidState(top).isEmpty()) {
+            return false;
+        }
+        return !WorldUtil.naturalGround(state) && !state.is(net.minecraft.tags.BlockTags.LOGS) && !state.is(net.minecraft.tags.BlockTags.LEAVES);
     }
 
     private int groundY(ServerLevel level, int x, int z) {
@@ -868,6 +876,7 @@ public final class Construction {
         colony.notify(level, Component.translatable("smartcolony.chat.build_done",
                 Component.translatable("smartcolony.building." + building.blueprint)));
         planRoad(level, WorldUtil.bp(building.door));
+        colony.improvements().furnish(level, building);
         colony.markDirty();
     }
 

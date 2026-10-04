@@ -187,6 +187,14 @@ public final class BuilderJob extends Job {
                 if (!clearOf(level, villager, pos)) {
                     return false;
                 }
+                if (task.state().isAir()) {
+                    if (!level.getBlockState(pos).isAir()) {
+                        colonist.digger().breakNow(level, villager, pos, true);
+                        stash(level, villager, colonist.digger().takeDrops());
+                    }
+                    colony().data().bump("improvements_dug", 1);
+                    return true;
+                }
                 if (!colony().improvements().take(level, task.state())) {
                     task = null;
                     wait = 100;
