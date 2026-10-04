@@ -227,6 +227,18 @@ public final class ColonyScreen extends Screen {
             bar(graphics, x, y, x + w, view.mineTotal() == 0 ? 0 : view.mineProgress() / (double) view.mineTotal(), ACCENT_CYAN);
             y += 12;
         }
+        y += 4;
+        y = heading(graphics, Component.translatable("smartcolony.ui.wall_title"), x, y);
+        if (view.wallMaterial() == null) {
+            graphics.text(font, Component.translatable("smartcolony.ui.wall_none"), x, y, TEXT_DIM, false);
+            y += 14;
+        } else {
+            Component material = Component.translatable(view.wallMaterial().equals("stone") ? "smartcolony.ui.wall_stone" : "smartcolony.ui.wall_wood");
+            graphics.text(font, Component.translatable("smartcolony.ui.wall", material, view.wallBuilt(), view.wallTotal()), x, y, TEXT_NORMAL, false);
+            y += 12;
+            bar(graphics, x, y, x + w, view.wallTotal() == 0 ? 0 : view.wallBuilt() / (double) view.wallTotal(), ACCENT_GOLD);
+            y += 12;
+        }
         if (!view.requests().isEmpty()) {
             y += 4;
             y = heading(graphics, Component.translatable("smartcolony.ui.requests"), x, y);

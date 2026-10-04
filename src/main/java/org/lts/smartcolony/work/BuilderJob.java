@@ -182,6 +182,22 @@ public final class BuilderJob extends Job {
                 torch(level, villager, pos);
                 return true;
             }
+            case ORDER -> {
+                if (!clearOf(level, villager, pos)) {
+                    return false;
+                }
+                if (!colony().improvements().take(level, task.state())) {
+                    task = null;
+                    wait = 100;
+                    return false;
+                }
+                if (!level.getBlockState(pos).isAir()) {
+                    colonist.digger().breakNow(level, villager, pos, false);
+                }
+                Placer.place(level, villager, pos, task.state());
+                colony().data().bump("improvements_placed", 1);
+                return true;
+            }
         }
         return true;
     }

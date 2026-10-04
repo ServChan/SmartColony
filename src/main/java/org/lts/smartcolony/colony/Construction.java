@@ -46,7 +46,8 @@ public final class Construction {
         FILL,
         PLACE,
         ROAD,
-        TORCH
+        TORCH,
+        ORDER
     }
 
     public record Task(Kind kind, BlockPos pos, BlockState state, BlockPos partner, BlockState partnerState, BlockPos stand) {
@@ -83,11 +84,13 @@ public final class Construction {
 
     public boolean hasWork(ServerLevel level) {
         ColonyData.Project project = data().project;
-        return (project != null && !project.phase.equals("reserve")) || !data().pendingRoad.isEmpty() || !data().pendingTorches.isEmpty();
+        return (project != null && !project.phase.equals("reserve")) || !data().pendingRoad.isEmpty() || !data().pendingTorches.isEmpty()
+                || colony.improvements().hasWork(level);
     }
 
     public void tick(ServerLevel level) {
         long now = level.getGameTime();
+        colony.improvements().tick(level);
         ColonyData.Project project = data().project;
         if (project == null) {
             if (now - lastPlan >= 400) {
@@ -196,6 +199,10 @@ public final class Construction {
 
     private static int woodStock(Stock stock, String wood) {
         return stock.get(Ids.mc(wood + "_log")) * 4 + stock.get(Ids.mc(wood + "_planks"));
+    }
+
+    public String preferredWood(ServerLevel level) {
+        return chooseWood(level);
     }
 
     private String chooseWood(ServerLevel level) {
@@ -578,7 +585,7 @@ public final class Construction {
             }
             return new Task(Kind.TORCH, feet, null, null, null, feet);
         }
-        return null;
+        return colony.improvements().next(level);
     }
 
     private Task projectTask(ServerLevel level, ColonyData.Project project) {
@@ -689,6 +696,7 @@ public final class Construction {
                 }
                 data().bump("road_blocks", 1);
             }
+            case ORDER -> colony.improvements().completed(task);
             case TORCH -> {
                 Pos pos = WorldUtil.pos(task.pos());
                 data().pendingTorches.remove(pos);

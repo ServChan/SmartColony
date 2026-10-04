@@ -95,5 +95,12 @@
   "smartcolony.ui.resting": "descansando",
   "smartcolony.ui.distance": "a %s m de la campana",
   "smartcolony.ui.singleplayer": "La ventana de la colonia solo funciona en un jugador.",
-  "smartcolony.chat.migrants": "%s aldeanos de un pueblo cercano se mudan a la colonia: hay camas libres y almacenes llenos."
+  "smartcolony.chat.migrants": "%s aldeanos de un pueblo cercano se mudan a la colonia: hay camas libres y almacenes llenos.",
+  "smartcolony.chat.wall_planned": "La colonia decidió amurallar la aldea: %s tramos alrededor de casas, campos y almacén.",
+  "smartcolony.chat.wall_done": "La muralla alrededor de la aldea está terminada.",
+  "smartcolony.ui.wall_title": "Muralla",
+  "smartcolony.ui.wall": "Muralla de %s: %s de %s bloques",
+  "smartcolony.ui.wall_stone": "piedra",
+  "smartcolony.ui.wall_wood": "madera",
+  "smartcolony.ui.wall_none": "Aún no planeada: la colonia pensará en una muralla tras dos días con cinco o más adultos."
 }

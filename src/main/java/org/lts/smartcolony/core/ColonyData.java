@@ -31,6 +31,9 @@ public final class ColonyData {
     public List<Pos> pendingRoad = new ArrayList<>();
     public List<Pos> pendingTorches = new ArrayList<>();
     public List<Pos> plantedTrees = new ArrayList<>();
+    public List<Order> orders = new ArrayList<>();
+    public Wall wall;
+    public boolean villageSurveyed;
     public long lastMarket;
     public long lastGolem;
     public long lastFeeding;
@@ -45,6 +48,30 @@ public final class ColonyData {
         public Role role() {
             return Role.byKey(role);
         }
+    }
+
+    public static final class Order {
+        public Pos pos;
+        public String state;
+        public String tag = "";
+
+        public Order() {
+        }
+
+        public Order(Pos pos, String state, String tag) {
+            this.pos = pos;
+            this.state = state;
+            this.tag = tag;
+        }
+    }
+
+    public static final class Wall {
+        public String material = "stone";
+        public List<Pos> columns = new ArrayList<>();
+        public int total;
+        public int built;
+        public long planned;
+        public boolean announced;
     }
 
     public static final class Building {

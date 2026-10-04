@@ -36,7 +36,10 @@ public record ColonyView(
         List<Member> villagers,
         List<String> journal,
         List<Market.Deal> deals,
-        List<String> requests) {
+        List<String> requests,
+        String wallMaterial,
+        int wallBuilt,
+        int wallTotal) {
 
     public record RoleCount(String role, int count) {
     }
@@ -122,6 +125,8 @@ public record ColonyView(
         java.util.Collections.reverse(deals);
         return new ColonyView(data.name, colony.colonists().size(), children, data.beds(), data.buildings.size(), roles, storages,
                 colony.foodPoints(level), project, phase, missing, mine, mineProgress, mineTotal, reputation,
-                Reputation.status(reputation).key(), villagers, journal, deals, new ArrayList<>(colony.requests()));
+                Reputation.status(reputation).key(), villagers, journal, deals, new ArrayList<>(colony.requests()),
+                data.wall == null ? null : data.wall.material, data.wall == null ? 0 : data.wall.built,
+                data.wall == null ? 0 : data.wall.total);
     }
 }

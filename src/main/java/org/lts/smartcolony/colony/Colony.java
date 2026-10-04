@@ -50,6 +50,7 @@ public final class Colony {
     private final Defense defense;
     private final Construction construction;
     private final Migration migration;
+    private final Improvements improvements;
     private final TheftWatcher theft;
     private final Map<UUID, Colonist> colonists = new LinkedHashMap<>();
     private final Set<String> requests = new LinkedHashSet<>();
@@ -68,6 +69,7 @@ public final class Colony {
         this.defense = new Defense(this);
         this.construction = new Construction(this);
         this.migration = new Migration(this);
+        this.improvements = new Improvements(this);
         this.theft = new TheftWatcher(this);
         for (Map.Entry<String, ColonyData.Member> entry : data.members.entrySet()) {
             UUID uuid = UUID.fromString(entry.getKey());
@@ -106,6 +108,10 @@ public final class Colony {
 
     public Defense defense() {
         return defense;
+    }
+
+    public Improvements improvements() {
+        return improvements;
     }
 
     public Migration migration() {
@@ -314,6 +320,9 @@ public final class Colony {
             }
         }
         if (data.mine != null && p.horizontalDistSq(data.mine.entrance) < 9) {
+            return true;
+        }
+        if (improvements.isWall(p)) {
             return true;
         }
         if (data.mine != null && data.mine.quarry() && p.x() >= data.mine.corner.x() - 1 && p.z() >= data.mine.corner.z() - 1

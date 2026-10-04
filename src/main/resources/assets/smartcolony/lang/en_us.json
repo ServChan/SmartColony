@@ -95,5 +95,12 @@
   "smartcolony.ui.resting": "resting",
   "smartcolony.ui.distance": "%s m from the bell",
   "smartcolony.ui.singleplayer": "The colony window works only in singleplayer.",
-  "smartcolony.chat.migrants": "%s villagers from a nearby village are moving into the colony: there are free beds and full stores."
+  "smartcolony.chat.migrants": "%s villagers from a nearby village are moving into the colony: there are free beds and full stores.",
+  "smartcolony.chat.wall_planned": "The colony decided to wall the village in: %s sections around the houses, fields and storage.",
+  "smartcolony.chat.wall_done": "The wall around the village is finished.",
+  "smartcolony.ui.wall_title": "Wall",
+  "smartcolony.ui.wall": "%s wall: %s of %s blocks",
+  "smartcolony.ui.wall_stone": "Stone wall",
+  "smartcolony.ui.wall_wood": "Palisade",
+  "smartcolony.ui.wall_none": "Not planned yet: the colony thinks about a wall after two days with five or more adults."
 }

@@ -95,5 +95,12 @@
   "smartcolony.ui.resting": "отдыхает",
   "smartcolony.ui.distance": "%s м от колокола",
   "smartcolony.ui.singleplayer": "Окно колонии работает только в одиночной игре.",
-  "smartcolony.chat.migrants": "Жители соседней деревни переселяются в колонию (%s): здесь есть свободные кровати и полные склады."
+  "smartcolony.chat.migrants": "Жители соседней деревни переселяются в колонию (%s): здесь есть свободные кровати и полные склады.",
+  "smartcolony.chat.wall_planned": "Колония решила обнести деревню стеной: %s участков вокруг домов, полей и склада.",
+  "smartcolony.chat.wall_done": "Стена вокруг деревни достроена.",
+  "smartcolony.ui.wall_title": "Стена",
+  "smartcolony.ui.wall": "%s: %s из %s блоков",
+  "smartcolony.ui.wall_stone": "Каменная стена",
+  "smartcolony.ui.wall_wood": "Частокол",
+  "smartcolony.ui.wall_none": "Пока не задумана: о стене колония задумается через два дня, когда взрослых станет пять или больше."
 }
