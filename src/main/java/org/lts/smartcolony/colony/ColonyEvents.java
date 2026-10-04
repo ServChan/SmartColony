@@ -66,6 +66,18 @@ public final class ColonyEvents {
         colony.memberDied(level, villager.getUUID());
     }
 
+    public static boolean cushionMineFalls(LivingEntity entity, DamageSource source, float amount) {
+        if (!(entity instanceof Villager villager) || !source.is(net.minecraft.tags.DamageTypeTags.IS_FALL)) {
+            return true;
+        }
+        Colony colony = ColonyManager.colonyOf(villager);
+        if (colony == null || !colony.inMine(villager.blockPosition())) {
+            return true;
+        }
+        colony.data().bump("mine_falls_cushioned", 1);
+        return false;
+    }
+
     public static void afterDeath(LivingEntity entity, DamageSource source) {
         if (!(entity.level() instanceof ServerLevel level)) {
             return;

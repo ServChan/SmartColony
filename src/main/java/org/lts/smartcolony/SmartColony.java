@@ -27,6 +27,7 @@ public final class SmartColony implements ModInitializer {
         ServerLivingEntityEvents.ALLOW_DAMAGE.register(ColonyEvents::allowDamage);
         ServerLivingEntityEvents.AFTER_DEATH.register(ColonyEvents::afterDeath);
         ServerLivingEntityEvents.MOB_CONVERSION.register(ColonyEvents::converted);
+        ServerLivingEntityEvents.ALLOW_DAMAGE.register(ColonyEvents::cushionMineFalls);
         PlayerBlockBreakEvents.BEFORE.register(ColonyEvents::beforeBreak);
         AttackEntityCallback.EVENT.register(ColonyEvents::attackEntity);
         LOGGER.info("Smart Colony initialized");

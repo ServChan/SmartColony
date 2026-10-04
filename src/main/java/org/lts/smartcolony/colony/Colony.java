@@ -468,6 +468,37 @@ public final class Colony {
         return mineClaims;
     }
 
+    public boolean inMine(BlockPos pos) {
+        ColonyData.Mine mine = data.mine;
+        if (mine == null || pos.getY() > mine.entrance.y() + 1) {
+            return false;
+        }
+        if (mine.quarry()) {
+            return pos.getX() >= mine.corner.x() - 1 && pos.getX() <= mine.corner.x() + mine.width
+                    && pos.getZ() >= mine.corner.z() - 1 && pos.getZ() <= mine.corner.z() + mine.width;
+        }
+        double dx = pos.getX() - mine.entrance.x();
+        double dz = pos.getZ() - mine.entrance.z();
+        return pos.getY() < mine.entrance.y() - 1 && dx * dx + dz * dz <= (double) (mine.depth + 6) * (mine.depth + 6);
+    }
+
+    private void clearMineOfStrangers(ServerLevel level) {
+        ColonyData.Mine mine = data.mine;
+        if (mine == null) {
+            return;
+        }
+        for (Map.Entry<UUID, Colonist> entry : colonists.entrySet()) {
+            if (entry.getValue().role() == Role.MINER || !(level.getEntity(entry.getKey()) instanceof Villager villager)) {
+                continue;
+            }
+            BlockPos pos = villager.blockPosition();
+            if (pos.getY() < mine.entrance.y() - 2 && inMine(pos) && org.lts.smartcolony.work.Mover.rescue(level, villager, depot().above())) {
+                entry.getValue().mover().reset();
+                data.bump("mine_strangers_led_out", 1);
+            }
+        }
+    }
+
     public int adultCount(ServerLevel level) {
         int adults = 0;
         for (UUID uuid : colonists.keySet()) {
@@ -533,6 +564,9 @@ public final class Colony {
         defense.tick(level, ticks);
         if (ticks % 200 == 7) {
             planRoles(level);
+        }
+        if (ticks % 40 == 23) {
+            clearMineOfStrangers(level);
         }
         if (ticks % 100 == 13) {
             construction.tick(level);
