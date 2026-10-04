@@ -53,7 +53,7 @@ public final class RoleAllocator {
         EnumMap<Role, Integer> caps = new EnumMap<>(Role.class);
         caps.put(Role.HERDER, 1);
         caps.put(Role.FISHERMAN, 1 + adults / 8);
-        caps.put(Role.MINER, Math.max(1, adults / 3));
+        caps.put(Role.MINER, Math.max(1, Math.min(2, adults / 4)));
         result.put(Role.LUMBERJACK, 1);
         int left = workers - 1;
         if (left > 0) {

@@ -87,6 +87,10 @@ public abstract class Job {
         return move(level, villager, colony().depot(), 2.5);
     }
 
+    public void handOverPreviousRole(ServerLevel level, Villager villager) {
+        depositAll(level, villager);
+    }
+
     protected boolean depositAll(ServerLevel level, Villager villager) {
         var inventory = villager.getInventory();
         boolean everything = true;

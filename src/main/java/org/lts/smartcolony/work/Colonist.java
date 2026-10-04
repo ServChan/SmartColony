@@ -60,9 +60,13 @@ public final class Colonist {
         if (villager != null && isControlled(villager)) {
             release(level, villager, "role change");
         }
+        Role previous = role;
         role = newRole;
         job = Jobs.create(newRole, this);
         if (villager != null) {
+            if (level != null && previous != Role.IDLE && previous != newRole) {
+                job.handOverPreviousRole(level, villager);
+            }
             applyName(villager);
         }
     }
