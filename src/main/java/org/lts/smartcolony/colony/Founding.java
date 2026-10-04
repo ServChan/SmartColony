@@ -40,7 +40,17 @@ public final class Founding {
     }
 
     public static Optional<BlockPos> nearbyBell(ServerLevel level, BlockPos from, int radius) {
-        return level.getPoiManager().findClosest(type -> type.is(PoiTypes.MEETING), from, radius, PoiManager.Occupancy.ANY);
+        long radiusSqr = (long) radius * radius;
+        return level.getPoiManager().getInSquare(type -> type.is(PoiTypes.MEETING), from, radius, PoiManager.Occupancy.ANY)
+                .map(record -> record.getPos())
+                .filter(pos -> horizontalDistSqr(pos, from) <= radiusSqr)
+                .min(java.util.Comparator.comparingLong(pos -> horizontalDistSqr(pos, from)));
+    }
+
+    private static long horizontalDistSqr(BlockPos a, BlockPos b) {
+        long dx = a.getX() - b.getX();
+        long dz = a.getZ() - b.getZ();
+        return dx * dx + dz * dz;
     }
 
     public static int villagersNear(ServerLevel level, BlockPos pos, int radius) {
@@ -53,9 +63,6 @@ public final class Founding {
             return;
         }
         for (ServerPlayer player : level.players()) {
-            if (player.isSpectator()) {
-                continue;
-            }
             Optional<BlockPos> bell = nearbyBell(level, player.blockPosition(), 48);
             if (bell.isEmpty() || ColonyManager.colonyNear(level, bell.get(), 96) != null || ColonyManager.recentlyFailed(bell.get())) {
                 continue;
@@ -66,6 +73,7 @@ public final class Founding {
             Colony colony = found(level, bell.get());
             if (colony == null) {
                 ColonyManager.markFailed(bell.get(), level.getGameTime());
+                player.sendSystemMessage(Component.translatable("smartcolony.command.no_site"));
             }
         }
     }

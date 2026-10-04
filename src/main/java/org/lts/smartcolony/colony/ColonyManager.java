@@ -222,7 +222,9 @@ public final class ColonyManager {
             if (!colony.data().dimension.equals(dimension)) {
                 continue;
             }
-            double distance = colony.center().distSqr(pos);
+            double dx = colony.center().getX() - pos.getX();
+            double dz = colony.center().getZ() - pos.getZ();
+            double distance = dx * dx + dz * dz;
             if (distance <= bestDistance) {
                 bestDistance = distance;
                 best = colony;
@@ -233,7 +235,7 @@ public final class ColonyManager {
 
     public static Colony colonyAt(ServerLevel level, BlockPos pos) {
         Colony colony = colonyNear(level, pos, 160);
-        if (colony != null && colony.center().distSqr(pos) <= Math.pow(colony.data().radius + 24, 2)) {
+        if (colony != null && colony.center().distToCenterSqr(pos.getX() + 0.5, colony.center().getY() + 0.5, pos.getZ() + 0.5) <= Math.pow(colony.data().radius + 24, 2)) {
             return colony;
         }
         return null;

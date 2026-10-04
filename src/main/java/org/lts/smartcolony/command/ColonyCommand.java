@@ -148,7 +148,8 @@ public final class ColonyCommand {
             source.sendFailure(Component.translatable("smartcolony.command.exists"));
             return 0;
         }
-        BlockPos center = Founding.nearbyBell(level, pos, 48).orElse(pos);
+        BlockPos center = Founding.nearbyBell(level, pos, 48)
+                .orElseGet(() -> level.getHeightmapPos(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, pos));
         Colony colony = Founding.found(level, center);
         if (colony == null) {
             source.sendFailure(Component.translatable("smartcolony.command.no_site"));
