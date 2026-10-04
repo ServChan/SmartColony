@@ -119,6 +119,8 @@ public final class BridgeTools {
         tools.add(tool("paste", "Place a blueprint instantly at x,y,z (y = foundation level) with rotation 0-3 and wood, for visual checks.",
                 props("blueprint", "string", "", "x", "integer", "", "y", "integer", "", "z", "integer", "", "rotation", "integer", "0-3", "wood", "string", "oak"),
                 "blueprint", "x", "y", "z"));
+        tools.add(tool("wall", "Replan the colony wall now with material stone or wood.",
+                props("material", "string", "stone|wood", "id", "string", "colony id"), "material"));
         tools.add(tool("site", "Evaluate a colony storage site in front of a position (facing north/south/east/west) and list blocking blocks.",
                 props("x", "integer", "", "y", "integer", "", "z", "integer", "", "facing", "string", "north|south|east|west"),
                 "x", "y", "z", "facing"));
@@ -141,6 +143,15 @@ public final class BridgeTools {
             case "build" -> onMain(() -> build(args));
             case "entities" -> onMain(() -> entities(args));
             case "site" -> onMain(() -> site(args));
+            case "wall" -> onMain(() -> {
+                Colony colony = pick(args);
+                if (colony == null) {
+                    return text("no colony", true);
+                }
+                colony.improvements().replanWall(ColonyManager.levelOf(colony), string(args, "material", "stone"));
+                return text("wall: " + colony.data().wall.columns.size() + " columns, " + colony.data().wall.total + " blocks, "
+                        + colony.data().wall.gates.size() + " gates", false);
+            });
             case "paste" -> onMain(() -> paste(args));
             default -> text("unknown tool " + name, true);
         };
