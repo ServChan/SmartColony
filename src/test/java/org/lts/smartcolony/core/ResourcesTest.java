@@ -74,6 +74,8 @@ class ResourcesTest {
         rich.add(Ids.mc("glass"), 30);
         rich.add(Ids.mc("white_wool"), 12);
         rich.add(Ids.mc("coal"), 20);
+        rich.add(Ids.mc("iron_ingot"), 64);
+        rich.add(Ids.mc("wheat"), 128);
         for (String id : Blueprints.IDS) {
             Blueprint blueprint = Blueprints.get(id);
             Map<String, Integer> materials = blueprint.materials("oak");

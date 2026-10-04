@@ -1,0 +1,74 @@
+{
+  "id": "market",
+  "kind": "market",
+  "beds": 0,
+  "door": [
+    5,
+    0
+  ],
+  "palette": {
+    "C": "minecraft:cobblestone",
+    "F": "minecraft:$wood_fence",
+    "S": "minecraft:$wood_slab[type=bottom]",
+    "B": "minecraft:barrel[facing=up]",
+    "T": "minecraft:torch",
+    "K": "minecraft:crafting_table"
+  },
+  "layers": [
+    [
+      "CCCCCCCCCCC",
+      "CCCCCCCCCCC",
+      "CCCCCCCCCCC",
+      "CCCCCCCCCCC",
+      "CCCCCCCCCCC",
+      "CCCCCCCCCCC",
+      "CCCCCCCCCCC",
+      "CCCCCCCCCCC",
+      "CCCCCCCCCCC"
+    ],
+    [
+      "...........",
+      "F.F.....F.F",
+      "BBK.....KBB",
+      "...........",
+      ".....F.....",
+      "...........",
+      "BBK.....KBB",
+      "F.F.....F.F",
+      "..........."
+    ],
+    [
+      "...........",
+      "F.F.....F.F",
+      "...........",
+      "...........",
+      ".....F.....",
+      "...........",
+      "...........",
+      "F.F.....F.F",
+      "..........."
+    ],
+    [
+      "...........",
+      "SSS.....SSS",
+      "SSS.....SSS",
+      "...........",
+      ".....F.....",
+      "...........",
+      "SSS.....SSS",
+      "SSS.....SSS",
+      "..........."
+    ],
+    [
+      "...........",
+      "...........",
+      "...........",
+      "...........",
+      ".....T.....",
+      "...........",
+      "...........",
+      "...........",
+      "..........."
+    ]
+  ]
+}

@@ -1,0 +1,90 @@
+{
+  "id": "blacksmith",
+  "kind": "workshop",
+  "beds": 0,
+  "door": [
+    4,
+    0
+  ],
+  "palette": {
+    "C": "minecraft:cobblestone",
+    "L": "minecraft:$wood_log",
+    "P": "minecraft:$wood_planks",
+    "F": "minecraft:$wood_fence",
+    "S": "minecraft:$wood_slab[type=bottom]",
+    "A": "minecraft:anvil[facing=east]",
+    "T": "minecraft:smithing_table",
+    "N": "minecraft:furnace[facing=north]",
+    "G": "minecraft:glass_pane",
+    "n": "minecraft:$wood_stairs[facing=south,half=bottom]",
+    "r": "minecraft:$wood_stairs[facing=north,half=bottom]",
+    "W": "minecraft:wall_torch[facing=south]",
+    "K": "minecraft:crafting_table",
+    "B": "minecraft:barrel[facing=up]"
+  },
+  "layers": [
+    [
+      "CCCCCCCCC",
+      "CCCCCCCCC",
+      "CCCCCCCCC",
+      "CCCCCCCCC",
+      "CCCCCCCCC",
+      "CCCCCCCCC",
+      "CCCCCCCCC"
+    ],
+    [
+      "F.......F",
+      "..A...T..",
+      ".........",
+      "CCCC.CCCC",
+      "CNN....KC",
+      "C......BC",
+      "CCCCCCCCC"
+    ],
+    [
+      "F.......F",
+      ".........",
+      ".........",
+      "CCCC.CCCC",
+      "C.......C",
+      "G.......G",
+      "CCCCCCCCC"
+    ],
+    [
+      "SSSSSSSSS",
+      "SSSSSSSSS",
+      "SSSSSSSSS",
+      "LPPPPPPPL",
+      "PW.....WP",
+      "PC......P",
+      "LPPPPPPPL"
+    ],
+    [
+      ".........",
+      ".........",
+      ".........",
+      "nnnnnnnnn",
+      "PPPPPPPPP",
+      "PCPPPPPPP",
+      "rrrrrrrrr"
+    ],
+    [
+      ".........",
+      ".........",
+      ".........",
+      ".........",
+      "nnnnnnnnn",
+      "rCrrrrrrr",
+      "........."
+    ],
+    [
+      ".........",
+      ".........",
+      ".........",
+      ".........",
+      ".........",
+      ".C.......",
+      "........."
+    ]
+  ]
+}

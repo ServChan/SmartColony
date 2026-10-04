@@ -119,7 +119,8 @@ public final class Construction {
             order.add("storage_shed");
         }
         if (beds < population + 1) {
-            order.add(adults >= 6 ? "house_family" : "house_small");
+            long houses = data().buildings.stream().filter(b -> "house".equals(b.kind)).count();
+            order.add(adults < 6 ? "house_small" : houses % 2 == 0 ? "house_family" : "house_garden");
         }
         boolean hasPen = data().pen != null || data().buildings.stream().anyMatch(b -> "pen".equals(b.kind));
         if (!hasPen && adults >= 5) {
@@ -133,6 +134,22 @@ public final class Construction {
         if (guards >= 2 && posts < Math.min(3, guards - 1)) {
             order.add("guard_post");
         }
+        Stock stock = colony.warehouse().stock(level);
+        if (adults >= 8 && built("blacksmith") == 0 && stock.get(Ids.mc("iron_ingot")) >= 12) {
+            order.add("blacksmith");
+        }
+        if (adults >= 10 && built("market") == 0) {
+            order.add("market");
+        }
+        if (data().pen != null && built("barn") == 0 && stock.get(Ids.mc("wheat")) >= 80) {
+            order.add("barn");
+        }
+        if (data().wall != null && built("watchtower") < 2 && (colony.defense().threatLevel() >= 0.4 || adults >= 12)) {
+            order.add("watchtower");
+        }
+        if (adults >= 14 && built("chapel") == 0) {
+            order.add("chapel");
+        }
         List<String> ready = new ArrayList<>();
         for (String id : order) {
             if (cooldown.getOrDefault(id, Long.MIN_VALUE) <= now && !ready.contains(id)) {
@@ -140,6 +157,14 @@ public final class Construction {
             }
         }
         return ready;
+    }
+
+    private long built(String blueprint) {
+        long count = data().buildings.stream().filter(b -> blueprint.equals(b.blueprint)).count();
+        if (data().project != null && blueprint.equals(data().project.building.blueprint)) {
+            count++;
+        }
+        return count;
     }
 
     private boolean satisfiable(ServerLevel level, String blueprintId, String wood) {
@@ -234,14 +259,18 @@ public final class Construction {
     }
 
     private List<Blueprint.Cell> cells(ColonyData.Project project) {
-        Blueprint blueprint = Blueprints.get(project.building.blueprint);
+        return cells(project.building, project.swaps);
+    }
+
+    public List<Blueprint.Cell> cells(ColonyData.Building building, Map<String, String> swaps) {
+        Blueprint blueprint = Blueprints.get(building.blueprint);
         List<Blueprint.Cell> result = new ArrayList<>();
-        for (Blueprint.Cell cell : blueprint.cells(project.building.wood)) {
+        for (Blueprint.Cell cell : blueprint.cells(building.wood)) {
             String id = Blueprint.blockId(cell.state());
-            String swap = project.swaps.get(id);
+            String swap = swaps == null ? null : swaps.get(id);
             if (swap != null) {
                 String props = cell.state().substring(id.length());
-                String newState = Blueprint.resolve(swap, project.building.wood);
+                String newState = Blueprint.resolve(swap, building.wood);
                 if (Blueprint.blockId(newState).endsWith("_bed")) {
                     newState = newState + props;
                 }
@@ -605,6 +634,7 @@ public final class Construction {
             }
             clearList = null;
             project.phase = "foundation";
+            raiseCrane(level, project);
             project.cursor = 0;
             colony.markDirty();
         }
@@ -711,8 +741,96 @@ public final class Construction {
         completed(task);
     }
 
+    private void raiseCrane(ServerLevel level, ColonyData.Project project) {
+        Blueprint blueprint = Blueprints.get(project.building.blueprint);
+        ColonyData.Building building = project.building;
+        String fence = Ids.mc(building.wood + "_fence");
+        String planks = Ids.mc(building.wood + "_planks");
+        int height = blueprint.sizeY() + 3;
+        int arm = Math.min(7, Math.max(blueprint.sizeX(), blueprint.sizeZ()) / 2 + 3);
+        int needed = height + arm + 2;
+        int[][] corners = {{building.min.x() - 3, building.min.z() - 3, 1, 1}, {building.max.x() + 3, building.min.z() - 3, -1, 1},
+                {building.min.x() - 3, building.max.z() + 3, 1, -1}, {building.max.x() + 3, building.max.z() + 3, -1, -1}};
+        for (int[] corner : corners) {
+            BlockPos ground = WorldUtil.surface(level, corner[0], corner[1]);
+            if (!WorldUtil.loaded(level, ground) || !WorldUtil.solidFloor(level, ground.below()) || colony.isProtected(ground, false)) {
+                continue;
+            }
+            List<BlockPos> mast = new ArrayList<>();
+            boolean clear = true;
+            for (int y = 0; y < height && clear; y++) {
+                BlockPos pos = ground.above(y);
+                clear = WorldUtil.isAirLike(level.getBlockState(pos));
+                mast.add(pos);
+            }
+            BlockPos top = ground.above(height - 1);
+            List<BlockPos> boom = new ArrayList<>();
+            for (int i = 1; i <= arm && clear; i++) {
+                BlockPos pos = top.offset(corner[2] * i, 0, 0);
+                clear = WorldUtil.isAirLike(level.getBlockState(pos));
+                boom.add(pos);
+            }
+            if (!clear) {
+                continue;
+            }
+            Stock stock = colony.warehouse().stock(level);
+            if (stock.get(fence) < needed && !colony.craft(level, fence, needed - stock.get(fence))) {
+                return;
+            }
+            if (colony.stockOf(level, id -> id.equals(planks)) == 0 && !colony.craft(level, planks, 1)) {
+                return;
+            }
+            if (colony.warehouse().take(level, fence, needed) < needed || colony.warehouse().take(level, planks, 1) < 1) {
+                return;
+            }
+            BlockState fenceState = parse(fence, 0);
+            List<BlockPos> all = new ArrayList<>(mast);
+            all.addAll(boom);
+            BlockPos end = boom.getLast();
+            all.add(end.below());
+            all.add(end.below(2));
+            for (BlockPos pos : all) {
+                org.lts.smartcolony.work.Placer.place(level, null, pos, fenceState);
+                project.crane.add(WorldUtil.pos(pos));
+            }
+            BlockPos load = end.below(3);
+            if (WorldUtil.isAirLike(level.getBlockState(load))) {
+                org.lts.smartcolony.work.Placer.place(level, null, load, parse(planks, 0));
+                project.crane.add(WorldUtil.pos(load));
+            }
+            colony.journal(level, "crane raised over the " + building.blueprint + " site");
+            return;
+        }
+    }
+
+    private void lowerCrane(ServerLevel level, ColonyData.Project project) {
+        int fences = 0;
+        int planks = 0;
+        for (Pos pos : project.crane) {
+            BlockPos block = WorldUtil.bp(pos);
+            BlockState state = level.getBlockState(block);
+            if (state.is(net.minecraft.tags.BlockTags.WOODEN_FENCES)) {
+                fences++;
+            } else if (state.is(net.minecraft.tags.BlockTags.PLANKS)) {
+                planks++;
+            } else {
+                continue;
+            }
+            level.setBlock(block, Blocks.AIR.defaultBlockState(), net.minecraft.world.level.block.Block.UPDATE_ALL);
+        }
+        if (fences > 0) {
+            colony.warehouse().give(level, Ids.mc(project.building.wood + "_fence"), fences);
+        }
+        if (planks > 0) {
+            colony.warehouse().give(level, Ids.mc(project.building.wood + "_planks"), planks);
+        }
+        project.crane.clear();
+    }
+
     private void finish(ServerLevel level, ColonyData.Project project) {
         ColonyData.Building building = project.building;
+        lowerCrane(level, project);
+        building.swaps = new LinkedHashMap<>(project.swaps);
         Blueprint blueprint = Blueprints.get(building.blueprint);
         for (int[] container : blueprint.containers()) {
             building.containers.add(WorldUtil.pos(world(building, container[0], container[1], container[2])));

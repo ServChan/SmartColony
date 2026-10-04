@@ -116,6 +116,9 @@ public final class BridgeTools {
         tools.add(tool("entities", "Entities near a point.",
                 props("x", "integer", "", "y", "integer", "", "z", "integer", "", "radius", "integer", "max 96", "type", "string", "entity id filter"),
                 "x", "y", "z"));
+        tools.add(tool("paste", "Place a blueprint instantly at x,y,z (y = foundation level) with rotation 0-3 and wood, for visual checks.",
+                props("blueprint", "string", "", "x", "integer", "", "y", "integer", "", "z", "integer", "", "rotation", "integer", "0-3", "wood", "string", "oak"),
+                "blueprint", "x", "y", "z"));
         tools.add(tool("site", "Evaluate a colony storage site in front of a position (facing north/south/east/west) and list blocking blocks.",
                 props("x", "integer", "", "y", "integer", "", "z", "integer", "", "facing", "string", "north|south|east|west"),
                 "x", "y", "z", "facing"));
@@ -138,6 +141,7 @@ public final class BridgeTools {
             case "build" -> onMain(() -> build(args));
             case "entities" -> onMain(() -> entities(args));
             case "site" -> onMain(() -> site(args));
+            case "paste" -> onMain(() -> paste(args));
             default -> text("unknown tool " + name, true);
         };
     }
@@ -270,6 +274,37 @@ public final class BridgeTools {
             }
             return text(out.toString(), false);
         });
+    }
+
+    private JsonObject paste(JsonObject args) {
+        ServerLevel level = server.overworld();
+        String id = string(args, "blueprint", "house_small");
+        org.lts.smartcolony.core.Blueprint blueprint = org.lts.smartcolony.core.Blueprints.get(id);
+        org.lts.smartcolony.core.ColonyData.Building building = new org.lts.smartcolony.core.ColonyData.Building();
+        building.blueprint = id;
+        building.rotation = integer(args, "rotation", 0);
+        building.wood = string(args, "wood", "oak");
+        building.origin = new org.lts.smartcolony.core.Pos(integer(args, "x", 0), integer(args, "y", 64), integer(args, "z", 0));
+        Colony colony = ColonyManager.all().isEmpty() ? null : ColonyManager.all().iterator().next();
+        if (colony == null) {
+            return text("needs any colony for the transform helpers", true);
+        }
+        int placed = 0;
+        for (int y = 0; y < blueprint.sizeY(); y++) {
+            for (int x = 0; x < blueprint.sizeX(); x++) {
+                for (int z = 0; z < blueprint.sizeZ(); z++) {
+                    if (blueprint.at(x, y, z) == org.lts.smartcolony.core.Blueprint.AIR) {
+                        level.setBlock(colony.construction().world(building, x, y, z), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 2);
+                    }
+                }
+            }
+        }
+        for (org.lts.smartcolony.core.Blueprint.Cell cell : colony.construction().cells(building, java.util.Map.of())) {
+            net.minecraft.world.level.block.state.BlockState state = org.lts.smartcolony.colony.Construction.parse(cell.state(), building.rotation);
+            level.setBlock(colony.construction().world(building, cell.x(), cell.y(), cell.z()), state, 2);
+            placed++;
+        }
+        return text("placed " + placed + " blocks, size " + blueprint.rotatedSizeX(building.rotation) + "x" + blueprint.rotatedSizeZ(building.rotation), false);
     }
 
     private JsonObject site(JsonObject args) {

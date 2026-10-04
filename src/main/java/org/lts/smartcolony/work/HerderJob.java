@@ -566,6 +566,7 @@ public final class HerderJob extends Job {
                 target.removeLeash();
                 leading = false;
                 colony().data().bump("animals_captured", 1);
+                gainXp(level, villager, 3);
                 captureCooldownUntil = level.getGameTime() + 1200;
                 colony().journal(level, "herder brought a " + Species.of(target).name().toLowerCase(java.util.Locale.ROOT) + " to the pen");
                 gateStep = 2;

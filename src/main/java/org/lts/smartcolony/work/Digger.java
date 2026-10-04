@@ -61,6 +61,12 @@ public final class Digger {
         return toolSpeed / hardness / divisor;
     }
 
+    private float bonus = 1.0F;
+
+    public void bonus(float value) {
+        bonus = value;
+    }
+
     public Result tick(ServerLevel level, Villager villager, BlockPos pos, boolean collectDrops) {
         BlockState state = level.getBlockState(pos);
         if (state.isAir() || !state.getFluidState().isEmpty() && state.getCollisionShape(level, pos).isEmpty() && state.canBeReplaced()) {
@@ -81,7 +87,7 @@ public final class Digger {
         }
         villager.getLookControl().setLookAt(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
         ticks++;
-        progress += perTick;
+        progress += perTick * bonus;
         if (ticks % 5 == 1) {
             villager.swing(InteractionHand.MAIN_HAND, SwingAnimation.DEFAULT, false);
             SoundType sound = state.getSoundType();

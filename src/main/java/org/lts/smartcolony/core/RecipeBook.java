@@ -48,6 +48,11 @@ public final class RecipeBook {
         craft(Ids.mc("glass_pane"), 16, Ids.mc("glass"), 6);
         craft(Ids.mc("lantern"), 1, Ids.mc("torch"), 1, Ids.mc("iron_nugget"), 8);
         craft(Ids.mc("iron_nugget"), 9, Ids.mc("iron_ingot"), 1);
+        craft(Ids.mc("hay_block"), 1, Ids.mc("wheat"), 9);
+        craft(Ids.mc("iron_block"), 1, Ids.mc("iron_ingot"), 9);
+        craft(Ids.mc("anvil"), 1, Ids.mc("iron_block"), 3, Ids.mc("iron_ingot"), 4);
+        craft(Ids.mc("smithing_table"), 1, Ids.mc("iron_ingot"), 2, Recipe.GROUP_PLANKS, 4);
+        craft(Ids.mc("composter"), 1, Recipe.GROUP_WOODEN_SLAB, 7);
         craft(Ids.mc("iron_ingot"), 9, Ids.mc("iron_block"), 1);
         craft(Ids.mc("bread"), 1, Ids.mc("wheat"), 3);
         craft(Ids.mc("bow"), 1, Ids.mc("stick"), 3, Ids.mc("string"), 3);

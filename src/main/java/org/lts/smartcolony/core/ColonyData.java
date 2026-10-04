@@ -44,6 +44,7 @@ public final class ColonyData {
         public boolean named;
         public long since;
         public int delivered;
+        public Map<String, Integer> xp = new LinkedHashMap<>();
 
         public Role role() {
             return Role.byKey(role);
@@ -72,6 +73,7 @@ public final class ColonyData {
         public int built;
         public long planned;
         public boolean announced;
+        public List<Pos> gates = new ArrayList<>();
     }
 
     public static final class Building {
@@ -87,6 +89,7 @@ public final class ColonyData {
         public List<Pos> containers = new ArrayList<>();
         public Category storageFor;
         public boolean connected;
+        public Map<String, String> swaps = new LinkedHashMap<>();
 
         public boolean contains(Pos pos, int margin) {
             return pos.x() >= min.x() - margin && pos.x() <= max.x() + margin
@@ -102,6 +105,7 @@ public final class ColonyData {
         public Map<String, Integer> required = new LinkedHashMap<>();
         public Map<String, Integer> reserved = new LinkedHashMap<>();
         public List<Pos> fill = new ArrayList<>();
+        public List<Pos> crane = new ArrayList<>();
         public Map<String, String> swaps = new LinkedHashMap<>();
         public long started;
         public long waitingSince;

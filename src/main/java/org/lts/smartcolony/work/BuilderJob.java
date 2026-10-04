@@ -140,7 +140,8 @@ public final class BuilderJob extends Job {
             colony().construction().completed(task);
             task = null;
             phase = "start";
-            cooldown = SmartColonyConfig.get().blockPlaceTicks;
+            gainXp(level, villager, 1);
+            cooldown = Math.max(1, SmartColonyConfig.get().blockPlaceTicks - skill());
             wait = 0;
         }
     }

@@ -87,6 +87,14 @@ public abstract class Job {
         return move(level, villager, colony().depot(), 2.5);
     }
 
+    protected void gainXp(ServerLevel level, Villager villager, int amount) {
+        colony().gainXp(level, villager, role(), amount);
+    }
+
+    protected int skill() {
+        return colony().skill(colonist.uuid(), role());
+    }
+
     public void handOverPreviousRole(ServerLevel level, Villager villager) {
         depositAll(level, villager);
     }

@@ -1,0 +1,91 @@
+{
+  "id": "watchtower",
+  "kind": "tower",
+  "beds": 0,
+  "door": [
+    2,
+    0
+  ],
+  "palette": {
+    "C": "minecraft:cobblestone",
+    "L": "minecraft:$wood_log",
+    "P": "minecraft:$wood_planks",
+    "F": "minecraft:$wood_fence",
+    "A": "minecraft:ladder[facing=north]",
+    "S": "minecraft:$wood_slab[type=bottom]",
+    "T": "minecraft:torch",
+    "G": "minecraft:glass_pane"
+  },
+  "layers": [
+    [
+      "CCCCC",
+      "CCCCC",
+      "CCCCC",
+      "CCCCC",
+      "CCCCC"
+    ],
+    [
+      "LC.CL",
+      "C...C",
+      "C...C",
+      "C.A.C",
+      "LCCCL"
+    ],
+    [
+      "LC.CL",
+      "C...C",
+      "C...C",
+      "C.A.C",
+      "LCCCL"
+    ],
+    [
+      "LCCCL",
+      "C...C",
+      "G...G",
+      "C.A.C",
+      "LCCCL"
+    ],
+    [
+      "LCCCL",
+      "C...C",
+      "C...C",
+      "C.A.C",
+      "LCCCL"
+    ],
+    [
+      "LCCCL",
+      "C...C",
+      "G...G",
+      "C.A.C",
+      "LCCCL"
+    ],
+    [
+      "PPPPP",
+      "PPPPP",
+      "PPPPP",
+      "PPAPP",
+      "PPPPP"
+    ],
+    [
+      "LFFFL",
+      "FT..F",
+      "F...F",
+      "F.A.F",
+      "LFFFL"
+    ],
+    [
+      "L...L",
+      ".....",
+      ".....",
+      ".....",
+      "L...L"
+    ],
+    [
+      "SSSSS",
+      "SSSSS",
+      "SSSSS",
+      "SSSSS",
+      "SSSSS"
+    ]
+  ]
+}

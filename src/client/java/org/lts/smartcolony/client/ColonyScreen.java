@@ -279,6 +279,8 @@ public final class ColonyScreen extends Screen {
             String icon = member.hand().isEmpty() ? ROLE_ICONS.getOrDefault(member.role(), "minecraft:bread") : member.hand();
             item(graphics, icon, 1, x, y);
             Component name = member.baby() ? Component.translatable("smartcolony.ui.child")
+                    : member.skill() > 0 ? Component.translatable("smartcolony.role." + member.role()).append(" ")
+                    .append(Component.translatable("smartcolony.ui.skill", member.skill()))
                     : Component.translatable("smartcolony.role." + member.role());
             graphics.text(font, name, x + 20, y + 4, TEXT_NORMAL, false);
             Component state;

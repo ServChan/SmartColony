@@ -22,6 +22,12 @@
   "smartcolony.building.storage_shed": "складской навес",
   "smartcolony.building.guard_post": "пост стражи",
   "smartcolony.building.pen": "загон",
+  "smartcolony.building.house_garden": "дом с двором",
+  "smartcolony.building.blacksmith": "кузница",
+  "smartcolony.building.market": "рыночная площадь",
+  "smartcolony.building.barn": "амбар",
+  "smartcolony.building.watchtower": "сторожевая башня",
+  "smartcolony.building.chapel": "часовня",
   "smartcolony.phase.reserve": "сбор материалов",
   "smartcolony.phase.clear": "расчистка площадки",
   "smartcolony.phase.foundation": "фундамент",
@@ -102,5 +108,8 @@
   "smartcolony.ui.wall": "%s: %s из %s блоков",
   "smartcolony.ui.wall_stone": "Каменная стена",
   "smartcolony.ui.wall_wood": "Частокол",
-  "smartcolony.ui.wall_none": "Пока не задумана: о стене колония задумается через два дня, когда взрослых станет пять или больше."
+  "smartcolony.ui.wall_none": "Пока не задумана: о стене колония задумается через два дня, когда взрослых станет пять или больше.",
+  "smartcolony.chat.alarm": "Тревога! В деревне %s: звонит колокол, жители прячутся по домам, стража выходит на бой.",
+  "smartcolony.chat.festival": "Праздник! Жители собираются у колокола и танцуют.",
+  "smartcolony.ui.skill": "ур. %s"
 }

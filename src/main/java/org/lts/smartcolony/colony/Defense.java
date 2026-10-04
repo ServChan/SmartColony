@@ -25,17 +25,60 @@ public final class Defense {
     private final Colony colony;
     private final List<LivingEntity> enemies = new ArrayList<>();
     private long scannedAt = -1000;
+    private long alarmUntil;
+    private long lastRing;
+    private long lastAnnounce = -100000;
 
     public Defense(Colony colony) {
         this.colony = colony;
     }
 
+    public boolean alarmed(ServerLevel level) {
+        return level.getGameTime() < alarmUntil;
+    }
+
     public void tick(ServerLevel level, long ticks) {
         if (ticks % 40 == 3) {
             scan(level);
+            alarm(level);
         }
         if (ticks % 1200 == 5) {
             ThreatMap.decay(colony.data().threat, 0.8);
+        }
+    }
+
+    private void alarm(ServerLevel level) {
+        BlockPos center = colony.center();
+        double inner = colony.data().radius * 0.75;
+        LivingEntity intruder = null;
+        for (LivingEntity enemy : enemies) {
+            if (enemy instanceof ServerPlayer || enemy.isInWater()) {
+                continue;
+            }
+            double dx = enemy.getX() - center.getX();
+            double dz = enemy.getZ() - center.getZ();
+            if (dx * dx + dz * dz <= inner * inner && Math.abs(enemy.getY() - center.getY()) < 12) {
+                intruder = enemy;
+                break;
+            }
+        }
+        long now = level.getGameTime();
+        if (intruder == null) {
+            return;
+        }
+        alarmUntil = now + 400;
+        if (now - lastRing >= 200 && level.getBlockState(center).getBlock() instanceof net.minecraft.world.level.block.BellBlock bell) {
+            lastRing = now;
+            bell.attemptToRing(level, center, net.minecraft.core.Direction.NORTH);
+            colony.data().bump("alarms_rung", 1);
+        }
+        for (java.util.Map.Entry<java.util.UUID, org.lts.smartcolony.work.Colonist> entry : colony.colonists().entrySet()) {
+            entry.getValue().hide(level, now + 400);
+        }
+        if (now - lastAnnounce > 2400) {
+            lastAnnounce = now;
+            colony.journal(level, "alarm: " + intruder.getType().toShortString() + " inside the village");
+            colony.notify(level, Component.translatable("smartcolony.chat.alarm", intruder.getDisplayName()));
         }
     }
 

@@ -457,11 +457,12 @@ public final class GuardJob extends Job {
         bow.hurtAndBreak(1, villager, EquipmentSlot.MAINHAND);
         shotCooldown = 25;
         colony().data().bump("arrows_shot", 1);
+        gainXp(level, villager, 1);
     }
 
     private void strike(ServerLevel level, Villager villager) {
         ItemStack weapon = villager.getMainHandItem();
-        float damage = (float) Tools.attackDamage(weapon);
+        float damage = (float) Tools.attackDamage(weapon) + 0.5F * skill();
         villager.swing(InteractionHand.MAIN_HAND, SwingAnimation.DEFAULT, false);
         if (target.hurtServer(level, level.damageSources().mobAttack(villager), damage)) {
             double dx = target.getX() - villager.getX();
@@ -471,6 +472,7 @@ public final class GuardJob extends Job {
                 weapon.hurtAndBreak(1, villager, EquipmentSlot.MAINHAND);
             }
             colony().data().bump("melee_hits", 1);
+            gainXp(level, villager, 1);
         }
         meleeCooldown = 20;
     }

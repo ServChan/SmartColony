@@ -50,7 +50,7 @@ public record ColonyView(
     public record Storage(String category, int percent, List<ItemCount> items) {
     }
 
-    public record Member(String role, boolean baby, boolean working, float health, float maxHealth, String hand, int distance) {
+    public record Member(String role, boolean baby, boolean working, float health, float maxHealth, String hand, int distance, int skill) {
     }
 
     public static ColonyView capture(ServerLevel level, Colony colony, UUID player) {
@@ -74,7 +74,7 @@ public record ColonyView(
                     : BuiltInRegistries.ITEM.getKey(villager.getMainHandItem().getItem()).toString();
             int distance = (int) Math.sqrt(villager.blockPosition().distSqr(center));
             villagers.add(new Member(colonist.role().key(), baby, Colonist.isControlled(villager), villager.getHealth(),
-                    villager.getMaxHealth(), hand, distance));
+                    villager.getMaxHealth(), hand, distance, colony.skill(entry.getKey(), colonist.role())));
         }
         villagers.sort((a, b) -> a.role().equals(b.role()) ? Integer.compare(a.distance(), b.distance()) : a.role().compareTo(b.role()));
         List<RoleCount> roles = new ArrayList<>();

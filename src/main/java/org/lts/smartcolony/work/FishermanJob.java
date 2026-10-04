@@ -130,6 +130,7 @@ public final class FishermanJob extends Job {
         villager.getMainHandItem().hurtAndBreak(1, villager, EquipmentSlot.MAINHAND);
         catches++;
         colony().data().bump("fish_caught", 1);
+        gainXp(level, villager, 2);
         bite = 100 + level.getRandom().nextInt(500);
     }
 

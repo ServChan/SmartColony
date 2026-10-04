@@ -156,6 +156,7 @@ public final class LumberjackJob extends Job {
         if (index >= logs.size()) {
             colony().forest().felled(tree);
             colony().data().bump("trees_felled", 1);
+            gainXp(level, villager, 3);
             wait = 30;
             phase = "settle";
             return;

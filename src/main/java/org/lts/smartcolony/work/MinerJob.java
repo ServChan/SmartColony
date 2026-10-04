@@ -326,6 +326,7 @@ public final class MinerJob extends Job {
                 if (result == Digger.Result.DONE) {
                     stash(level, villager, colonist.digger().takeDrops());
                     colony().data().bump("blocks_mined", 1);
+                    gainXp(level, villager, 1);
                 }
                 if (result == Digger.Result.FAILED) {
                     mine.progress++;
@@ -461,6 +462,7 @@ public final class MinerJob extends Job {
         if (result == Digger.Result.DONE) {
             stash(level, villager, colonist.digger().takeDrops());
             colony().data().bump("ores_mined", 1);
+            gainXp(level, villager, 2);
             veinIndex++;
         } else if (result == Digger.Result.FAILED) {
             veinIndex++;

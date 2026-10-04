@@ -279,6 +279,7 @@ public final class FarmerJob extends Job {
         }
         stash(level, villager, drops);
         colony().data().bump("crops_harvested", 1);
+        gainXp(level, villager, 1);
     }
 
     private void plant(ServerLevel level, Villager villager, BlockPos farmland) {

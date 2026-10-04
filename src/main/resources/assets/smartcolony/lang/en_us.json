@@ -22,6 +22,12 @@
   "smartcolony.building.storage_shed": "storage shed",
   "smartcolony.building.guard_post": "guard post",
   "smartcolony.building.pen": "animal pen",
+  "smartcolony.building.house_garden": "house with a yard",
+  "smartcolony.building.blacksmith": "blacksmith",
+  "smartcolony.building.market": "market square",
+  "smartcolony.building.barn": "barn",
+  "smartcolony.building.watchtower": "watchtower",
+  "smartcolony.building.chapel": "chapel",
   "smartcolony.phase.reserve": "gathering materials",
   "smartcolony.phase.clear": "clearing the site",
   "smartcolony.phase.foundation": "laying the foundation",
@@ -102,5 +108,8 @@
   "smartcolony.ui.wall": "%s wall: %s of %s blocks",
   "smartcolony.ui.wall_stone": "Stone wall",
   "smartcolony.ui.wall_wood": "Palisade",
-  "smartcolony.ui.wall_none": "Not planned yet: the colony thinks about a wall after two days with five or more adults."
+  "smartcolony.ui.wall_none": "Not planned yet: the colony thinks about a wall after two days with five or more adults.",
+  "smartcolony.chat.alarm": "Alarm! %s is inside the village: the bell rings, villagers hide in their homes and the guards come out.",
+  "smartcolony.chat.festival": "Festival! The villagers gather at the bell to dance.",
+  "smartcolony.ui.skill": "lvl %s"
 }

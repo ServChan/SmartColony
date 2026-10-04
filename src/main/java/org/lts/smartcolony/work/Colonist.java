@@ -24,6 +24,14 @@ public final class Colonist {
     private String releaseReason = "";
     private long lastDangerCheck;
 
+    public void hide(ServerLevel level, long until) {
+        if (role == Role.GUARD) {
+            return;
+        }
+        releasedUntil = Math.max(releasedUntil, until);
+        releaseReason = "alarm";
+    }
+
     public Colonist(UUID uuid, Colony colony) {
         this.uuid = uuid;
         this.colony = colony;
@@ -136,12 +144,44 @@ public final class Colonist {
         } else if (!want && controlled) {
             release(level, villager, villager.isTrading() ? "trading" : "off duty");
         }
+        if (want && colony.festival(level) && role != Role.GUARD) {
+            if (!isControlled(villager)) {
+                take(level, villager);
+            }
+            Mover.keepAfloat(villager);
+            celebrate(level, villager);
+            return;
+        }
         if (isControlled(villager)) {
             if (villager.isSleeping()) {
                 villager.stopSleeping();
             }
             Mover.keepAfloat(villager);
+            digger.bonus(1.0F + 0.12F * colony.skill(uuid, role));
             job.tick(level, villager);
+        }
+    }
+
+    private void celebrate(ServerLevel level, Villager villager) {
+        net.minecraft.core.BlockPos bell = colony.center();
+        double angle = (uuid.getLeastSignificantBits() & 0xFFFF) / 65536.0 * Math.PI * 2.0;
+        double radius = 3.0 + (uuid.getMostSignificantBits() & 3);
+        net.minecraft.core.BlockPos spot = org.lts.smartcolony.util.WorldUtil.surface(level,
+                bell.getX() + (int) Math.round(Math.cos(angle) * radius), bell.getZ() + (int) Math.round(Math.sin(angle) * radius));
+        if (mover.tick(level, villager, spot, 1.5, 0.55, false) == Mover.Result.MOVING) {
+            return;
+        }
+        villager.getNavigation().stop();
+        villager.getLookControl().setLookAt(bell.getX() + 0.5, bell.getY() + 1.0, bell.getZ() + 0.5);
+        long time = level.getGameTime() + (uuid.hashCode() & 31);
+        if (time % 40 == 0) {
+            villager.getJumpControl().jump();
+            level.sendParticles(net.minecraft.core.particles.ParticleTypes.NOTE, villager.getX(), villager.getY() + 2.2, villager.getZ(),
+                    1, 0.3, 0.2, 0.3, 1.0);
+        }
+        if (time % 100 == 0) {
+            level.sendParticles(net.minecraft.core.particles.ParticleTypes.HAPPY_VILLAGER, villager.getX(), villager.getY() + 1.5,
+                    villager.getZ(), 4, 0.4, 0.4, 0.4, 0.0);
         }
     }
 

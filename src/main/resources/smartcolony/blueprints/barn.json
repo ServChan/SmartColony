@@ -1,0 +1,121 @@
+{
+  "id": "barn",
+  "kind": "barn",
+  "beds": 0,
+  "door": [
+    4,
+    0
+  ],
+  "palette": {
+    "C": "minecraft:cobblestone",
+    "L": "minecraft:$wood_log",
+    "P": "minecraft:$wood_planks",
+    "H": "minecraft:hay_block",
+    "G": "minecraft:glass_pane",
+    "e": "minecraft:$wood_stairs[facing=east,half=bottom]",
+    "w": "minecraft:$wood_stairs[facing=west,half=bottom]",
+    "S": "minecraft:$wood_slab[type=bottom]",
+    "W": "minecraft:wall_torch[facing=south]"
+  },
+  "layers": [
+    [
+      "CCCCCCCCC",
+      "CCCCCCCCC",
+      "CCCCCCCCC",
+      "CCCCCCCCC",
+      "CCCCCCCCC",
+      "CCCCCCCCC",
+      "CCCCCCCCC",
+      "CCCCCCCCC",
+      "CCCCCCCCC"
+    ],
+    [
+      "LPP...PPL",
+      "P.......P",
+      "P.......P",
+      "P.......P",
+      "P.......P",
+      "P.......P",
+      "PH.....HP",
+      "PHH...HHP",
+      "LPPPPPPPL"
+    ],
+    [
+      "LPP...PPL",
+      "P.......P",
+      "P.......P",
+      "P.......P",
+      "G.......G",
+      "P.......P",
+      "P.......P",
+      "PH.....HP",
+      "LPPPPPPPL"
+    ],
+    [
+      "LPPPPPPPL",
+      "PW.....WP",
+      "P.......P",
+      "P.......P",
+      "P.......P",
+      "P.......P",
+      "P.......P",
+      "P.......P",
+      "LPPPPPPPL"
+    ],
+    [
+      "ePPPPPPPw",
+      "e.......w",
+      "e.......w",
+      "e.......w",
+      "e.......w",
+      "e.......w",
+      "e.......w",
+      "e.......w",
+      "ePPPPPPPw"
+    ],
+    [
+      ".ePPPPPw.",
+      ".e.....w.",
+      ".e.....w.",
+      ".e.....w.",
+      ".e.....w.",
+      ".e.....w.",
+      ".e.....w.",
+      ".e.....w.",
+      ".ePPPPPw."
+    ],
+    [
+      "..ePPPw..",
+      "..e...w..",
+      "..e...w..",
+      "..e...w..",
+      "..e...w..",
+      "..e...w..",
+      "..e...w..",
+      "..e...w..",
+      "..ePPPw.."
+    ],
+    [
+      "...ePw...",
+      "...e.w...",
+      "...e.w...",
+      "...e.w...",
+      "...e.w...",
+      "...e.w...",
+      "...e.w...",
+      "...e.w...",
+      "...ePw..."
+    ],
+    [
+      "....S....",
+      "....S....",
+      "....S....",
+      "....S....",
+      "....S....",
+      "....S....",
+      "....S....",
+      "....S....",
+      "....S...."
+    ]
+  ]
+}

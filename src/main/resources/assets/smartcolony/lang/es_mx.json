@@ -22,6 +22,12 @@
   "smartcolony.building.storage_shed": "cobertizo de almacén",
   "smartcolony.building.guard_post": "puesto de guardia",
   "smartcolony.building.pen": "corral",
+  "smartcolony.building.house_garden": "casa con patio",
+  "smartcolony.building.blacksmith": "herrería",
+  "smartcolony.building.market": "plaza del mercado",
+  "smartcolony.building.barn": "granero",
+  "smartcolony.building.watchtower": "torre de vigía",
+  "smartcolony.building.chapel": "capilla",
   "smartcolony.phase.reserve": "reuniendo materiales",
   "smartcolony.phase.clear": "despejando el terreno",
   "smartcolony.phase.foundation": "cimientos",
@@ -102,5 +108,8 @@
   "smartcolony.ui.wall": "Muralla de %s: %s de %s bloques",
   "smartcolony.ui.wall_stone": "piedra",
   "smartcolony.ui.wall_wood": "madera",
-  "smartcolony.ui.wall_none": "Aún no planeada: la colonia pensará en una muralla tras dos días con cinco o más adultos."
+  "smartcolony.ui.wall_none": "Aún no planeada: la colonia pensará en una muralla tras dos días con cinco o más adultos.",
+  "smartcolony.chat.alarm": "¡Alarma! %s está dentro de la aldea: suena la campana, los aldeanos se esconden y salen los guardias.",
+  "smartcolony.chat.festival": "¡Fiesta! Los aldeanos se reúnen junto a la campana para bailar.",
+  "smartcolony.ui.skill": "nv. %s"
 }

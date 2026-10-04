@@ -51,6 +51,7 @@ public final class Colony {
     private final Construction construction;
     private final Migration migration;
     private final Improvements improvements;
+    private boolean festivalAnnounced;
     private final TheftWatcher theft;
     private final Map<UUID, Colonist> colonists = new LinkedHashMap<>();
     private final Set<String> requests = new LinkedHashSet<>();
@@ -150,6 +151,37 @@ public final class Colony {
         boolean was = dirty;
         dirty = false;
         return was;
+    }
+
+    public static int levelFor(int xp) {
+        return Math.min(5, (int) Math.floor(Math.sqrt(xp / 12.0)));
+    }
+
+    public int skill(UUID uuid, Role role) {
+        ColonyData.Member member = data.members.get(uuid.toString());
+        return member == null ? 0 : levelFor(member.xp.getOrDefault(role.key(), 0));
+    }
+
+    public void gainXp(ServerLevel level, Villager villager, Role role, int amount) {
+        ColonyData.Member member = data.members.get(villager.getUUID().toString());
+        if (member == null || amount <= 0) {
+            return;
+        }
+        int before = levelFor(member.xp.getOrDefault(role.key(), 0));
+        int after = levelFor(member.xp.merge(role.key(), amount, Integer::sum));
+        if (after > before) {
+            journal(level, role.key() + " reached skill level " + after);
+            level.sendParticles(net.minecraft.core.particles.ParticleTypes.HAPPY_VILLAGER, villager.getX(), villager.getY() + 2.0,
+                    villager.getZ(), 12, 0.4, 0.4, 0.4, 0.0);
+        }
+        markDirty();
+    }
+
+    public boolean festival(ServerLevel level) {
+        long time = level.getDefaultClockTime();
+        long day = time / 24000L;
+        long hour = Math.floorMod(time, 24000L);
+        return day % 3 == 2 && hour >= 6000 && hour < 7800 && colonists.size() >= 4;
     }
 
     public boolean workTime(ServerLevel level) {
@@ -493,6 +525,15 @@ public final class Colony {
         }
         economy.tick(level, ticks);
         migration.tick(level);
+        boolean party = festival(level);
+        if (party && !festivalAnnounced) {
+            festivalAnnounced = true;
+            journal(level, "festival at the bell");
+            notify(level, Component.translatable("smartcolony.chat.festival"));
+            level.playSound(null, center(), net.minecraft.sounds.SoundEvents.BELL_BLOCK, net.minecraft.sounds.SoundSource.BLOCKS, 2.0F, 1.0F);
+        } else if (!party) {
+            festivalAnnounced = false;
+        }
         if (ticks % 1000 == 0) {
             recoverReputation();
         }
