@@ -14,6 +14,7 @@ public final class ColonyData {
     public Pos depot = new Pos(0, 64, 0);
     public int radius = 32;
     public long founded;
+    public int peakMembers;
     public Map<Category, List<Pos>> storage = new EnumMap<>(Category.class);
     public Map<String, Member> members = new LinkedHashMap<>();
     public List<Building> buildings = new ArrayList<>();

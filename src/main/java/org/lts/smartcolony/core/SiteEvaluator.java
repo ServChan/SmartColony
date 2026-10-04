@@ -13,6 +13,10 @@ public final class SiteEvaluator {
     }
 
     public static Result evaluate(int[][] ground, boolean[][] blocked) {
+        return evaluate(ground, blocked, MAX_FILL, MAX_CUT);
+    }
+
+    public static Result evaluate(int[][] ground, boolean[][] blocked, int fillLimit, int cutLimit) {
         int sizeX = ground.length;
         int sizeZ = ground[0].length;
         int[] all = new int[sizeX * sizeZ];
@@ -43,7 +47,7 @@ public final class SiteEvaluator {
                 }
             }
         }
-        boolean ok = maxFill <= MAX_FILL && maxCut <= MAX_CUT;
+        boolean ok = maxFill <= fillLimit && maxCut <= cutLimit;
         return new Result(ok, base, fill, cut, maxFill, maxCut, fill * 2.0 + cut);
     }
 }

@@ -100,13 +100,27 @@ public final class Defense {
         double radius = colony.data().radius * 0.8;
         for (int sector : ThreatMap.hottest(colony.data().threat, count)) {
             double[] direction = ThreatMap.direction(sector);
-            int x = colony.center().getX() + (int) Math.round(direction[0] * radius);
-            int z = colony.center().getZ() + (int) Math.round(direction[1] * radius);
-            if (WorldUtil.loaded(level, new BlockPos(x, 0, z))) {
-                posts.add(WorldUtil.surface(level, x, z));
+            BlockPos post = dryPoint(level, direction[0], direction[1], radius);
+            if (post != null) {
+                posts.add(post);
             }
         }
         return posts;
+    }
+
+    private BlockPos dryPoint(ServerLevel level, double dx, double dz, double radius) {
+        for (double r = radius; r >= 4; r -= 3) {
+            int x = colony.center().getX() + (int) Math.round(dx * r);
+            int z = colony.center().getZ() + (int) Math.round(dz * r);
+            if (!WorldUtil.loaded(level, new BlockPos(x, 0, z))) {
+                continue;
+            }
+            BlockPos surface = WorldUtil.surface(level, x, z);
+            if (level.getFluidState(surface).isEmpty() && level.getFluidState(surface.below()).isEmpty()) {
+                return surface;
+            }
+        }
+        return null;
     }
 
     public List<BlockPos> patrolRoute(ServerLevel level) {
@@ -114,10 +128,9 @@ public final class Defense {
         double radius = colony.data().radius * 0.75;
         for (int i = 0; i < 8; i++) {
             double angle = i * Math.PI / 4.0;
-            int x = colony.center().getX() + (int) Math.round(Math.cos(angle) * radius);
-            int z = colony.center().getZ() + (int) Math.round(Math.sin(angle) * radius);
-            if (WorldUtil.loaded(level, new BlockPos(x, 0, z))) {
-                route.add(WorldUtil.surface(level, x, z));
+            BlockPos point = dryPoint(level, Math.cos(angle), Math.sin(angle), radius);
+            if (point != null) {
+                route.add(point);
             }
         }
         if (colony.data().mine != null) {

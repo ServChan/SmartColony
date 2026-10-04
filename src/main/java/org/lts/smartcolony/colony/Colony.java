@@ -49,6 +49,7 @@ public final class Colony {
     private final Economy economy;
     private final Defense defense;
     private final Construction construction;
+    private final Migration migration;
     private final TheftWatcher theft;
     private final Map<UUID, Colonist> colonists = new LinkedHashMap<>();
     private final Set<String> requests = new LinkedHashSet<>();
@@ -66,6 +67,7 @@ public final class Colony {
         this.economy = new Economy(this);
         this.defense = new Defense(this);
         this.construction = new Construction(this);
+        this.migration = new Migration(this);
         this.theft = new TheftWatcher(this);
         for (Map.Entry<String, ColonyData.Member> entry : data.members.entrySet()) {
             UUID uuid = UUID.fromString(entry.getKey());
@@ -104,6 +106,10 @@ public final class Colony {
 
     public Defense defense() {
         return defense;
+    }
+
+    public Migration migration() {
+        return migration;
     }
 
     public Construction construction() {
@@ -461,6 +467,7 @@ public final class Colony {
             construction.tick(level);
         }
         economy.tick(level, ticks);
+        migration.tick(level);
         if (ticks % 1000 == 0) {
             recoverReputation();
         }
@@ -578,7 +585,7 @@ public final class Colony {
             current.put(key, entry.getValue().role());
             affinity.put(key, Role.affinity(villager.getVillagerData().profession().unwrapKey()
                     .map(k -> k.identifier().getPath()).orElse("none")));
-            if (member != null && (member.locked || (member.role() != Role.IDLE && level.getGameTime() - member.since < 1200))) {
+            if (member != null && (member.locked || (member.role() != Role.IDLE && level.getGameTime() - member.since < 2400))) {
                 locked.add(key);
             }
             loaded.put(key, villager);
@@ -645,6 +652,7 @@ public final class Colony {
     }
 
     public void disband(ServerLevel level) {
+        migration.releaseAll(level);
         for (Map.Entry<UUID, Colonist> entry : colonists.entrySet()) {
             if (level.getEntity(entry.getKey()) instanceof Villager villager) {
                 if (Colonist.isControlled(villager)) {

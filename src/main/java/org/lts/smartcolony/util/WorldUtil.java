@@ -50,7 +50,7 @@ public final class WorldUtil {
     }
 
     public static boolean isSoil(BlockState state) {
-        return state.is(BlockTags.DIRT) || state.is(BlockTags.SAND);
+        return state.is(BlockTags.SUBSTRATE_OVERWORLD) || state.is(BlockTags.SAND);
     }
 
     public static boolean isReplaceablePlant(BlockState state) {
@@ -66,7 +66,7 @@ public final class WorldUtil {
     }
 
     public static boolean naturalGround(BlockState state) {
-        return state.is(BlockTags.DIRT) || state.is(BlockTags.SAND) || state.is(Blocks.GRAVEL)
+        return state.is(BlockTags.SUBSTRATE_OVERWORLD) || state.is(BlockTags.SAND) || state.is(Blocks.GRAVEL)
                 || state.is(BlockTags.BASE_STONE_OVERWORLD) || state.is(Blocks.DIRT_PATH) || state.is(Blocks.SNOW_BLOCK)
                 || state.is(Blocks.CLAY) || state.is(Blocks.POWDER_SNOW);
     }
@@ -84,5 +84,19 @@ public final class WorldUtil {
         return state.canBeReplaced() || state.is(BlockTags.REPLACEABLE_BY_TREES) || state.is(BlockTags.FLOWERS)
                 || state.is(BlockTags.SAPLINGS) || state.is(Blocks.SNOW) || state.is(Blocks.BUSH) || state.is(Blocks.FIREFLY_BUSH)
                 || state.is(Blocks.SWEET_BERRY_BUSH) || state.is(Blocks.BROWN_MUSHROOM) || state.is(Blocks.RED_MUSHROOM);
+    }
+
+    public static boolean fallenLog(ServerLevel level, BlockPos pos) {
+        BlockState state = level.getBlockState(pos);
+        if (!state.is(BlockTags.LOGS) || !state.hasProperty(net.minecraft.world.level.block.RotatedPillarBlock.AXIS)
+                || state.getValue(net.minecraft.world.level.block.RotatedPillarBlock.AXIS) == Direction.Axis.Y) {
+            return false;
+        }
+        BlockState below = level.getBlockState(pos.below());
+        return naturalGround(below) || below.is(BlockTags.LOGS);
+    }
+
+    public static boolean removable(ServerLevel level, BlockPos pos) {
+        return clearable(level.getBlockState(pos)) || fallenLog(level, pos);
     }
 }

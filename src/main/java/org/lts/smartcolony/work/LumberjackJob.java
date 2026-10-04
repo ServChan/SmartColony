@@ -230,7 +230,7 @@ public final class LumberjackJob extends Job {
             return;
         }
         BlockPos spot = tree;
-        if (!WorldUtil.isAirLike(level.getBlockState(spot)) || !level.getBlockState(spot.below()).is(BlockTags.DIRT)) {
+        if (!WorldUtil.isAirLike(level.getBlockState(spot)) || !level.getBlockState(spot.below()).is(BlockTags.SUBSTRATE_OVERWORLD)) {
             return;
         }
         ItemStack sapling = Inv.find(villager, stack -> stack.is(ItemTags.SAPLINGS)

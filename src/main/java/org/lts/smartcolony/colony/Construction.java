@@ -194,6 +194,10 @@ public final class Construction {
         reserve(level);
     }
 
+    private static int woodStock(Stock stock, String wood) {
+        return stock.get(Ids.mc(wood + "_log")) * 4 + stock.get(Ids.mc(wood + "_planks"));
+    }
+
     private String chooseWood(ServerLevel level) {
         Stock stock = colony.warehouse().stock(level);
         String best = "oak";
@@ -276,6 +280,15 @@ public final class Construction {
         }
         missing = lack;
         status = "waiting for materials: " + lack;
+        String richer = chooseWood(level);
+        if (!richer.equals(project.building.wood) && woodStock(stock, richer) > woodStock(stock, project.building.wood)) {
+            colony.journal(level, project.building.blueprint + " switched from " + project.building.wood + " to " + richer);
+            project.building.wood = richer;
+            recomputeRequired(project);
+            cells = null;
+            colony.markDirty();
+            return;
+        }
         long waited = level.getGameTime() - project.waitingSince;
         if (waited > 3000) {
             String wood = chooseWood(level);
@@ -328,6 +341,14 @@ public final class Construction {
     }
 
     private ColonyData.Project findSite(ServerLevel level, Blueprint blueprint, String wood) {
+        ColonyData.Project easy = findSite(level, blueprint, wood, SiteEvaluator.MAX_FILL, SiteEvaluator.MAX_CUT);
+        if (easy != null || !"house".equals(blueprint.kind())) {
+            return easy;
+        }
+        return findSite(level, blueprint, wood, 4, Math.min(7, blueprint.sizeY() + 1));
+    }
+
+    private ColonyData.Project findSite(ServerLevel level, Blueprint blueprint, String wood, int fillLimit, int cutLimit) {
         BlockPos center = colony.center();
         int maxDistance = data().radius + 28;
         double bestScore = Double.MAX_VALUE;
@@ -377,7 +398,7 @@ public final class Construction {
                         }
                     }
                 }
-                SiteEvaluator.Result result = SiteEvaluator.evaluate(ground, blocked);
+                SiteEvaluator.Result result = SiteEvaluator.evaluate(ground, blocked, fillLimit, cutLimit);
                 if (!result.ok() || !accessible(level, blueprint, rotation, ox, oz, result.baseY())) {
                     continue;
                 }
@@ -414,7 +435,7 @@ public final class Construction {
     private int groundY(ServerLevel level, int x, int z) {
         int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z) - 1;
         int floor = y - 8;
-        while (y > floor && WorldUtil.clearable(level.getBlockState(new BlockPos(x, y, z)))) {
+        while (y > floor && WorldUtil.removable(level, new BlockPos(x, y, z))) {
             y--;
         }
         return y;

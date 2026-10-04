@@ -58,7 +58,7 @@ public final class TreeScan {
         if (baseState.hasProperty(RotatedPillarBlock.AXIS) && baseState.getValue(RotatedPillarBlock.AXIS) != Direction.Axis.Y) {
             return List.of();
         }
-        if (!level.getBlockState(base.below()).is(BlockTags.DIRT)) {
+        if (!level.getBlockState(base.below()).is(BlockTags.SUBSTRATE_OVERWORLD)) {
             return List.of();
         }
         List<BlockPos> logs = connectedLogs(level, base);

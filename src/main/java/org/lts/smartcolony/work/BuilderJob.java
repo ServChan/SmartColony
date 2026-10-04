@@ -259,7 +259,7 @@ public final class BuilderJob extends Job {
                 return;
             }
         }
-        if (state.is(BlockTags.DIRT) && !state.is(Blocks.DIRT_PATH) && !state.is(Blocks.FARMLAND) && !state.is(Blocks.MUD)) {
+        if (state.is(BlockTags.SUBSTRATE_OVERWORLD) && !state.is(Blocks.DIRT_PATH) && !state.is(Blocks.FARMLAND) && !state.is(Blocks.MUD)) {
             level.setBlock(ground, Blocks.DIRT_PATH.defaultBlockState(), Block.UPDATE_ALL);
             level.playSound(null, ground, SoundEvents.SHOVEL_FLATTEN.value(), SoundSource.BLOCKS, 1.0F, 1.0F);
             villager.getLookControl().setLookAt(ground.getX() + 0.5, ground.getY() + 1.0, ground.getZ() + 0.5);

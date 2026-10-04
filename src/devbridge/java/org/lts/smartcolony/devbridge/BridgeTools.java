@@ -116,6 +116,9 @@ public final class BridgeTools {
         tools.add(tool("entities", "Entities near a point.",
                 props("x", "integer", "", "y", "integer", "", "z", "integer", "", "radius", "integer", "max 96", "type", "string", "entity id filter"),
                 "x", "y", "z"));
+        tools.add(tool("site", "Evaluate a colony storage site in front of a position (facing north/south/east/west) and list blocking blocks.",
+                props("x", "integer", "", "y", "integer", "", "z", "integer", "", "facing", "string", "north|south|east|west"),
+                "x", "y", "z", "facing"));
         return tools;
     }
 
@@ -134,6 +137,7 @@ public final class BridgeTools {
             case "give" -> onMain(() -> give(args));
             case "build" -> onMain(() -> build(args));
             case "entities" -> onMain(() -> entities(args));
+            case "site" -> onMain(() -> site(args));
             default -> text("unknown tool " + name, true);
         };
     }
@@ -266,6 +270,24 @@ public final class BridgeTools {
             }
             return text(out.toString(), false);
         });
+    }
+
+    private JsonObject site(JsonObject args) {
+        ServerLevel level = server.overworld();
+        net.minecraft.core.BlockPos feet = new net.minecraft.core.BlockPos(integer(args, "x", 0), integer(args, "y", 64), integer(args, "z", 0));
+        net.minecraft.core.Direction facing = net.minecraft.core.Direction.byName(string(args, "facing", "north"));
+        org.lts.smartcolony.colony.Founding.Plan plan = org.lts.smartcolony.colony.Founding.planAt(level, feet,
+                facing == null ? net.minecraft.core.Direction.NORTH : facing);
+        if (plan == null) {
+            return text("not loaded", true);
+        }
+        StringBuilder out = new StringBuilder();
+        out.append("valid=").append(plan.valid()).append(" fault=").append(plan.fault()).append(" base=")
+                .append(plan.layout().baseY()).append(" cost=").append(plan.cost()).append('\n');
+        for (net.minecraft.core.BlockPos pos : plan.blockers()) {
+            out.append(pos.toShortString()).append(' ').append(level.getBlockState(pos)).append('\n');
+        }
+        return text(out.toString(), false);
     }
 
     private JsonObject command(JsonObject args) throws Exception {

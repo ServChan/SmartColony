@@ -94,5 +94,6 @@
   "smartcolony.ui.working": "работает",
   "smartcolony.ui.resting": "отдыхает",
   "smartcolony.ui.distance": "%s м от колокола",
-  "smartcolony.ui.singleplayer": "Окно колонии работает только в одиночной игре."
+  "smartcolony.ui.singleplayer": "Окно колонии работает только в одиночной игре.",
+  "smartcolony.chat.migrants": "Жители соседней деревни переселяются в колонию (%s): здесь есть свободные кровати и полные склады."
 }

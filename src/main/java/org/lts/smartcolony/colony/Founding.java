@@ -145,10 +145,13 @@ public final class Founding {
     private static final List<Preview> PREVIEWS = new ArrayList<>();
 
     public static Plan planHere(ServerLevel level, ServerPlayer player) {
-        Direction facing = player.getDirection();
+        return planAt(level, player.blockPosition(), player.getDirection());
+    }
+
+    public static Plan planAt(ServerLevel level, BlockPos feet, Direction facing) {
         Direction front = facing.getOpposite();
         Direction side = front.getClockWise();
-        BlockPos origin = player.blockPosition().relative(facing, 3).relative(side, -2);
+        BlockPos origin = feet.relative(facing, 3).relative(side, -2);
         return evaluate(level, new Layout(origin, front, side, 0));
     }
 
@@ -189,7 +192,7 @@ public final class Founding {
                 }
                 int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, column.getX(), column.getZ()) - 1;
                 int floor = y - 8;
-                while (y > floor && WorldUtil.clearable(level.getBlockState(column.atY(y)))) {
+                while (y > floor && WorldUtil.removable(level, column.atY(y))) {
                     y--;
                 }
                 BlockPos ground = column.atY(y);
@@ -232,7 +235,7 @@ public final class Founding {
                     if (state.isAir()) {
                         continue;
                     }
-                    if (WorldUtil.clearable(state)) {
+                    if (WorldUtil.removable(level, pos)) {
                         cost++;
                     } else if (!(y <= ground && WorldUtil.naturalGround(state)) && !blockers.contains(pos)) {
                         blockers.add(pos);

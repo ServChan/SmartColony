@@ -94,5 +94,6 @@
   "smartcolony.ui.working": "at work",
   "smartcolony.ui.resting": "resting",
   "smartcolony.ui.distance": "%s m from the bell",
-  "smartcolony.ui.singleplayer": "The colony window works only in singleplayer."
+  "smartcolony.ui.singleplayer": "The colony window works only in singleplayer.",
+  "smartcolony.chat.migrants": "%s villagers from a nearby village are moving into the colony: there are free beds and full stores."
 }

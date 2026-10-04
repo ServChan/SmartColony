@@ -82,7 +82,7 @@ public final class ForestIndex {
                 continue;
             }
             BlockPos base = TreeScan.baseOf(level, topPos);
-            if (!level.getBlockState(base.below()).is(BlockTags.DIRT) || colony.isProtected(base)) {
+            if (!level.getBlockState(base.below()).is(BlockTags.SUBSTRATE_OVERWORLD) || colony.isProtected(base)) {
                 continue;
             }
             if (near(base)) {

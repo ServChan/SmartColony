@@ -51,7 +51,7 @@ public final class Sites {
                 continue;
             }
             BlockPos feet = WorldUtil.surface(level, x, z);
-            if (!level.getBlockState(feet.below()).is(BlockTags.DIRT) || !WorldUtil.isAirLike(level.getBlockState(feet))
+            if (!level.getBlockState(feet.below()).is(BlockTags.SUBSTRATE_OVERWORLD) || !WorldUtil.isAirLike(level.getBlockState(feet))
                     || !level.getFluidState(feet).isEmpty() || !canopyFree(level, feet) || colony.isProtected(feet)
                     || onRoad(feet.below())) {
                 continue;
