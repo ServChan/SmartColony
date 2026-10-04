@@ -3,11 +3,12 @@ package org.lts.smartcolony.core;
 import java.util.ArrayList;
 import java.util.List;
 
-public final class MinePlan {
+public final class MinePlan implements DigPlan {
     public enum Kind {
         STAIR,
         MAIN,
-        BRANCH
+        BRANCH,
+        QUARRY
     }
 
     public record Cell(int index, Kind kind, Pos feet, int height) {

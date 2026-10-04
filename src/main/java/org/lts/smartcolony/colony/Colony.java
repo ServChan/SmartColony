@@ -316,6 +316,10 @@ public final class Colony {
         if (data.mine != null && p.horizontalDistSq(data.mine.entrance) < 9) {
             return true;
         }
+        if (data.mine != null && data.mine.quarry() && p.x() >= data.mine.corner.x() - 1 && p.z() >= data.mine.corner.z() - 1
+                && p.x() <= data.mine.corner.x() + data.mine.width && p.z() <= data.mine.corner.z() + data.mine.width) {
+            return true;
+        }
         return false;
     }
 
@@ -343,10 +347,22 @@ public final class Colony {
     }
 
     public ColonyData.Mine ensureMine(ServerLevel level) {
+        if (data.mine != null && !data.mine.quarry() && data.mine.type == null) {
+            ColonyData.Mine quarry = sites.mineSite(level, data.mine.generation + 1, data.mine);
+            if (quarry != null && quarry.quarry()) {
+                quarry.generation = data.mine.generation + 1;
+                data.mine = quarry;
+                journal(level, "stair mine replaced by a quarry at " + quarry.entrance);
+                markDirty();
+                return data.mine;
+            }
+            data.mine.type = "stair";
+            markDirty();
+        }
         if (data.mine == null) {
             data.mine = sites.mineSite(level, 0, null);
             if (data.mine != null) {
-                journal(level, "mine entrance marked at " + data.mine.entrance);
+                journal(level, (data.mine.quarry() ? "quarry marked at " : "mine entrance marked at ") + data.mine.entrance);
                 markDirty();
             }
         }
@@ -359,7 +375,7 @@ public final class Colony {
         if (next != null) {
             next.generation = generation;
             data.mine = next;
-            journal(level, "old mine worked out, new entrance at " + next.entrance);
+            journal(level, "old mine worked out, new " + (next.quarry() ? "quarry" : "mine") + " at " + next.entrance);
         }
         markDirty();
     }

@@ -141,6 +141,7 @@ public final class Migration {
                 it.remove();
                 continue;
             }
+            Mover.keepAfloat(villager);
             Mover.Result result = walker.mover.tick(level, villager, colony.depot(), 4.0, 0.6, true);
             if (result == Mover.Result.FAILED) {
                 walker.failures++;

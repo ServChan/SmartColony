@@ -27,6 +27,7 @@ public final class Colonist {
     public Colonist(UUID uuid, Colony colony) {
         this.uuid = uuid;
         this.colony = colony;
+        this.mover.guard(pos -> colony.isProtected(pos, false));
     }
 
     public UUID uuid() {
@@ -115,7 +116,7 @@ public final class Colonist {
         }
         if (role != Role.GUARD && now - lastDangerCheck >= 10) {
             lastDangerCheck = now;
-            if (inDanger(level, villager)) {
+            if (inDanger(level, villager) && !trappedUnderground(level, villager)) {
                 releasedUntil = now + 120;
                 releaseReason = "danger";
             }
@@ -139,6 +140,7 @@ public final class Colonist {
             if (villager.isSleeping()) {
                 villager.stopSleeping();
             }
+            Mover.keepAfloat(villager);
             job.tick(level, villager);
         }
     }
@@ -161,6 +163,11 @@ public final class Colonist {
                 }
             }
         }
+    }
+
+    private static boolean trappedUnderground(ServerLevel level, Villager villager) {
+        net.minecraft.core.BlockPos feet = villager.blockPosition();
+        return !level.canSeeSky(feet.above()) && feet.getY() < org.lts.smartcolony.util.WorldUtil.surfaceY(level, feet.getX(), feet.getZ()) - 4;
     }
 
     private boolean inDanger(ServerLevel level, Villager villager) {

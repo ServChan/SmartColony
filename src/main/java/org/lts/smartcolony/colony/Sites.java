@@ -76,6 +76,88 @@ public final class Sites {
     }
 
     public ColonyData.Mine mineSite(ServerLevel level, int generation, ColonyData.Mine previous) {
+        ColonyData.Mine quarry = quarrySite(level, generation, previous);
+        return quarry != null ? quarry : stairSite(level, generation, previous);
+    }
+
+    private static final int QUARRY_WIDTH = 7;
+
+    private int groundY(ServerLevel level, int x, int z) {
+        int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z) - 1;
+        int floor = y - 8;
+        while (y > floor && WorldUtil.removable(level, new BlockPos(x, y, z))) {
+            y--;
+        }
+        return y;
+    }
+
+    private ColonyData.Mine quarrySite(ServerLevel level, int generation, ColonyData.Mine previous) {
+        int targetY = SmartColonyConfig.get().mineTargetY;
+        double offset = generation * Math.PI / 5.0;
+        for (int distance = 24; distance <= 48; distance += 3) {
+            ColonyData.Mine best = null;
+            int bestScore = Integer.MAX_VALUE;
+            for (int i = 0; i < 16; i++) {
+                double angle = offset + i * Math.PI / 8.0;
+                int cx = center().getX() + (int) Math.round(Math.cos(angle) * distance) - QUARRY_WIDTH / 2;
+                int cz = center().getZ() + (int) Math.round(Math.sin(angle) * distance) - QUARRY_WIDTH / 2;
+                if (previous != null && previous.quarry()
+                        && new org.lts.smartcolony.core.Pos(cx, 0, cz).horizontalDistSq(previous.corner) < 20 * 20) {
+                    continue;
+                }
+                int score = quarryScore(level, cx, cz);
+                if (score < bestScore) {
+                    bestScore = score;
+                    int top = groundY(level, cx, cz);
+                    ColonyData.Mine mine = new ColonyData.Mine();
+                    mine.type = "quarry";
+                    mine.width = QUARRY_WIDTH;
+                    mine.corner = new org.lts.smartcolony.core.Pos(cx, top, cz);
+                    mine.depth = Math.max(6, Math.min(50, org.lts.smartcolony.core.QuarryPlan.layersFor(top, targetY)));
+                    mine.entrance = mine.plan().entrance();
+                    best = mine;
+                }
+            }
+            if (best != null) {
+                return best;
+            }
+        }
+        return null;
+    }
+
+    private int quarryScore(ServerLevel level, int cx, int cz) {
+        if (!WorldUtil.loaded(level, new BlockPos(cx - 3, 0, cz - 3)) || !WorldUtil.loaded(level, new BlockPos(cx + QUARRY_WIDTH + 2, 0, cz + QUARRY_WIDTH + 2))) {
+            return Integer.MAX_VALUE;
+        }
+        int top = groundY(level, cx, cz);
+        int entrance = groundY(level, cx - 1, cz);
+        if (entrance != top || !WorldUtil.naturalGround(level.getBlockState(new BlockPos(cx - 1, top, cz)))) {
+            return Integer.MAX_VALUE;
+        }
+        int score = 0;
+        for (int x = cx - 2; x < cx + QUARRY_WIDTH + 2; x++) {
+            for (int z = cz - 2; z < cz + QUARRY_WIDTH + 2; z++) {
+                int y = groundY(level, x, z);
+                BlockPos ground = new BlockPos(x, y, z);
+                if (!level.getFluidState(ground).isEmpty() || !level.getFluidState(ground.above()).isEmpty()) {
+                    return Integer.MAX_VALUE;
+                }
+                if (colony.isProtected(ground.above()) || onRoad(ground)) {
+                    return Integer.MAX_VALUE;
+                }
+                boolean pit = x >= cx && x < cx + QUARRY_WIDTH && z >= cz && z < cz + QUARRY_WIDTH;
+                if (pit) {
+                    if (y < top - 1 || y > top + 2 || !WorldUtil.naturalGround(level.getBlockState(ground))) {
+                        return Integer.MAX_VALUE;
+                    }
+                    score += Math.abs(y - top);
+                }
+            }
+        }
+        return score;
+    }
+
+    private ColonyData.Mine stairSite(ServerLevel level, int generation, ColonyData.Mine previous) {
         int targetY = SmartColonyConfig.get().mineTargetY;
         double offset = generation * Math.PI / 4.0;
         for (int distance = 12; distance <= 30; distance += 4) {

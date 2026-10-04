@@ -202,7 +202,10 @@ public final class GuardJob extends Job {
 
     private boolean outOfBounds(LivingEntity entity) {
         double limit = colony().data().radius + 20;
-        return entity.blockPosition().distSqr(colony().center()) > limit * limit;
+        if (entity.blockPosition().distSqr(colony().center()) > limit * limit) {
+            return true;
+        }
+        return entity.isInWater() || !entity.level().getFluidState(entity.blockPosition().below()).isEmpty();
     }
 
     private boolean armed(Villager villager) {

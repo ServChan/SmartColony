@@ -19,6 +19,7 @@ import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.Fluids;
 import org.lts.smartcolony.core.ColonyData;
 import org.lts.smartcolony.core.Ids;
+import org.lts.smartcolony.core.DigPlan;
 import org.lts.smartcolony.core.MinePlan;
 import org.lts.smartcolony.core.Pos;
 import org.lts.smartcolony.core.Role;
@@ -162,7 +163,7 @@ public final class MinerJob extends Job {
             phase = "deposit";
             return;
         }
-        MinePlan plan = mine.plan();
+        DigPlan plan = mine.plan();
         List<Pos> forward = plan.routeTo(Math.min(mine.progress, plan.size() - 1));
         List<Pos> back = new ArrayList<>(forward);
         java.util.Collections.reverse(back);
@@ -244,7 +245,7 @@ public final class MinerJob extends Job {
 
     private void dig(ServerLevel level, Villager villager) {
         ColonyData.Mine mine = colony().data().mine;
-        MinePlan plan = mine.plan();
+        DigPlan plan = mine.plan();
         if (mine.progress >= plan.size()) {
             colony().mineExhausted(level);
             beginReturn();

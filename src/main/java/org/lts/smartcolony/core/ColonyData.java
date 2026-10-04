@@ -87,8 +87,18 @@ public final class ColonyData {
         public int depth = 1;
         public int progress;
         public int generation;
+        public String type;
+        public Pos corner;
+        public int width;
 
-        public MinePlan plan() {
+        public boolean quarry() {
+            return "quarry".equals(type) && corner != null;
+        }
+
+        public DigPlan plan() {
+            if (quarry()) {
+                return new QuarryPlan(corner, width, depth);
+            }
             return new MinePlan(entrance, dirX, dirZ, depth);
         }
     }

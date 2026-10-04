@@ -37,6 +37,8 @@ public final class Mover {
     private int failedPaths;
     private final List<BlockPos> openedPassages = new ArrayList<>();
     private String note = "";
+    private java.util.function.Predicate<BlockPos> guarded = pos -> false;
+    private int carveCooldown;
 
     public void reset() {
         target = null;
@@ -48,12 +50,25 @@ public final class Mover {
         note = "";
     }
 
+    public void guard(java.util.function.Predicate<BlockPos> area) {
+        guarded = area;
+    }
+
     public String note() {
         return note;
     }
 
     public BlockPos target() {
         return target;
+    }
+
+    public static void keepAfloat(Villager villager) {
+        if ((villager.isInWater() && villager.getFluidHeight(net.minecraft.tags.FluidTags.WATER) > villager.getFluidJumpThreshold())
+                || villager.isInLava()) {
+            if (villager.getRandom().nextFloat() < 0.8F) {
+                villager.getJumpControl().jump();
+            }
+        }
     }
 
     public static double distance(Villager villager, BlockPos pos) {
@@ -102,6 +117,17 @@ public final class Mover {
             }
             repath = 30;
         }
+        if (carveCooldown > 0) {
+            carveCooldown--;
+        } else if ((inPit(level, villager) || (noProgress > 60 || failedPaths >= 2) && goal.getY() > villager.getBlockY() + 1)
+                && carveStep(level, villager, goal)) {
+            carveCooldown = 8;
+            noProgress = Math.max(0, noProgress - 20);
+            failedPaths = 0;
+            repath = 0;
+            note = "digging out";
+            return Result.MOVING;
+        }
         if (noProgress > 200 || failedPaths > 8 || total > 3000) {
             if (allowRescue && teleportAllowed(level, villager) && rescue(level, villager, goal)) {
                 reset();
@@ -111,6 +137,81 @@ public final class Mover {
             return Result.FAILED;
         }
         return Result.MOVING;
+    }
+
+    private static boolean inPit(ServerLevel level, Villager villager) {
+        if (!villager.onGround() || villager.isInWater()) {
+            return false;
+        }
+        BlockPos feet = villager.blockPosition();
+        for (net.minecraft.core.Direction direction : net.minecraft.core.Direction.Plane.HORIZONTAL) {
+            BlockPos side = feet.relative(direction);
+            boolean walk = WorldUtil.passable(level, side) && WorldUtil.passable(level, side.above());
+            boolean climb = WorldUtil.passable(level, side.above()) && WorldUtil.passable(level, side.above(2))
+                    && WorldUtil.passable(level, feet.above(2));
+            if (walk || climb) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean carveStep(ServerLevel level, Villager villager, BlockPos goal) {
+        BlockPos feet = villager.blockPosition();
+        if (!villager.onGround() || villager.isInWater()) {
+            return false;
+        }
+        int dx = goal.getX() - feet.getX();
+        int dz = goal.getZ() - feet.getZ();
+        List<net.minecraft.core.Direction> order = new ArrayList<>(net.minecraft.core.Direction.Plane.HORIZONTAL.stream().toList());
+        order.sort(java.util.Comparator.comparingDouble(d -> -(d.getStepX() * dx + d.getStepZ() * dz)));
+        for (net.minecraft.core.Direction direction : order) {
+            BlockPos step = feet.relative(direction);
+            if (WorldUtil.passable(level, step)) {
+                continue;
+            }
+            List<BlockPos> cut = new ArrayList<>();
+            for (BlockPos pos : new BlockPos[] {feet.above(2), step.above(), step.above(2)}) {
+                if (!WorldUtil.passable(level, pos)) {
+                    cut.add(pos);
+                }
+            }
+            if (cut.isEmpty()) {
+                villager.getJumpControl().jump();
+                villager.getMoveControl().setWantedPosition(step.getX() + 0.5, step.getY() + 1, step.getZ() + 0.5, 0.6);
+                return true;
+            }
+            boolean allowed = true;
+            for (BlockPos pos : cut) {
+                if (!carvable(level, pos)) {
+                    allowed = false;
+                    break;
+                }
+            }
+            if (!allowed) {
+                continue;
+            }
+            BlockPos pos = cut.getFirst();
+            villager.getLookControl().setLookAt(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
+            villager.swing(net.minecraft.world.InteractionHand.MAIN_HAND, net.minecraft.world.item.component.SwingAnimation.DEFAULT, false);
+            level.destroyBlock(pos, true, villager);
+            return true;
+        }
+        return false;
+    }
+
+    private boolean carvable(ServerLevel level, BlockPos pos) {
+        BlockState state = level.getBlockState(pos);
+        if (!state.getFluidState().isEmpty() || level.getBlockEntity(pos) != null || guarded.test(pos)) {
+            return false;
+        }
+        float hardness = state.getDestroySpeed(level, pos);
+        if (hardness < 0 || hardness > 3.5F) {
+            return false;
+        }
+        return WorldUtil.naturalGround(state) || WorldUtil.removable(level, pos) || state.is(BlockTags.LEAVES)
+                || state.is(BlockTags.BASE_STONE_OVERWORLD) || state.is(BlockTags.COPPER_ORES)
+                || state.is(BlockTags.IRON_ORES);
     }
 
     private BlockPos hop(ServerLevel level, Villager villager, BlockPos goal) {
