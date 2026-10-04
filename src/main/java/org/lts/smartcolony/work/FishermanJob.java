@@ -70,13 +70,13 @@ public final class FishermanJob extends Job {
         }
         if (equip == Equip.MISSING) {
             status = "no fishing rod";
-            wait = 600;
+            idle(level, 600);
             return;
         }
         BlockPos[] spot = colony().fishingSpot(level, villager.blockPosition());
         if (spot == null) {
             status = "no open water nearby";
-            wait = 600;
+            idle(level, 600);
             return;
         }
         shore = spot[0];

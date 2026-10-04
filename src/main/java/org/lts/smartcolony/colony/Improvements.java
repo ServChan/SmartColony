@@ -66,8 +66,10 @@ public final class Improvements {
     }
 
     public void tick(ServerLevel level) {
-        if (!data().villageSurveyed) {
+        migrateWall();
+        if (data().surveyVersion < 2) {
             data().villageSurveyed = true;
+            data().surveyVersion = 2;
             surveyVillage(level);
             colony.markDirty();
         }
@@ -327,7 +329,8 @@ public final class Improvements {
     }
 
     private boolean wallWanted(ServerLevel level) {
-        if (level.getGameTime() - data().founded < WALL_AFTER && colony.defense().threatLevel() < 0.8) {
+        long age = level.getGameTime() - data().founded;
+        if (age < 24000 || age < WALL_AFTER && colony.defense().threatLevel() < 0.8) {
             return false;
         }
         return colony.adultCount(level) >= 5;
@@ -350,7 +353,8 @@ public final class Improvements {
             BlockPos outside = null;
             for (Direction side : new Direction[] {facing, facing.getOpposite()}) {
                 BlockPos candidate = pos.relative(side);
-                if (level.canSeeSky(candidate) && WorldUtil.standable(level, candidate)) {
+                if (WorldUtil.standable(level, candidate)
+                        && (level.canSeeSky(candidate) || level.canSeeSky(candidate.relative(side)) || level.canSeeSky(candidate.relative(side, 2)))) {
                     outside = candidate.immutable();
                     break;
                 }
@@ -477,14 +481,9 @@ public final class Improvements {
                 sinceTower = 0;
                 tower(level, columnPos, pillar, cap, towerOrders, towerCells);
             }
+            boolean post = (wall.columns.size() - 1) % 5 == 0;
             for (int h = 1; h <= WALL_HEIGHT; h++) {
-                String state;
-                if (stone) {
-                    state = h == WALL_HEIGHT ? "minecraft:cobblestone_wall" : "minecraft:cobblestone";
-                } else {
-                    state = Ids.mc(wood + "_log");
-                }
-                wallOrders.add(new ColonyData.Order(new Pos(cell[0], groundY + h, cell[1]), state, WALL));
+                wallOrders.add(new ColonyData.Order(new Pos(cell[0], groundY + h, cell[1]), wallState(wall.material, h, post), WALL));
             }
         }
         for (Pos gate : mainGates) {
@@ -504,10 +503,49 @@ public final class Improvements {
         data().orders.addAll(wallOrders);
         wall.total = towerOrders.size() + wallOrders.size();
         data().wall = wall;
+        data().wallVersion = 2;
         wallColumns = null;
         colony.journal(level, "planned a " + wall.material + " wall: " + wall.columns.size() + " columns, " + wall.total + " blocks");
         colony.notify(level, Component.translatable("smartcolony.chat.wall_planned", wall.columns.size()));
         colony.markDirty();
+    }
+
+    private static String wallState(String material, int h, boolean post) {
+        if (material.equals("stone")) {
+            return h == WALL_HEIGHT ? "minecraft:cobblestone_wall" : "minecraft:cobblestone";
+        }
+        if (post) {
+            return Ids.mc(material + "_log");
+        }
+        return h == 1 ? "minecraft:cobblestone" : Ids.mc(material + "_planks");
+    }
+
+    private void migrateWall() {
+        ColonyData.Wall wall = data().wall;
+        if (wall == null || wall.material.equals("stone") || data().wallVersion >= 2) {
+            return;
+        }
+        data().wallVersion = 2;
+        String log = Ids.mc(wall.material + "_log");
+        java.util.Map<Long, Integer> ground = new java.util.HashMap<>();
+        java.util.Map<Long, Integer> index = new java.util.HashMap<>();
+        for (int i = 0; i < wall.columns.size(); i++) {
+            Pos column = wall.columns.get(i);
+            long key = BlockPos.asLong(column.x(), 0, column.z());
+            ground.put(key, column.y());
+            index.put(key, i);
+        }
+        for (ColonyData.Order order : data().orders) {
+            if (!WALL.equals(order.tag) || !order.state.equals(log)) {
+                continue;
+            }
+            long key = BlockPos.asLong(order.pos.x(), 0, order.pos.z());
+            Integer base = ground.get(key);
+            if (base == null) {
+                continue;
+            }
+            order.state = wallState(wall.material, order.pos.y() - base, index.get(key) % 5 == 0);
+        }
     }
 
     private void tower(ServerLevel level, Pos base, String pillar, String cap, List<ColonyData.Order> orders, Set<Long> cells) {

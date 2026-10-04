@@ -87,6 +87,17 @@ public abstract class Job {
         return move(level, villager, colony().depot(), 2.5);
     }
 
+    private long idleUntil;
+
+    protected void idle(ServerLevel level, int ticks) {
+        idleUntil = level.getGameTime() + ticks;
+        status = status.isEmpty() ? "nothing to do" : status;
+    }
+
+    public boolean idling(ServerLevel level) {
+        return level.getGameTime() < idleUntil;
+    }
+
     protected void gainXp(ServerLevel level, Villager villager, int amount) {
         colony().gainXp(level, villager, role(), amount);
     }

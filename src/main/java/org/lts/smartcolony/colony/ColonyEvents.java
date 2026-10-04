@@ -49,6 +49,23 @@ public final class ColonyEvents {
         return true;
     }
 
+    public static void converted(net.minecraft.world.entity.Mob previous, net.minecraft.world.entity.Mob converted,
+                                 net.minecraft.world.entity.ConversionParams params) {
+        if (!(previous.level() instanceof ServerLevel level) || !(previous instanceof Villager villager)) {
+            return;
+        }
+        Colony colony = ColonyManager.colonyOf(villager);
+        if (colony == null) {
+            return;
+        }
+        if (colony.ownsName(villager.getUUID())) {
+            converted.setCustomName(null);
+            converted.setCustomNameVisible(false);
+        }
+        colony.journal(level, "a villager was turned into a zombie");
+        colony.memberDied(level, villager.getUUID());
+    }
+
     public static void afterDeath(LivingEntity entity, DamageSource source) {
         if (!(entity.level() instanceof ServerLevel level)) {
             return;

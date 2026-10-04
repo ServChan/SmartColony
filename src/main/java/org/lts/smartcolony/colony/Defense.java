@@ -87,7 +87,7 @@ public final class Defense {
         for (java.util.Map.Entry<java.util.UUID, org.lts.smartcolony.work.Colonist> entry : colony.colonists().entrySet()) {
             entry.getValue().hide(level, now + 400);
         }
-        if (now - lastAnnounce > 2400) {
+        if (now - lastAnnounce > 12000) {
             lastAnnounce = now;
             colony.journal(level, "alarm: " + intruder.getType().toShortString() + " inside the village");
             colony.notify(level, Component.translatable("smartcolony.chat.alarm", intruder.getDisplayName()));
@@ -104,7 +104,8 @@ public final class Defense {
         enemies.clear();
         BlockPos center = colony.center();
         for (LivingEntity entity : level.getEntitiesOfClass(LivingEntity.class, area(16),
-                e -> e instanceof Enemy && e.isAlive() && !(e instanceof IronGolem) && hostileNow(e))) {
+                e -> e instanceof Enemy && e.isAlive() && !(e instanceof IronGolem) && hostileNow(e)
+                        && e.getY() >= WorldUtil.surfaceY(level, e.getBlockX(), e.getBlockZ()) - 6)) {
             enemies.add(entity);
             ThreatMap.add(colony.data().threat, entity.getX() - center.getX(), entity.getZ() - center.getZ(), 0.2);
         }

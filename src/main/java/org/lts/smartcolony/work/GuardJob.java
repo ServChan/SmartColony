@@ -109,11 +109,20 @@ public final class GuardJob extends Job {
         }
         ignored.values().removeIf(until -> until < level.getGameTime());
         boolean attacked = villager.getLastHurtByMob() != null && villager.tickCount - villager.getLastHurtByMobTimestamp() < 60;
-        if (!armed(villager) && !attacked && level.getGameTime() >= nextGear - 2400 + 200) {
+        if (!armed(villager) && !attacked) {
             target = null;
-            if (gear(level, villager)) {
-                nextGear = level.getGameTime() + 2400;
+            if (level.getGameTime() >= nextGear - 2400 + 200) {
+                if (gear(level, villager)) {
+                    nextGear = level.getGameTime() + 2400;
+                    if (!armed(villager)) {
+                        status = "no weapons in storage";
+                        idle(level, 600);
+                    }
+                }
+                return;
             }
+            status = "no weapons in storage";
+            idle(level, 600);
             return;
         }
         if (--retargetIn <= 0) {

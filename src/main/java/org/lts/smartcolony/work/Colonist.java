@@ -134,6 +134,7 @@ public final class Colonist {
                 && villager.isAlive()
                 && !villager.isTrading()
                 && releasedUntil <= now
+                && !job.idling(level)
                 && job.wantsControl(level, villager);
         if (villager.isSleeping() && role != Role.GUARD) {
             want = false;

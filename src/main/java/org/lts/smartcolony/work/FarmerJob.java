@@ -154,7 +154,7 @@ public final class FarmerJob extends Job {
             return;
         }
         status = "fields are tended";
-        wait = 200;
+        idle(level, 400);
     }
 
     private Task nextTask(ServerLevel level, Villager villager) {

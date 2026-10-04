@@ -79,7 +79,7 @@ public final class BuilderJob extends Job {
         task = colony().construction().next(level);
         if (task == null) {
             status = colony().construction().status();
-            wait = 100;
+            idle(level, 400);
             return;
         }
         if (task.kind() == Construction.Kind.TORCH && Inv.count(villager, Tools.TORCH) == 0) {

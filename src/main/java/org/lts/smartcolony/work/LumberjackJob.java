@@ -122,7 +122,7 @@ public final class LumberjackJob extends Job {
                 phase = "deposit";
                 return;
             }
-            wait = 100;
+            idle(level, 600);
             return;
         }
         status = "tree at " + tree.toShortString();

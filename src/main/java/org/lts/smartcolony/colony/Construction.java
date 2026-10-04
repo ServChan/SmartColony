@@ -956,15 +956,27 @@ public final class Construction {
             candidates.add(WorldUtil.bp(building.door).below());
         }
         candidates.add(colony.depot().below());
+        BlockPos center = colony.center();
+        int reach = (int) (data().radius * 0.85);
+        for (int dx = -reach; dx <= reach; dx += 7) {
+            for (int dz = -reach; dz <= reach; dz += 7) {
+                if (dx * dx + dz * dz <= reach * reach) {
+                    candidates.add(new BlockPos(center.getX() + dx, center.getY(), center.getZ() + dz));
+                }
+            }
+        }
         int planned = 0;
         for (BlockPos ground : candidates) {
-            if (planned >= 6 || data().pendingTorches.size() > 16) {
+            if (planned >= 12 || data().pendingTorches.size() > 40) {
                 break;
             }
             if (!WorldUtil.loaded(level, ground)) {
                 continue;
             }
             BlockPos surface = WorldUtil.surface(level, ground.getX(), ground.getZ());
+            if (!WorldUtil.naturalGround(level.getBlockState(surface.below())) || !level.getFluidState(surface).isEmpty()) {
+                continue;
+            }
             if (level.getBrightness(LightLayer.BLOCK, surface) >= 8) {
                 continue;
             }

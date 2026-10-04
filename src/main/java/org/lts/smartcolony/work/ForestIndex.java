@@ -29,6 +29,7 @@ public final class ForestIndex {
     private int cursor;
     private int lastFullCount;
     private int foundThisPass;
+    private int radius;
 
     public ForestIndex(Colony colony) {
         this.colony = colony;
@@ -38,13 +39,19 @@ public final class ForestIndex {
         return Math.max(trees.size(), lastFullCount);
     }
 
+    public int radius() {
+        return radius;
+    }
+
     public int known() {
         return trees.size();
     }
 
     private List<int[]> spiral() {
         if (spiral == null) {
-            int radius = SmartColonyConfig.get().forestRadius;
+            if (radius == 0) {
+                radius = SmartColonyConfig.get().forestRadius;
+            }
             List<int[]> offsets = new ArrayList<>();
             for (int dx = -radius; dx <= radius; dx += STEP) {
                 for (int dz = -radius; dz <= radius; dz += STEP) {
@@ -67,6 +74,11 @@ public final class ForestIndex {
                 cursor = 0;
                 lastFullCount = foundThisPass;
                 foundThisPass = 0;
+                if (lastFullCount < 4 && radius < 160) {
+                    radius = Math.min(160, radius + 32);
+                    spiral = null;
+                    offsets = spiral();
+                }
                 trees.removeIf(base -> !WorldUtil.loaded(level, base) || !TreeScan.isLog(level.getBlockState(base)));
             }
             int[] offset = offsets.get(cursor++);

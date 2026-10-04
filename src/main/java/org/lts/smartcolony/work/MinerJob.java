@@ -129,7 +129,8 @@ public final class MinerJob extends Job {
             return;
         }
         if (equip == Equip.MISSING) {
-            wait = 600;
+            status = "no pickaxe in storage";
+            idle(level, 600);
             phase = "start";
             return;
         }

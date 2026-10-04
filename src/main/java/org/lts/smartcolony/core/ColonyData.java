@@ -34,6 +34,8 @@ public final class ColonyData {
     public List<Order> orders = new ArrayList<>();
     public Wall wall;
     public boolean villageSurveyed;
+    public int surveyVersion;
+    public int wallVersion;
     public long lastMarket;
     public long lastGolem;
     public long lastFeeding;
