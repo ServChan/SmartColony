@@ -372,20 +372,30 @@ public final class GuardJob extends Job {
     private void fightCreeper(ServerLevel level, Villager villager, Creeper creeper, double distance, boolean ranged) {
         villager.getLookControl().setLookAt(creeper, 30.0F, 30.0F);
         boolean fuse = creeper.getSwellDir() > 0 || creeper.isIgnited();
+        boolean huntsVillagers = creeper.getTarget() instanceof Villager;
+        if (!ranged && !huntsVillagers) {
+            if (distance < 8.0) {
+                status = "keeping away from a creeper";
+                BlockPos spot = safeSpot(level, villager, creeper, 7.0);
+                if (spot != null) {
+                    villager.getNavigation().moveTo(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5, 1.0);
+                }
+                return;
+            }
+            ignored.put(creeper.getUUID(), level.getGameTime() + 200);
+            target = null;
+            return;
+        }
         if (creeperBackOff > 0) {
             creeperBackOff--;
         }
         double safe = ranged ? 8.0 : 7.5;
         if (fuse && distance < safe || creeperBackOff > 0 && distance < 6.0 || ranged && distance < 5.0) {
             status = "keeping away from a creeper";
-            double[] away = CombatMath.retreatPoint(villager.getX(), villager.getZ(), creeper.getX(), creeper.getZ(), 6.0);
-            BlockPos spot = WorldUtil.surface(level, (int) Math.floor(away[0]), (int) Math.floor(away[1]));
-            if (Math.abs(spot.getY() - villager.getBlockY()) > 3) {
-                double[] side = CombatMath.strafePoint(villager.getX(), villager.getZ(), creeper.getX(), creeper.getZ(), 6.0, strafeLeft);
-                spot = WorldUtil.surface(level, (int) Math.floor(side[0]), (int) Math.floor(side[1]));
-                strafeLeft = !strafeLeft;
+            BlockPos spot = safeSpot(level, villager, creeper, 6.0);
+            if (spot != null) {
+                villager.getNavigation().moveTo(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5, 1.0);
             }
-            villager.getNavigation().moveTo(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5, 1.0);
             if (ranged && !fuse && shotCooldown <= 0 && distance > 3.0 && clearShot(level, villager)) {
                 shoot(level, villager);
             }
@@ -411,6 +421,25 @@ public final class GuardJob extends Job {
             creeperBackOff = 30;
             colony().data().bump("creeper_hits", 1);
         }
+    }
+
+    private BlockPos safeSpot(ServerLevel level, Villager villager, LivingEntity threat, double distance) {
+        double base = Math.atan2(villager.getZ() - threat.getZ(), villager.getX() - threat.getX());
+        double[] turns = {0, 0.6, -0.6, 1.2, -1.2, 1.8, -1.8};
+        for (double turn : turns) {
+            double angle = base + turn;
+            int x = (int) Math.floor(villager.getX() + Math.cos(angle) * distance);
+            int z = (int) Math.floor(villager.getZ() + Math.sin(angle) * distance);
+            if (!WorldUtil.loaded(level, new BlockPos(x, 0, z))) {
+                continue;
+            }
+            BlockPos spot = WorldUtil.surface(level, x, z);
+            if (Math.abs(spot.getY() - villager.getBlockY()) <= 2 && level.getFluidState(spot).isEmpty()
+                    && level.getFluidState(spot.below()).isEmpty() && spot.distSqr(threat.blockPosition()) > villager.blockPosition().distSqr(threat.blockPosition())) {
+                return spot;
+            }
+        }
+        return null;
     }
 
     private boolean clearShot(ServerLevel level, Villager villager) {

@@ -138,6 +138,17 @@ public final class Colonist {
         if (villager.isSleeping() && role != Role.GUARD) {
             want = false;
         }
+        if (!want && role != Role.GUARD && !villager.isBaby() && villager.isAlive() && !villager.isSleeping()
+                && !colony.workTime(level) && farFromHome(villager)) {
+            if (!isControlled(villager)) {
+                take(level, villager);
+            }
+            Mover.keepAfloat(villager);
+            if (mover.tick(level, villager, colony.depot(), 6.0, 0.6, false) != Mover.Result.MOVING) {
+                release(level, villager, "home");
+            }
+            return;
+        }
         boolean controlled = isControlled(villager);
         if (want && !controlled) {
             take(level, villager);
@@ -160,6 +171,20 @@ public final class Colonist {
             digger.bonus(1.0F + 0.12F * colony.skill(uuid, role));
             job.tick(level, villager);
         }
+    }
+
+    private boolean farFromHome(Villager villager) {
+        double limit = colony.data().radius + 28;
+        if (villager.blockPosition().distSqr(colony.center()) <= limit * limit) {
+            return false;
+        }
+        org.lts.smartcolony.core.Pos here = org.lts.smartcolony.util.WorldUtil.pos(villager.blockPosition());
+        for (org.lts.smartcolony.core.ColonyData.Building building : colony.data().buildings) {
+            if (building.contains(here, 8)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private void celebrate(ServerLevel level, Villager villager) {

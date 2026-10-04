@@ -47,12 +47,24 @@ public final class Defense {
         }
     }
 
+    private static boolean hostileNow(LivingEntity entity) {
+        if (entity instanceof net.minecraft.world.entity.monster.Enderman
+                || entity instanceof net.minecraft.world.entity.monster.zombie.ZombifiedPiglin) {
+            return entity instanceof net.minecraft.world.entity.Mob mob && mob.getTarget() != null;
+        }
+        return true;
+    }
+
     private void alarm(ServerLevel level) {
         BlockPos center = colony.center();
         double inner = colony.data().radius * 0.75;
         LivingEntity intruder = null;
         for (LivingEntity enemy : enemies) {
             if (enemy instanceof ServerPlayer || enemy.isInWater()) {
+                continue;
+            }
+            if (enemy instanceof net.minecraft.world.entity.Mob mob && mob.getTarget() == null
+                    && !(enemy instanceof net.minecraft.world.entity.monster.Creeper)) {
                 continue;
             }
             double dx = enemy.getX() - center.getX();
@@ -92,7 +104,7 @@ public final class Defense {
         enemies.clear();
         BlockPos center = colony.center();
         for (LivingEntity entity : level.getEntitiesOfClass(LivingEntity.class, area(16),
-                e -> e instanceof Enemy && e.isAlive() && !(e instanceof IronGolem))) {
+                e -> e instanceof Enemy && e.isAlive() && !(e instanceof IronGolem) && hostileNow(e))) {
             enemies.add(entity);
             ThreatMap.add(colony.data().threat, entity.getX() - center.getX(), entity.getZ() - center.getZ(), 0.2);
         }
