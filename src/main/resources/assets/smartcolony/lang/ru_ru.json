@@ -111,5 +111,16 @@
   "smartcolony.ui.wall_none": "Пока не задумана: о стене колония задумается через два дня, когда взрослых станет пять или больше.",
   "smartcolony.chat.alarm": "Тревога! В деревне %s: звонит колокол, жители прячутся по домам, стража выходит на бой.",
   "smartcolony.chat.festival": "Праздник! Жители собираются у колокола и танцуют.",
-  "smartcolony.ui.skill": "ур. %s"
+  "smartcolony.ui.skill": "ур. %s",
+  "smartcolony.ui.advisor_title": "Советник ИИ",
+  "smartcolony.ui.advisor_off": "Выключен. Включите aiEnabled в config/smartcolony.json и запустите Ollama.",
+  "smartcolony.ui.advisor_asking": "Думает...",
+  "smartcolony.ui.advisor_error": "Модель не отвечает: %s",
+  "smartcolony.ui.advisor_idle": "Ждёт следующего обзора.",
+  "smartcolony.command.ai_status": "Советник ИИ: %s, модель %s, адрес %s",
+  "smartcolony.command.ai_on": "Советник ИИ включён для этой колонии.",
+  "smartcolony.command.ai_off": "Советник ИИ выключен для этой колонии.",
+  "smartcolony.command.ai_now": "Советник сейчас посмотрит колонию.",
+  "smartcolony.command.ai_global_off": "Советник ИИ выключен: поставьте aiEnabled = true в config/smartcolony.json и выполните /colony ai reload.",
+  "smartcolony.command.ai_reload": "Настройки перечитаны, советник ИИ: %s."
 }

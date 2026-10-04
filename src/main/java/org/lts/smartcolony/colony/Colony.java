@@ -53,6 +53,7 @@ public final class Colony {
     private final Improvements improvements;
     private boolean festivalAnnounced;
     private final TheftWatcher theft;
+    private final org.lts.smartcolony.ai.Advisor advisor;
     private final Map<UUID, Colonist> colonists = new LinkedHashMap<>();
     private final Set<String> requests = new LinkedHashSet<>();
     private final Set<UUID> ownedNames = new java.util.HashSet<>();
@@ -72,6 +73,7 @@ public final class Colony {
         this.migration = new Migration(this);
         this.improvements = new Improvements(this);
         this.theft = new TheftWatcher(this);
+        this.advisor = new org.lts.smartcolony.ai.Advisor(this);
         for (Map.Entry<String, ColonyData.Member> entry : data.members.entrySet()) {
             UUID uuid = UUID.fromString(entry.getKey());
             Colonist colonist = new Colonist(uuid, this);
@@ -121,6 +123,10 @@ public final class Colony {
 
     public Construction construction() {
         return construction;
+    }
+
+    public org.lts.smartcolony.ai.Advisor advisor() {
+        return advisor;
     }
 
     public TheftWatcher theft() {
@@ -533,6 +539,9 @@ public final class Colony {
         }
         economy.tick(level, ticks);
         migration.tick(level);
+        if (ticks % 20 == 11) {
+            advisor.tick(level);
+        }
         boolean party = festival(level);
         if (party && !festivalAnnounced) {
             festivalAnnounced = true;
@@ -653,7 +662,7 @@ public final class Colony {
         }
         RoleAllocator.Needs needs = new RoleAllocator.Needs(adults, wood, stone, iron, economy.foodPoints(stock), animal,
                 construction.backlog(level), data.pen != null, equippable, defense.threatLevel());
-        desired = RoleAllocator.desired(needs);
+        desired = RoleAllocator.withTargets(RoleAllocator.desired(needs), advisor.roleTargets(level.getGameTime()), adults);
         Map<String, Role> current = new LinkedHashMap<>();
         Map<String, Role> affinity = new HashMap<>();
         Set<String> locked = new java.util.HashSet<>();

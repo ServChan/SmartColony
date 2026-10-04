@@ -58,6 +58,10 @@ public final class Mover {
         return note;
     }
 
+    public int failures() {
+        return failedPaths;
+    }
+
     public BlockPos target() {
         return target;
     }

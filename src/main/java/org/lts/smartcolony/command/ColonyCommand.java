@@ -64,10 +64,58 @@ public final class ColonyCommand {
                 .then(Commands.literal("build")
                         .then(Commands.argument("blueprint", StringArgumentType.word()).suggests(BLUEPRINTS)
                                 .executes(ColonyCommand::build)))
+                .then(Commands.literal("ai").executes(ctx -> ai(ctx, "status"))
+                        .then(Commands.literal("on").executes(ctx -> ai(ctx, "on")))
+                        .then(Commands.literal("off").executes(ctx -> ai(ctx, "off")))
+                        .then(Commands.literal("now").executes(ctx -> ai(ctx, "now")))
+                        .then(Commands.literal("reload").executes(ctx -> ai(ctx, "reload"))))
                 .then(Commands.literal("role")
                         .then(Commands.argument("villagers", EntityArgument.entities())
                                 .then(Commands.argument("role", StringArgumentType.word()).suggests(ROLES)
                                         .executes(ColonyCommand::role)))));
+    }
+
+    private static int ai(CommandContext<CommandSourceStack> context, String mode) {
+        CommandSourceStack source = context.getSource();
+        if (mode.equals("reload")) {
+            java.util.concurrent.CompletableFuture.runAsync(org.lts.smartcolony.SmartColonyConfig::load)
+                    .thenRun(() -> source.getServer().execute(() -> source.sendSuccess(() -> Component.translatable("smartcolony.command.ai_reload",
+                            org.lts.smartcolony.SmartColonyConfig.get().aiEnabled ? "on" : "off"), false)));
+            return 1;
+        }
+        Colony colony = colony(source);
+        if (colony == null) {
+            return 0;
+        }
+        org.lts.smartcolony.SmartColonyConfig config = org.lts.smartcolony.SmartColonyConfig.get();
+        switch (mode) {
+            case "on" -> {
+                colony.data().aiOff = false;
+                colony.markDirty();
+                source.sendSuccess(() -> Component.translatable(config.aiEnabled ? "smartcolony.command.ai_on" : "smartcolony.command.ai_global_off"), false);
+            }
+            case "off" -> {
+                colony.data().aiOff = true;
+                colony.markDirty();
+                source.sendSuccess(() -> Component.translatable("smartcolony.command.ai_off"), false);
+            }
+            case "now" -> {
+                if (!colony.advisor().active()) {
+                    source.sendFailure(Component.translatable("smartcolony.command.ai_global_off"));
+                    return 0;
+                }
+                colony.advisor().askNow();
+                source.sendSuccess(() -> Component.translatable("smartcolony.command.ai_now"), false);
+            }
+            default -> {
+                String state = colony.advisor().state() + (colony.advisor().error().isEmpty() ? "" : " (" + colony.advisor().error() + ")");
+                source.sendSuccess(() -> Component.translatable("smartcolony.command.ai_status", state, config.aiModel, config.aiEndpoint), false);
+                if (!colony.advisor().thoughts().isEmpty()) {
+                    source.sendSuccess(() -> Component.literal(colony.advisor().thoughts()), false);
+                }
+            }
+        }
+        return 1;
     }
 
     private static Colony colony(CommandSourceStack source) {

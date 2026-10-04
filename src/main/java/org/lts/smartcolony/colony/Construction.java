@@ -79,6 +79,7 @@ public final class Construction {
     private long lastLighting = -100000;
     private final Map<ColonyData.Project, Runtime> runtime = new IdentityHashMap<>();
     private final Map<Long, Long> claims = new HashMap<>();
+    private BlockPos siteHint;
     private final Map<UUID, ColonyData.Project> assigned = new HashMap<>();
     private final Map<UUID, Long> assignedAt = new HashMap<>();
 
@@ -481,6 +482,9 @@ public final class Construction {
                 double angle = (i + (distance % 2) * 0.5) * Math.PI * 2.0 / steps;
                 int px = center.getX() + (int) Math.round(Math.cos(angle) * distance);
                 int pz = center.getZ() + (int) Math.round(Math.sin(angle) * distance);
+                if (siteHint != null && Math.hypot(px - siteHint.getX(), pz - siteHint.getZ()) > 14) {
+                    continue;
+                }
                 int rotation = Blueprint.rotationFacing(center.getX() - px, center.getZ() - pz);
                 int sx = blueprint.rotatedSizeX(rotation);
                 int sz = blueprint.rotatedSizeZ(rotation);
@@ -1242,8 +1246,18 @@ public final class Construction {
     }
 
     public boolean forceProject(ServerLevel level, String blueprintId) {
+        return forceProject(level, blueprintId, null);
+    }
+
+    public boolean forceProject(ServerLevel level, String blueprintId, BlockPos hint) {
         Blueprint blueprint = Blueprints.get(blueprintId);
-        ColonyData.Project project = findSite(level, blueprint, chooseWood(level));
+        siteHint = hint;
+        ColonyData.Project project;
+        try {
+            project = findSite(level, blueprint, chooseWood(level));
+        } finally {
+            siteHint = null;
+        }
         if (project != null) {
             project.started = level.getGameTime();
             project.waitingSince = level.getGameTime();

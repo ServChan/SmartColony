@@ -203,6 +203,25 @@ class CoreLogicTest {
     }
 
     @Test
+    void advisorTargetsKeepTheHeadcount() {
+        EnumMap<Role, Integer> base = new EnumMap<>(Role.class);
+        for (Role role : Role.values()) {
+            base.put(role, 0);
+        }
+        base.put(Role.FARMER, 10);
+        base.put(Role.LUMBERJACK, 6);
+        base.put(Role.GUARD, 4);
+        EnumMap<Role, Integer> steered = RoleAllocator.withTargets(base, Map.of(Role.BUILDER, 5, Role.MINER, 3), 20);
+        assertEquals(20, steered.values().stream().mapToInt(Integer::intValue).sum());
+        assertEquals(5, steered.get(Role.BUILDER));
+        assertEquals(3, steered.get(Role.MINER));
+        assertTrue(steered.get(Role.FARMER) > steered.get(Role.GUARD));
+        EnumMap<Role, Integer> greedy = RoleAllocator.withTargets(base, Map.of(Role.BUILDER, 50), 20);
+        assertEquals(10, greedy.get(Role.BUILDER));
+        assertEquals(20, greedy.values().stream().mapToInt(Integer::intValue).sum());
+    }
+
+    @Test
     void longBuildQueuesCallMoreBuilders() {
         RoleAllocator.Needs small = new RoleAllocator.Needs(40, 300, 300, 10, 500, 0, 20, true, Set.of(Role.MINER), 0);
         assertEquals(2, RoleAllocator.desired(small).get(Role.BUILDER));

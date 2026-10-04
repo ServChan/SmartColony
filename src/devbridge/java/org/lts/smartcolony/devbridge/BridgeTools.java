@@ -119,6 +119,8 @@ public final class BridgeTools {
         tools.add(tool("paste", "Place a blueprint instantly at x,y,z (y = foundation level) with rotation 0-3 and wood, for visual checks.",
                 props("blueprint", "string", "", "x", "integer", "", "y", "integer", "", "z", "integer", "", "rotation", "integer", "0-3", "wood", "string", "oak"),
                 "blueprint", "x", "y", "z"));
+        tools.add(tool("ai", "Advisor state, last prompt and reply; now=true asks the model at once.",
+                props("id", "string", "colony id", "now", "boolean", "ask now")));
         tools.add(tool("rooms", "Explain village house room detection for every bed near a colony.", props("id", "string", "colony id")));
         tools.add(tool("wall", "Replan the colony wall now with material stone or wood.",
                 props("material", "string", "stone|wood", "id", "string", "colony id"), "material"));
@@ -157,6 +159,16 @@ public final class BridgeTools {
             });
             case "paste" -> onMain(() -> paste(args));
             case "rooms" -> onMain(() -> rooms(args));
+            case "ai" -> onMain(() -> {
+                Colony colony = pick(args);
+                if (colony == null) {
+                    return text("no colony", true);
+                }
+                if (args.has("now") && args.get("now").getAsBoolean()) {
+                    colony.advisor().askNow();
+                }
+                return json(colony.advisor().debug());
+            });
             default -> text("unknown tool " + name, true);
         };
     }

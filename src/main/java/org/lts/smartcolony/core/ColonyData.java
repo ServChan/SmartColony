@@ -34,6 +34,7 @@ public final class ColonyData {
     public List<Pos> plantedTrees = new ArrayList<>();
     public List<Order> orders = new ArrayList<>();
     public Map<String, Integer> renovated = new LinkedHashMap<>();
+    public boolean aiOff;
     public Wall wall;
     public boolean villageSurveyed;
     public int surveyVersion;
@@ -78,6 +79,7 @@ public final class ColonyData {
         public long planned;
         public boolean announced;
         public List<Pos> gates = new ArrayList<>();
+        public List<Integer> heights = new ArrayList<>();
     }
 
     public static final class Building {

@@ -40,7 +40,9 @@ public record ColonyView(
         String wallMaterial,
         int wallBuilt,
         int wallTotal,
-        List<String> sites) {
+        List<String> sites,
+        String advisorState,
+        String advisorText) {
 
     public record RoleCount(String role, int count) {
     }
@@ -135,6 +137,8 @@ public record ColonyView(
                 colony.foodPoints(level), project, phase, missing, mine, mineProgress, mineTotal, reputation,
                 Reputation.status(reputation).key(), villagers, journal, deals, new ArrayList<>(colony.requests()),
                 data.wall == null ? null : data.wall.material, data.wall == null ? 0 : data.wall.built,
-                data.wall == null ? 0 : data.wall.total, sites);
+                data.wall == null ? 0 : data.wall.total, sites, colony.advisor().active() || !colony.advisor().state().equals("off")
+                        ? colony.advisor().state() : "off",
+                colony.advisor().state().equals("error") ? colony.advisor().error() : colony.advisor().thoughts());
     }
 }

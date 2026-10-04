@@ -33,7 +33,8 @@ public final class Improvements {
     private static final int POST_SPACING = 8;
     private static final int TOWER_HEIGHT = 5;
     private static final long WALL_AFTER = 24000L * 2;
-    private static final int WALL_VERSION = 5;
+    private static final int WALL_VERSION = 6;
+    private static final int MAX_RAISE = 4;
 
     private final Colony colony;
     private long blockedUntil;
@@ -344,7 +345,8 @@ public final class Improvements {
                 int columnIndex = Math.floorMod(inspectWall++, wall.columns.size());
                 Pos column = wall.columns.get(columnIndex);
                 boolean gate = wall.gates.contains(column);
-                for (int h = 1; h <= (gate ? 1 : WALL_HEIGHT); h++) {
+                int top = gate ? 1 : height(wall, columnIndex);
+                for (int h = 1; h <= top; h++) {
                     BlockPos pos = new BlockPos(column.x(), column.y() + h, column.z());
                     if (!WorldUtil.loaded(level, pos) || !missing(level, pos)) {
                         continue;
@@ -353,7 +355,7 @@ public final class Improvements {
                     if (gate) {
                         state = doorState(wall.material.equals("stone") ? "oak" : wall.material, gateFacing(wall.columns, columnIndex));
                     } else {
-                        state = wallState(wall.material, h, columnIndex % POST_SPACING == 0);
+                        state = wallState(wall.material, h, top, columnIndex % POST_SPACING == 0);
                     }
                     found.add(new ColonyData.Order(WorldUtil.pos(pos), state, REPAIR));
                 }
@@ -534,30 +536,6 @@ public final class Improvements {
         return state.is(net.minecraft.tags.BlockTags.LOGS) || state.is(net.minecraft.tags.BlockTags.PLANKS)
                 || state.is(net.minecraft.tags.BlockTags.WOODEN_FENCES) || state.is(net.minecraft.tags.BlockTags.FENCE_GATES)
                 || state.is(Blocks.COBBLESTONE) || state.is(Blocks.COBBLESTONE_WALL) || state.is(Blocks.TORCH) || state.is(Blocks.LANTERN);
-    }
-
-    private void clearOutside(ServerLevel level, BlockPos center, Pos column, List<ColonyData.Order> orders) {
-        double dx = column.x() - center.getX();
-        double dz = column.z() - center.getZ();
-        double length = Math.sqrt(dx * dx + dz * dz);
-        if (length < 1) {
-            return;
-        }
-        for (int d = 1; d <= 3; d++) {
-            int x = column.x() + (int) Math.round(dx / length * d);
-            int z = column.z() + (int) Math.round(dz / length * d);
-            BlockPos probe = new BlockPos(x, 0, z);
-            if (!WorldUtil.loaded(level, probe)) {
-                continue;
-            }
-            int ground = wallGround(level, x, z);
-            if (ground <= column.y() || ground - column.y() > 5 || colony.isProtected(new BlockPos(x, ground + 1, z), false)) {
-                continue;
-            }
-            for (int y = ground; y > column.y(); y--) {
-                orders.add(new ColonyData.Order(new Pos(x, y, z), "minecraft:air", WALL));
-            }
-        }
     }
 
     private boolean occupiedByOther(ColonyData.Building building, BlockPos cell) {
@@ -786,7 +764,7 @@ public final class Improvements {
             Pos columnPos = wall.columns.get(i);
             if (gateAt[i]) {
                 lastGate = i;
-                clearOutside(level, center, columnPos, wallOrders);
+                wall.heights.add(WALL_HEIGHT);
                 wallOrders.add(new ColonyData.Order(new Pos(columnPos.x(), columnPos.y() + 1, columnPos.z()),
                         doorState(wood, gateFacing(wall.columns, i)), WALL));
                 wallOrders.add(new ColonyData.Order(new Pos(columnPos.x(), columnPos.y() + WALL_HEIGHT, columnPos.z()),
@@ -799,9 +777,10 @@ public final class Improvements {
                 tower(level, columnPos, pillar, cap, towerOrders, towerCells);
             }
             boolean post = i % POST_SPACING == 0;
-            clearOutside(level, center, columnPos, wallOrders);
-            for (int h = 1; h <= WALL_HEIGHT; h++) {
-                wallOrders.add(new ColonyData.Order(new Pos(columnPos.x(), columnPos.y() + h, columnPos.z()), wallState(wall.material, h, post), WALL));
+            int top = columnTop(level, center, columnPos);
+            wall.heights.add(top);
+            for (int h = 1; h <= top; h++) {
+                wallOrders.add(new ColonyData.Order(new Pos(columnPos.x(), columnPos.y() + h, columnPos.z()), wallState(wall.material, h, top, post), WALL));
             }
         }
         for (Pos gate : mainGates) {
@@ -812,8 +791,9 @@ public final class Improvements {
                     continue;
                 }
                 Pos post = wall.columns.get(neighbour);
-                wallOrders.add(new ColonyData.Order(new Pos(post.x(), post.y() + WALL_HEIGHT + 1, post.z()), pillar, WALL));
-                wallOrders.add(new ColonyData.Order(new Pos(post.x(), post.y() + WALL_HEIGHT + 2, post.z()), "minecraft:lantern", WALL));
+                int top = height(wall, neighbour);
+                wallOrders.add(new ColonyData.Order(new Pos(post.x(), post.y() + top + 1, post.z()), pillar, WALL));
+                wallOrders.add(new ColonyData.Order(new Pos(post.x(), post.y() + top + 2, post.z()), "minecraft:lantern", WALL));
             }
         }
         wallOrders.removeIf(order -> towerCells.contains(BlockPos.asLong(order.pos.x(), 0, order.pos.z())));
@@ -870,18 +850,82 @@ public final class Improvements {
         return Math.abs(a.x() - b.x()) <= 1 && Math.abs(a.z() - b.z()) <= 1;
     }
 
-    private static String wallState(String material, int h, boolean post) {
+    private static String wallState(String material, int h, int top, boolean post) {
         if (material.equals("stone")) {
-            return h == WALL_HEIGHT ? "minecraft:cobblestone_wall" : "minecraft:cobblestone";
+            return h == top ? "minecraft:cobblestone_wall" : "minecraft:cobblestone";
         }
         if (post && h > 1) {
             return Ids.mc(material + "_log");
         }
-        return switch (h) {
-            case 1 -> "minecraft:cobblestone";
-            case 2 -> Ids.mc(material + "_planks");
-            default -> Ids.mc(material + "_fence");
-        };
+        if (h == 1) {
+            return "minecraft:cobblestone";
+        }
+        return h == top ? Ids.mc(material + "_fence") : Ids.mc(material + "_planks");
+    }
+
+    private static int height(ColonyData.Wall wall, int index) {
+        return index < wall.heights.size() ? wall.heights.get(index) : WALL_HEIGHT;
+    }
+
+    private int columnTop(ServerLevel level, BlockPos center, Pos column) {
+        double dx = column.x() - center.getX();
+        double dz = column.z() - center.getZ();
+        double length = Math.sqrt(dx * dx + dz * dz);
+        int highest = column.y();
+        if (length >= 1) {
+            for (int d = 1; d <= 3; d++) {
+                for (int side = -1; side <= 1; side++) {
+                    int x = column.x() + (int) Math.round((dx * d - dz * side) / length);
+                    int z = column.z() + (int) Math.round((dz * d + dx * side) / length);
+                    if (!WorldUtil.loaded(level, new BlockPos(x, 0, z))) {
+                        continue;
+                    }
+                    BlockPos ground = new BlockPos(x, wallGround(level, x, z), z);
+                    if (level.getFluidState(ground).isEmpty() && !isWall(WorldUtil.pos(ground))) {
+                        highest = Math.max(highest, ground.getY());
+                    }
+                }
+            }
+        }
+        return WALL_HEIGHT + Math.max(0, Math.min(MAX_RAISE, highest - column.y()));
+    }
+
+    private boolean raiseWall(ServerLevel level) {
+        ColonyData.Wall wall = data().wall;
+        for (Pos column : wall.columns) {
+            if (!WorldUtil.loaded(level, new BlockPos(column.x(), 0, column.z()))) {
+                return false;
+            }
+        }
+        BlockPos center = colony.center();
+        List<ColonyData.Order> raise = new ArrayList<>();
+        List<Integer> heights = new ArrayList<>();
+        int raised = 0;
+        for (int i = 0; i < wall.columns.size(); i++) {
+            Pos column = wall.columns.get(i);
+            if (wall.gates.contains(column)) {
+                heights.add(WALL_HEIGHT);
+                continue;
+            }
+            int top = columnTop(level, center, column);
+            heights.add(top);
+            if (top <= WALL_HEIGHT) {
+                continue;
+            }
+            raised++;
+            boolean post = i % POST_SPACING == 0;
+            for (int h = WALL_HEIGHT; h <= top; h++) {
+                raise.add(new ColonyData.Order(new Pos(column.x(), column.y() + h, column.z()), wallState(wall.material, h, top, post), WALL));
+            }
+        }
+        wall.heights = heights;
+        data().orders.addAll(raise);
+        wall.total += raise.size();
+        if (raised > 0) {
+            colony.journal(level, "raising " + raised + " wall columns where the ground outside is higher");
+        }
+        colony.markDirty();
+        return true;
     }
 
     private void migrateWall(ServerLevel level) {
@@ -890,8 +934,14 @@ public final class Improvements {
             return;
         }
         if (data().wallVersion == 4) {
-            data().wallVersion = WALL_VERSION;
+            data().wallVersion = 5;
             gatesToDoors(level);
+            return;
+        }
+        if (data().wallVersion == 5) {
+            if (raiseWall(level)) {
+                data().wallVersion = WALL_VERSION;
+            }
             return;
         }
         if (level.getGameTime() - lastWallAttempt < 200) {
@@ -900,7 +950,7 @@ public final class Improvements {
         lastWallAttempt = level.getGameTime();
         String material = wall.material.equals("stone") ? "stone" : "wood";
         if (replanWall(level, material)) {
-            colony.journal(level, "the wall plan was redrawn around every building, with a ditch outside");
+            colony.journal(level, "the wall plan was redrawn around every building");
         }
     }
 
@@ -1029,7 +1079,7 @@ public final class Improvements {
             }
             String item = BuiltInRegistries.ITEM.getKey(target.getBlock().asItem()).toString();
             if (colony.stockOf(level, id -> id.equals(item)) == 0 && !colony.craft(level, item, 1)) {
-                String substitute = DECOR.equals(order.tag) ? null : substitute(level, order.state);
+                String substitute = DECOR.equals(order.tag) ? null : substitute(level, order.state, WALL.equals(order.tag));
                 if (substitute != null) {
                     order.state = substitute;
                     colony.markDirty();
@@ -1074,7 +1124,9 @@ public final class Improvements {
             "tuff", "mossy_cobblestone", "stone_bricks", "red_sandstone", "blackstone", "mud_bricks", "bricks", "deepslate");
     private static final List<String> WOOD_SUFFIXES = List.of("_fence_gate", "_fence", "_planks", "_log", "_stairs", "_slab");
 
-    private String substitute(ServerLevel level, String state) {
+    private static final List<String> GRAY_STONES = List.of("cobbled_deepslate", "mossy_cobblestone", "stone", "stone_bricks", "deepslate");
+
+    private String substitute(ServerLevel level, String state, boolean wallTag) {
         int bracket = state.indexOf('[');
         String id = Ids.path(bracket < 0 ? state : state.substring(0, bracket));
         String props = bracket < 0 ? "" : state.substring(bracket);
@@ -1089,7 +1141,7 @@ public final class Improvements {
             return null;
         }
         if (id.equals("cobblestone") || id.equals("cobblestone_wall")) {
-            for (String stone : STONES) {
+            for (String stone : wallTag ? GRAY_STONES : STONES) {
                 String candidate = Ids.mc(stone);
                 if (colony.stockOf(level, found -> found.equals(candidate)) > 0) {
                     return candidate;

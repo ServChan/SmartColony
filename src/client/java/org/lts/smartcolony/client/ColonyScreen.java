@@ -223,6 +223,37 @@ public final class ColonyScreen extends Screen {
             }
         }
         y += 4;
+        y = heading(graphics, Component.translatable("smartcolony.ui.advisor_title"), x, y);
+        switch (view.advisorState()) {
+            case "off" -> {
+                graphics.text(font, font.plainSubstrByWidth(Component.translatable("smartcolony.ui.advisor_off").getString(), w), x, y, TEXT_DIM, false);
+                y += 14;
+            }
+            case "asking" -> {
+                graphics.text(font, Component.translatable("smartcolony.ui.advisor_asking"), x, y, TEXT_DIM, false);
+                y += 14;
+            }
+            case "error" -> {
+                graphics.text(font, font.plainSubstrByWidth(Component.translatable("smartcolony.ui.advisor_error", view.advisorText()).getString(), w),
+                        x, y, STATUS_WARN, false);
+                y += 14;
+            }
+            default -> {
+                String text = view.advisorText() == null || view.advisorText().isEmpty()
+                        ? Component.translatable("smartcolony.ui.advisor_idle").getString() : view.advisorText();
+                for (int line = 0; line < 3 && !text.isEmpty(); line++) {
+                    String part = font.plainSubstrByWidth(text, w);
+                    if (part.isEmpty()) {
+                        break;
+                    }
+                    graphics.text(font, part, x, y, TEXT_NORMAL, false);
+                    y += 12;
+                    text = text.substring(part.length()).stripLeading();
+                }
+                y += 2;
+            }
+        }
+        y += 4;
         y = heading(graphics, Component.translatable("smartcolony.ui.mine_title"), x, y);
         if (view.mine() == null) {
             graphics.text(font, Component.translatable("smartcolony.ui.mine_none"), x, y, TEXT_DIM, false);

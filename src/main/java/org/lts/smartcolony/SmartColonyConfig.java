@@ -38,6 +38,18 @@ public final class SmartColonyConfig {
     public float guardRetreatHealth = 0.35f;
     public int woodSurplus = 320;
     public boolean guardsAttackEnemyPlayers = true;
+    public boolean aiEnabled = false;
+    public String aiApi = "ollama";
+    public String aiEndpoint = "http://127.0.0.1:11434";
+    public String aiModel = "qwen2.5:7b";
+    public String aiApiKey = "";
+    public String aiLanguage = "ru";
+    public int aiIntervalTicks = 3600;
+    public int aiTimeoutSeconds = 120;
+    public boolean aiCanAssignRoles = true;
+    public boolean aiCanBuild = true;
+    public boolean aiCanCraft = true;
+    public boolean aiCanRescue = true;
 
     public static SmartColonyConfig get() {
         return instance;
@@ -101,6 +113,13 @@ public final class SmartColonyConfig {
         marketIntervalTicks = clamp(marketIntervalTicks, 200, 72000);
         guardRetreatHealth = Math.max(0.05f, Math.min(0.9f, guardRetreatHealth));
         woodSurplus = clamp(woodSurplus, 64, 100000);
+        aiApi = aiApi == null || !aiApi.trim().equalsIgnoreCase("openai") ? "ollama" : "openai";
+        aiEndpoint = aiEndpoint == null || aiEndpoint.isBlank() ? "http://127.0.0.1:11434" : aiEndpoint.trim();
+        aiModel = aiModel == null || aiModel.isBlank() ? "qwen2.5:7b" : aiModel.trim();
+        aiApiKey = aiApiKey == null ? "" : aiApiKey.trim();
+        aiLanguage = aiLanguage == null || aiLanguage.isBlank() ? "ru" : aiLanguage.trim();
+        aiIntervalTicks = clamp(aiIntervalTicks, 400, 72000);
+        aiTimeoutSeconds = clamp(aiTimeoutSeconds, 5, 600);
     }
 
     public boolean isWorkTime(long dayTime) {

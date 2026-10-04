@@ -111,5 +111,16 @@
   "smartcolony.ui.wall_none": "Not planned yet: the colony thinks about a wall after two days with five or more adults.",
   "smartcolony.chat.alarm": "Alarm! %s is inside the village: the bell rings, villagers hide in their homes and the guards come out.",
   "smartcolony.chat.festival": "Festival! The villagers gather at the bell to dance.",
-  "smartcolony.ui.skill": "lvl %s"
+  "smartcolony.ui.skill": "lvl %s",
+  "smartcolony.ui.advisor_title": "AI advisor",
+  "smartcolony.ui.advisor_off": "Off. Set aiEnabled in config/smartcolony.json and run Ollama.",
+  "smartcolony.ui.advisor_asking": "Thinking...",
+  "smartcolony.ui.advisor_error": "The model does not answer: %s",
+  "smartcolony.ui.advisor_idle": "Waiting for the next review.",
+  "smartcolony.command.ai_status": "AI advisor: %s, model %s at %s",
+  "smartcolony.command.ai_on": "The AI advisor is on for this colony.",
+  "smartcolony.command.ai_off": "The AI advisor is off for this colony.",
+  "smartcolony.command.ai_now": "The advisor will review the colony now.",
+  "smartcolony.command.ai_global_off": "The AI advisor is off: set aiEnabled to true in config/smartcolony.json, then run /colony ai reload.",
+  "smartcolony.command.ai_reload": "Config reloaded, AI advisor %s."
 }
