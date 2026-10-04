@@ -147,7 +147,9 @@ public final class Advisor {
         root.addProperty("ageDays", (level.getGameTime() - data.founded) / 24000L);
         root.addProperty("center", pos(colony.center()));
         root.addProperty("radius", data.radius);
-        root.addProperty("beds", data.beds());
+        int beds = (int) level.getPoiManager().getCountInRange(type -> type.is(net.minecraft.world.entity.ai.village.poi.PoiTypes.HOME),
+                colony.center(), data.radius + 16, net.minecraft.world.entity.ai.village.poi.PoiManager.Occupancy.ANY);
+        root.addProperty("beds", beds);
         EnumMap<Role, Integer> counts = new EnumMap<>(Role.class);
         int children = 0;
         JsonArray stuck = new JsonArray();
@@ -234,8 +236,8 @@ public final class Advisor {
         root.add("activeRoleTargets", roleTargetsJson(level.getGameTime()));
         JsonArray hints = new JsonArray();
         int population = colony.colonists().size();
-        if (data.beds() < population + 2) {
-            hints.add("beds " + data.beds() + " for " + population + " villagers: more houses would let the colony grow");
+        if (beds < population + 2) {
+            hints.add("beds " + beds + " for " + population + " villagers: more houses would let the colony grow");
         }
         long waiting = colony.construction().projects().stream().filter(p -> p.phase.equals("reserve")).count();
         if (waiting > 0 && !colony.construction().missing().isEmpty()) {
@@ -387,8 +389,11 @@ public final class Advisor {
 
     private String craft(ServerLevel level, JsonObject action) {
         String item = Ids.path(string(action, "item"));
+        if (item.equals("bed")) {
+            item = "white_bed";
+        }
         int count = action.has("count") ? action.get("count").getAsInt() : 1;
-        if (!CRAFTABLE.contains(item)) {
+        if (!CRAFTABLE.contains(item) && !item.endsWith("_bed")) {
             return "rejected: " + item + " is not on the craft list";
         }
         count = Math.max(1, Math.min(16, count));
