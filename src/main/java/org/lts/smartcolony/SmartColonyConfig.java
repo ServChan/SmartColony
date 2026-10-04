@@ -41,7 +41,7 @@ public final class SmartColonyConfig {
     public boolean aiEnabled = false;
     public String aiApi = "ollama";
     public String aiEndpoint = "http://127.0.0.1:11434";
-    public String aiModel = "qwen2.5:7b";
+    public String aiModel = "gemma4:latest";
     public String aiApiKey = "";
     public String aiLanguage = "ru";
     public int aiIntervalTicks = 3600;
@@ -115,7 +115,7 @@ public final class SmartColonyConfig {
         woodSurplus = clamp(woodSurplus, 64, 100000);
         aiApi = aiApi == null || !aiApi.trim().equalsIgnoreCase("openai") ? "ollama" : "openai";
         aiEndpoint = aiEndpoint == null || aiEndpoint.isBlank() ? "http://127.0.0.1:11434" : aiEndpoint.trim();
-        aiModel = aiModel == null || aiModel.isBlank() ? "qwen2.5:7b" : aiModel.trim();
+        aiModel = aiModel == null || aiModel.isBlank() ? "gemma4:latest" : aiModel.trim();
         aiApiKey = aiApiKey == null ? "" : aiApiKey.trim();
         aiLanguage = aiLanguage == null || aiLanguage.isBlank() ? "ru" : aiLanguage.trim();
         aiIntervalTicks = clamp(aiIntervalTicks, 400, 72000);
