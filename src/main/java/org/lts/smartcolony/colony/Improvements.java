@@ -71,6 +71,12 @@ public final class Improvements {
             surveyVillage(level);
             colony.markDirty();
         }
+        ColonyData.Mine mine = data().mine;
+        if (mine != null && mine.quarry() && !mine.decorated) {
+            mine.decorated = true;
+            fenceQuarry(level, mine);
+            colony.markDirty();
+        }
         if (data().wall == null && wallWanted(level)) {
             planWall(level);
         }
@@ -133,6 +139,87 @@ public final class Improvements {
             colony.journal(level, "decorating the village: " + added + " benches and avenue trees");
             colony.markDirty();
         }
+    }
+
+    private void fenceQuarry(ServerLevel level, ColonyData.Mine mine) {
+        String wood = colony.construction().preferredWood(level);
+        String fence = Ids.mc(wood + "_fence");
+        int cx = mine.corner.x();
+        int cz = mine.corner.z();
+        int w = mine.width;
+        Pos gate = new Pos(mine.entrance.x(), 0, mine.entrance.z());
+        int added = 0;
+        for (int x = cx - 1; x <= cx + w; x++) {
+            for (int z = cz - 1; z <= cz + w; z++) {
+                boolean ring = x == cx - 1 || x == cx + w || z == cz - 1 || z == cz + w;
+                if (!ring) {
+                    continue;
+                }
+                int y = groundY(level, x, z) + 1;
+                BlockPos pos = new BlockPos(x, y, z);
+                if (!WorldUtil.loaded(level, pos) || !WorldUtil.isAirLike(level.getBlockState(pos)) || !level.getFluidState(pos.below()).isEmpty()) {
+                    continue;
+                }
+                boolean corner = (x == cx - 1 || x == cx + w) && (z == cz - 1 || z == cz + w);
+                if (x == gate.x() && z == gate.z()) {
+                    queue(pos, Ids.mc(wood + "_fence_gate") + "[facing=east]");
+                } else {
+                    queue(pos, fence);
+                    if (corner) {
+                        queue(pos.above(), fence);
+                        queue(pos.above(2), "minecraft:torch");
+                    }
+                }
+                added++;
+            }
+        }
+        colony.journal(level, "fencing the quarry: " + added + " posts, a gate and corner lamps");
+        tidyQuarry(level, mine);
+    }
+
+    private void tidyQuarry(ServerLevel level, ColonyData.Mine mine) {
+        org.lts.smartcolony.core.QuarryPlan quarry = (org.lts.smartcolony.core.QuarryPlan) mine.plan();
+        int dug = Math.min(quarry.layers(), mine.progress / quarry.perLayer());
+        int cx = quarry.corner().x();
+        int cz = quarry.corner().z();
+        int w = quarry.width();
+        int removed = 0;
+        for (int y = quarry.layerY(dug) - 1; y <= quarry.corner().y() + 3; y++) {
+            for (int x = cx; x < cx + w; x++) {
+                for (int z = cz; z < cz + w; z++) {
+                    BlockPos pos = new BlockPos(x, y, z);
+                    BlockState state = level.getBlockState(pos);
+                    if (state.is(Blocks.TORCH) || state.is(Blocks.WALL_TORCH)) {
+                        level.setBlock(pos, Blocks.AIR.defaultBlockState(), net.minecraft.world.level.block.Block.UPDATE_ALL);
+                        removed++;
+                    }
+                }
+            }
+        }
+        int mid = w / 2;
+        int[][] spots = {{cx + mid, cz, 0, -1}, {cx + mid, cz + w - 1, 0, 1}, {cx, cz + mid, -1, 0}, {cx + w - 1, cz + mid, 1, 0}};
+        int placed = 0;
+        for (int layer = 4; layer < dug; layer += 4) {
+            int y = quarry.layerY(layer) + 1;
+            for (int[] spot : spots) {
+                BlockPos at = new BlockPos(spot[0], y, spot[1]);
+                BlockPos wall = at.offset(spot[2], 0, spot[3]);
+                Direction facing = Direction.getApproximateNearest(-spot[2], 0, -spot[3]);
+                BlockState torch = Blocks.WALL_TORCH.defaultBlockState().setValue(net.minecraft.world.level.block.WallTorchBlock.FACING, facing);
+                if (!WorldUtil.isAirLike(level.getBlockState(at)) || !level.getBlockState(wall).isFaceSturdy(level, wall, facing)
+                        || !torch.canSurvive(level, at)) {
+                    continue;
+                }
+                if (removed > placed || colony.warehouse().take(level, Ids.mc("torch"), 1) == 1) {
+                    level.setBlock(at, torch, net.minecraft.world.level.block.Block.UPDATE_ALL);
+                    placed++;
+                }
+            }
+        }
+        if (removed > placed) {
+            colony.warehouse().give(level, Ids.mc("torch"), removed - placed);
+        }
+        colony.journal(level, "tidied the quarry lights: " + removed + " stray torches replaced by " + placed + " wall lamps");
     }
 
     private boolean decorSpot(ServerLevel level, BlockPos pos) {

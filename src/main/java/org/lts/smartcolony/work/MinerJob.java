@@ -357,7 +357,9 @@ public final class MinerJob extends Job {
                 return;
             }
         }
-        if (level.getBrightness(LightLayer.BLOCK, feet) < 4 && level.getBrightness(LightLayer.SKY, feet) < 8
+        if (cell.kind() == MinePlan.Kind.QUARRY) {
+            lightQuarry(level, villager, mine, cell);
+        } else if (level.getBrightness(LightLayer.BLOCK, feet) < 4 && level.getBrightness(LightLayer.SKY, feet) < 8
                 && Inv.count(villager, Ids.mc("torch")) > 0 && Placer.placeTorch(level, villager, feet)) {
             Inv.remove(villager, stack -> stack.is(Items.TORCH), 1);
             colony().data().bump("torches_mine", 1);
@@ -371,6 +373,39 @@ public final class MinerJob extends Job {
         colony().markDirty();
         if (!vein.isEmpty()) {
             phase = "vein";
+        }
+    }
+
+    private void lightQuarry(ServerLevel level, Villager villager, ColonyData.Mine mine, MinePlan.Cell cell) {
+        org.lts.smartcolony.core.QuarryPlan quarry = (org.lts.smartcolony.core.QuarryPlan) mine.plan();
+        int layer = quarry.layerOf(cell.index());
+        if (layer < 2 || layer % 4 != 0 || cell.index() % quarry.perLayer() != 0) {
+            return;
+        }
+        int w = quarry.width();
+        int cx = quarry.corner().x();
+        int cz = quarry.corner().z();
+        int y = quarry.layerY(layer) + 1;
+        int mid = w / 2;
+        int[][] spots = {{cx + mid, cz, 0, -1}, {cx + mid, cz + w - 1, 0, 1}, {cx, cz + mid, -1, 0}, {cx + w - 1, cz + mid, 1, 0}};
+        for (int[] spot : spots) {
+            if (Inv.count(villager, Ids.mc("torch")) == 0) {
+                return;
+            }
+            BlockPos at = new BlockPos(spot[0], y, spot[1]);
+            BlockPos wall = at.offset(spot[2], 0, spot[3]);
+            Direction facing = Direction.getApproximateNearest(-spot[2], 0, -spot[3]);
+            if (facing == null || !WorldUtil.isAirLike(level.getBlockState(at))
+                    || !level.getBlockState(wall).isFaceSturdy(level, wall, facing)) {
+                continue;
+            }
+            BlockState torch = net.minecraft.world.level.block.Blocks.WALL_TORCH.defaultBlockState()
+                    .setValue(net.minecraft.world.level.block.WallTorchBlock.FACING, facing);
+            if (torch.canSurvive(level, at)) {
+                Placer.place(level, villager, at, torch);
+                Inv.remove(villager, stack -> stack.is(Items.TORCH), 1);
+                colony().data().bump("torches_mine", 1);
+            }
         }
     }
 
