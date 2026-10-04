@@ -19,6 +19,7 @@ public final class ColonyData {
     public Map<String, Member> members = new LinkedHashMap<>();
     public List<Building> buildings = new ArrayList<>();
     public Project project;
+    public List<Project> projects = new ArrayList<>();
     public Mine mine;
     public List<Pos> farms = new ArrayList<>();
     public Pen pen;
@@ -32,6 +33,7 @@ public final class ColonyData {
     public List<Pos> pendingTorches = new ArrayList<>();
     public List<Pos> plantedTrees = new ArrayList<>();
     public List<Order> orders = new ArrayList<>();
+    public Map<String, Integer> renovated = new LinkedHashMap<>();
     public Wall wall;
     public boolean villageSurveyed;
     public int surveyVersion;

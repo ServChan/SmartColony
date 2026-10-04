@@ -47,6 +47,13 @@ public final class ColonyCodec {
         }
         for (JsonElement element : root.getAsJsonArray("colonies")) {
             ColonyData colony = GSON.fromJson(element, ColonyData.class);
+            if (colony.projects == null) {
+                colony.projects = new ArrayList<>();
+            }
+            if (colony.project != null) {
+                colony.projects.add(colony.project);
+                colony.project = null;
+            }
             if (colony.threat == null || colony.threat.length != ThreatMap.SECTORS) {
                 colony.threat = new double[ThreatMap.SECTORS];
             }

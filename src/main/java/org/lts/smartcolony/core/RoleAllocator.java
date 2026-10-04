@@ -36,9 +36,9 @@ public final class RoleAllocator {
         }
         int builders = 0;
         if (needs.builderBacklog() > 0 && adults >= 4) {
-            builders = adults >= 12 ? 2 : 1;
-            if (adults >= 16) {
-                builders = Math.min(5, builders + Math.min(adults / 8 - 1, needs.builderBacklog() / 250));
+            builders = adults >= 22 ? 4 : adults >= 14 ? 3 : adults >= 8 ? 2 : 1;
+            if (adults >= 12) {
+                builders = Math.min(Math.max(builders, adults / 5), builders + Math.min(adults / 8, needs.builderBacklog() / 250));
             }
         }
         int workers = adults - guards - builders;
@@ -54,9 +54,9 @@ public final class RoleAllocator {
         scores.put(Role.FISHERMAN, needs.equippable().contains(Role.FISHERMAN) ? 0.6 * pressure(needs.foodPoints(), 300) : 0.0);
         scores.put(Role.HERDER, needs.penReady() ? 0.5 * pressure(needs.animal(), 64) : 0.0);
         EnumMap<Role, Integer> caps = new EnumMap<>(Role.class);
-        caps.put(Role.HERDER, 1);
+        caps.put(Role.HERDER, 1 + adults / 20);
         caps.put(Role.FISHERMAN, 1 + adults / 8);
-        caps.put(Role.MINER, Math.max(1, Math.min(2, adults / 4)));
+        caps.put(Role.MINER, Math.max(1, Math.min(4, adults / 6)));
         result.put(Role.LUMBERJACK, 1);
         int left = workers - 1;
         if (left > 0) {

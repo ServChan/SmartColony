@@ -77,7 +77,7 @@ public final class BuilderJob extends Job {
             phase = "deposit";
             return;
         }
-        task = colony().construction().next(level);
+        task = colony().construction().next(level, villager.getUUID());
         if (task == null) {
             status = colony().construction().status();
             idle(level, 400);
@@ -205,6 +205,19 @@ public final class BuilderJob extends Job {
                     colonist.digger().breakNow(level, villager, pos, true);
                     stash(level, villager, colonist.digger().takeDrops());
                 }
+                if (task.state().getBlock() instanceof net.minecraft.world.level.block.BedBlock) {
+                    net.minecraft.core.Direction facing = task.state().getValue(net.minecraft.world.level.block.BedBlock.FACING);
+                    BlockPos head = pos.relative(facing);
+                    if (WorldUtil.isAirLike(level.getBlockState(head))) {
+                        int flags = Block.UPDATE_ALL | Block.UPDATE_KNOWN_SHAPE;
+                        level.setBlock(pos, task.state(), flags);
+                        level.setBlock(head, task.state().setValue(net.minecraft.world.level.block.BedBlock.PART,
+                                net.minecraft.world.level.block.state.properties.BedPart.HEAD), flags);
+                        level.playSound(null, pos, task.state().getSoundType().getPlaceSound(), SoundSource.BLOCKS, 1.0F, 0.8F);
+                    }
+                    colony().data().bump("improvements_placed", 1);
+                    return true;
+                }
                 if (task.state().getBlock() instanceof net.minecraft.world.level.block.DoorBlock) {
                     BlockPos upper = pos.above();
                     BlockState above = level.getBlockState(upper);
@@ -248,7 +261,7 @@ public final class BuilderJob extends Job {
     }
 
     private BlockPos nearestFree(ServerLevel level, BlockPos pos) {
-        var building = colony().data().project == null ? null : colony().data().project.building;
+        var building = task == null || task.project() == null ? null : task.project().building;
         for (int r = 1; r <= 6; r++) {
             for (int dx = -r; dx <= r; dx++) {
                 for (int dz = -r; dz <= r; dz++) {

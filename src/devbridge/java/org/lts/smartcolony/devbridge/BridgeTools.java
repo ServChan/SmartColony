@@ -119,6 +119,7 @@ public final class BridgeTools {
         tools.add(tool("paste", "Place a blueprint instantly at x,y,z (y = foundation level) with rotation 0-3 and wood, for visual checks.",
                 props("blueprint", "string", "", "x", "integer", "", "y", "integer", "", "z", "integer", "", "rotation", "integer", "0-3", "wood", "string", "oak"),
                 "blueprint", "x", "y", "z"));
+        tools.add(tool("rooms", "Explain village house room detection for every bed near a colony.", props("id", "string", "colony id")));
         tools.add(tool("wall", "Replan the colony wall now with material stone or wood.",
                 props("material", "string", "stone|wood", "id", "string", "colony id"), "material"));
         tools.add(tool("site", "Evaluate a colony storage site in front of a position (facing north/south/east/west) and list blocking blocks.",
@@ -155,6 +156,7 @@ public final class BridgeTools {
                         + colony.data().wall.gates.size() + " gates", false);
             });
             case "paste" -> onMain(() -> paste(args));
+            case "rooms" -> onMain(() -> rooms(args));
             default -> text("unknown tool " + name, true);
         };
     }
@@ -210,8 +212,8 @@ public final class BridgeTools {
             c.addProperty("radius", colony.data().radius);
             c.addProperty("members", colony.colonists().size());
             c.addProperty("ticking", level.isPositionEntityTicking(colony.center()));
-            c.addProperty("project", colony.data().project == null ? "none"
-                    : colony.data().project.building.blueprint + "/" + colony.data().project.phase);
+            c.addProperty("project", colony.data().projects.isEmpty() ? "none"
+                    : String.join(", ", colony.data().projects.stream().map(p -> p.building.blueprint + "/" + p.phase).toList()));
             JsonObject roles = new JsonObject();
             colony.colonists().values().forEach(colonist -> roles.addProperty(colonist.role().key(),
                     roles.has(colonist.role().key()) ? roles.get(colonist.role().key()).getAsInt() + 1 : 1));
@@ -287,6 +289,25 @@ public final class BridgeTools {
             }
             return text(out.toString(), false);
         });
+    }
+
+    private JsonObject rooms(JsonObject args) {
+        Colony colony = pick(args);
+        if (colony == null) {
+            return text("no colony", true);
+        }
+        ServerLevel level = ColonyManager.levelOf(colony);
+        StringBuilder out = new StringBuilder();
+        level.getPoiManager().getInSquare(type -> type.is(net.minecraft.world.entity.ai.village.poi.PoiTypes.HOME), colony.center(),
+                colony.data().radius + 16, net.minecraft.world.entity.ai.village.poi.PoiManager.Occupancy.ANY).forEach(record -> {
+            StringBuilder why = new StringBuilder();
+            org.lts.smartcolony.colony.Renovation.Room room = org.lts.smartcolony.colony.Renovation.room(level, record.getPos(), why);
+            out.append(record.getPos().toShortString()).append(" -> ");
+            out.append(room == null ? "no room: " + why : room.cells().size() + " cells, " + room.doors().size() + " doors, key " + room.key());
+            out.append(System.lineSeparator());
+        });
+        out.append("renovated ").append(colony.data().renovated);
+        return text(out.toString(), false);
     }
 
     private JsonObject paste(JsonObject args) {
@@ -524,8 +545,8 @@ public final class BridgeTools {
         if (colony == null) {
             return text("no colony", true);
         }
-        if (colony.data().project != null) {
-            return text("busy with " + colony.data().project.building.blueprint, true);
+        if (colony.data().projects.size() >= 3) {
+            return text("busy with " + colony.data().projects.size() + " sites", true);
         }
         boolean ok = colony.construction().forceProject(ColonyManager.levelOf(colony), string(args, "blueprint", "house_small"));
         return text(ok ? "planned" : "no site", !ok);

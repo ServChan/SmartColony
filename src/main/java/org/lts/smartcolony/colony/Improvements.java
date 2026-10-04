@@ -40,8 +40,11 @@ public final class Improvements {
     private String waitingFor = "";
     private Set<Long> wallColumns;
 
+    private final Renovation renovation;
+
     Improvements(Colony colony) {
         this.colony = colony;
+        this.renovation = new Renovation(colony);
     }
 
     private ColonyData data() {
@@ -106,6 +109,7 @@ public final class Improvements {
             lastDecor = level.getGameTime();
             decorate(level);
         }
+        renovation.tick(level);
         ColonyData.Wall wall = data().wall;
         if (wall != null && !wall.announced && wall.total > 0 && wall.built >= wall.total) {
             wall.announced = true;
@@ -489,7 +493,7 @@ public final class Improvements {
                 return true;
             }
         }
-        return data().project != null && data().project.building.contains(p, 0);
+        return data().projects.stream().anyMatch(project -> project.building.contains(p, 0));
     }
 
     private boolean oldTower(ServerLevel level, Pos column) {
@@ -1015,7 +1019,8 @@ public final class Improvements {
                 }
                 return claim(level, order, pos, target);
             }
-            boolean replace = WALL.equals(order.tag) && wallMaterial(current);
+            boolean replace = WALL.equals(order.tag) && wallMaterial(current)
+                    || Renovation.TAG.equals(order.tag) && WorldUtil.naturalGround(current);
             if (target == null || matches(current, target)
                     || (!replace && !WorldUtil.isAirLike(current) && !WorldUtil.removable(level, pos))) {
                 orders.remove(i);
@@ -1073,6 +1078,16 @@ public final class Improvements {
         int bracket = state.indexOf('[');
         String id = Ids.path(bracket < 0 ? state : state.substring(0, bracket));
         String props = bracket < 0 ? "" : state.substring(bracket);
+        if (id.endsWith("_bed")) {
+            for (String color : Ids.COLORS) {
+                String candidate = Ids.mc(color + "_bed");
+                if (!candidate.equals(Ids.mc(id))
+                        && (colony.stockOf(level, found -> found.equals(candidate)) > 0 || colony.craft(level, candidate, 1))) {
+                    return candidate + props;
+                }
+            }
+            return null;
+        }
         if (id.equals("cobblestone") || id.equals("cobblestone_wall")) {
             for (String stone : STONES) {
                 String candidate = Ids.mc(stone);

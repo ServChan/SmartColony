@@ -4,10 +4,12 @@ import com.google.gson.JsonObject;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.UUID;
 import net.minecraft.commands.arguments.blocks.BlockStateParser;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -50,8 +52,21 @@ public final class Construction {
         ORDER
     }
 
-    public record Task(Kind kind, BlockPos pos, BlockState state, BlockPos partner, BlockState partnerState, BlockPos stand) {
+    public record Task(Kind kind, BlockPos pos, BlockState state, BlockPos partner, BlockState partnerState, BlockPos stand,
+                       ColonyData.Project project) {
+        public Task(Kind kind, BlockPos pos, BlockState state, BlockPos partner, BlockState partnerState, BlockPos stand) {
+            this(kind, pos, state, partner, partnerState, stand, null);
+        }
     }
+
+    private static final class Runtime {
+        List<BlockPos> clearList;
+        int clearIndex;
+        List<Blueprint.Cell> cells;
+    }
+
+    private static final int LOOKAHEAD = 10;
+    private static final long CLAIM_TICKS = 1200;
 
     static final List<String> OVERWORLD_WOODS = List.of(
             "oak", "spruce", "birch", "jungle", "acacia", "dark_oak", "mangrove", "cherry", "pale_oak");
@@ -62,9 +77,10 @@ public final class Construction {
     private final Map<String, Long> cooldown = new HashMap<>();
     private long lastPlan = -100000;
     private long lastLighting = -100000;
-    private List<BlockPos> clearList;
-    private int clearIndex;
-    private List<Blueprint.Cell> cells;
+    private final Map<ColonyData.Project, Runtime> runtime = new IdentityHashMap<>();
+    private final Map<Long, Long> claims = new HashMap<>();
+    private final Map<UUID, ColonyData.Project> assigned = new HashMap<>();
+    private final Map<UUID, Long> assignedAt = new HashMap<>();
 
     public Construction(Colony colony) {
         this.colony = colony;
@@ -82,9 +98,40 @@ public final class Construction {
         return colony.data();
     }
 
+    private Runtime rt(ColonyData.Project project) {
+        return runtime.computeIfAbsent(project, key -> new Runtime());
+    }
+
+    public List<ColonyData.Project> projects() {
+        return data().projects;
+    }
+
+    public ColonyData.Project primary() {
+        for (ColonyData.Project project : data().projects) {
+            if (!project.phase.equals("reserve")) {
+                return project;
+            }
+        }
+        return data().projects.isEmpty() ? null : data().projects.getFirst();
+    }
+
+    private List<ColonyData.Project> active() {
+        List<ColonyData.Project> active = new ArrayList<>();
+        for (ColonyData.Project project : data().projects) {
+            if (!project.phase.equals("reserve")) {
+                active.add(project);
+            }
+        }
+        return active;
+    }
+
+    public int maxProjects() {
+        int builders = colony.desired().getOrDefault(Role.BUILDER, 0);
+        return builders >= 5 ? 3 : builders >= 3 ? 2 : 1;
+    }
+
     public boolean hasWork(ServerLevel level) {
-        ColonyData.Project project = data().project;
-        return (project != null && !project.phase.equals("reserve")) || !data().pendingRoad.isEmpty() || !data().pendingTorches.isEmpty()
+        return !active().isEmpty() || !data().pendingRoad.isEmpty() || !data().pendingTorches.isEmpty()
                 || colony.improvements().hasWork(level);
     }
 
@@ -92,8 +139,7 @@ public final class Construction {
         if (!hasWork(level)) {
             return 0;
         }
-        ColonyData.Project project = data().project;
-        int work = project != null && !project.phase.equals("reserve") ? 100 : 0;
+        int work = active().size() * 250;
         work += data().pendingRoad.size() + data().pendingTorches.size();
         if (colony.improvements().hasWork(level)) {
             work += data().orders.size();
@@ -104,14 +150,19 @@ public final class Construction {
     public void tick(ServerLevel level) {
         long now = level.getGameTime();
         colony.improvements().tick(level);
-        ColonyData.Project project = data().project;
-        if (project == null) {
-            if (now - lastPlan >= 400) {
-                lastPlan = now;
-                plan(level);
+        for (ColonyData.Project project : new ArrayList<>(data().projects)) {
+            if (project.phase.equals("reserve")) {
+                reserve(level, project);
             }
-        } else if (project.phase.equals("reserve")) {
-            reserve(level);
+        }
+        if (now - lastPlan >= 400) {
+            if (data().projects.isEmpty()) {
+                lastPlan = now;
+                plan(level, false);
+            } else if (data().projects.size() < maxProjects()) {
+                lastPlan = now;
+                plan(level, true);
+            }
         }
         if (now - lastLighting >= 1200) {
             lastLighting = now;
@@ -131,8 +182,15 @@ public final class Construction {
         if (fullest >= 0.9) {
             order.add("storage_shed");
         }
-        if (beds < population + 1) {
-            long houses = data().buildings.stream().filter(b -> "house".equals(b.kind)).count();
+        long plannedBeds = 0;
+        for (ColonyData.Project project : data().projects) {
+            if ("house".equals(project.building.kind)) {
+                plannedBeds += Blueprints.get(project.building.blueprint).beds();
+            }
+        }
+        if (beds + plannedBeds < population + 1) {
+            long houses = data().buildings.stream().filter(b -> "house".equals(b.kind)).count()
+                    + data().projects.stream().filter(p -> "house".equals(p.building.kind)).count();
             order.add(adults < 6 ? "house_small" : houses % 2 == 0 ? "house_family" : "house_garden");
         }
         boolean hasPen = data().pen != null || data().buildings.stream().anyMatch(b -> "pen".equals(b.kind));
@@ -174,9 +232,7 @@ public final class Construction {
 
     private long built(String blueprint) {
         long count = data().buildings.stream().filter(b -> blueprint.equals(b.blueprint)).count();
-        if (data().project != null && blueprint.equals(data().project.building.blueprint)) {
-            count++;
-        }
+        count += data().projects.stream().filter(p -> blueprint.equals(p.building.blueprint)).count();
         return count;
     }
 
@@ -202,20 +258,28 @@ public final class Construction {
         return CraftPlanner.plan(stock, materials).isPresent();
     }
 
-    private void plan(ServerLevel level) {
+    private void plan(ServerLevel level, boolean extra) {
         List<String> needs = decideNeeds(level);
+        if (extra) {
+            needs.removeIf(id -> !id.startsWith("house") && data().projects.stream().anyMatch(p -> p.building.blueprint.equals(id)));
+        }
         if (needs.isEmpty()) {
-            status = "nothing to build";
-            missing = new TreeMap<>();
+            if (!extra) {
+                status = "nothing to build";
+                missing = new TreeMap<>();
+            }
             return;
         }
         String wood = chooseWood(level);
-        String need = needs.getFirst();
+        String need = extra ? null : needs.getFirst();
         for (String candidate : needs) {
             if (satisfiable(level, candidate, wood)) {
                 need = candidate;
                 break;
             }
+        }
+        if (need == null) {
+            return;
         }
         Blueprint blueprint = Blueprints.get(need);
         ColonyData.Project project = findSite(level, blueprint, wood);
@@ -226,13 +290,12 @@ public final class Construction {
         }
         project.started = level.getGameTime();
         project.waitingSince = level.getGameTime();
-        data().project = project;
+        data().projects.add(project);
         recomputeRequired(project);
-        cells = null;
-        clearList = null;
-        colony.journal(level, "planned " + need + " at " + project.building.origin);
+        colony.journal(level, "planned " + need + " at " + project.building.origin
+                + (data().projects.size() > 1 ? " alongside " + (data().projects.size() - 1) + " other sites" : ""));
         colony.markDirty();
-        reserve(level);
+        reserve(level, project);
     }
 
     private static int woodStock(Stock stock, String wood) {
@@ -295,13 +358,12 @@ public final class Construction {
         return result;
     }
 
-    private void reserve(ServerLevel level) {
-        ColonyData.Project project = data().project;
+    private void reserve(ServerLevel level, ColonyData.Project project) {
         Stock stock = colony.warehouse().stock(level);
         var plan = CraftPlanner.plan(stock, project.required);
         if (plan.isEmpty() && applySwaps(level, project, stock)) {
             recomputeRequired(project);
-            cells = null;
+            rt(project).cells = null;
             plan = CraftPlanner.plan(stock, project.required);
         }
         if (plan.isPresent()) {
@@ -309,7 +371,7 @@ public final class Construction {
                 project.reserved = new LinkedHashMap<>(project.required);
                 project.phase = "clear";
                 project.cursor = 0;
-                clearList = null;
+                rt(project).clearList = null;
                 missing = new TreeMap<>();
                 status = "building " + project.building.blueprint;
                 colony.journal(level, "materials reserved for " + project.building.blueprint);
@@ -334,18 +396,18 @@ public final class Construction {
             colony.journal(level, project.building.blueprint + " switched from " + project.building.wood + " to " + richer);
             project.building.wood = richer;
             recomputeRequired(project);
-            cells = null;
+            rt(project).cells = null;
             colony.markDirty();
             return;
         }
         long waited = level.getGameTime() - project.waitingSince;
-        if (waited > 3000) {
+        if (waited > 3000 && data().projects.size() >= maxProjects()) {
             String wood = chooseWood(level);
             for (String candidate : decideNeeds(level)) {
                 if (!candidate.equals(project.building.blueprint) && satisfiable(level, candidate, wood)) {
                     colony.journal(level, "postponed " + project.building.blueprint + ", " + candidate + " can be built now");
                     cooldown.put(project.building.blueprint, level.getGameTime() + 6000);
-                    data().project = null;
+                    drop(project);
                     missing = new TreeMap<>();
                     lastPlan = -100000;
                     colony.markDirty();
@@ -356,10 +418,16 @@ public final class Construction {
         if (waited > 24000L * 3 && !project.building.kind.equals("house")) {
             colony.journal(level, "gave up waiting for " + project.building.blueprint);
             cooldown.put(project.building.blueprint, level.getGameTime() + 24000L);
-            data().project = null;
+            drop(project);
             missing = new TreeMap<>();
             colony.markDirty();
         }
+    }
+
+    private void drop(ColonyData.Project project) {
+        data().projects.remove(project);
+        runtime.remove(project);
+        assigned.values().removeIf(p -> p == project);
     }
 
     private boolean applySwaps(ServerLevel level, ColonyData.Project project, Stock stock) {
@@ -608,84 +676,154 @@ public final class Construction {
         return list;
     }
 
-    public Task next(ServerLevel level) {
-        ColonyData.Project project = data().project;
-        if (project != null && !project.phase.equals("reserve")) {
-            Task task = projectTask(level, project);
-            if (task != null || data().project != null) {
-                return task;
+    private boolean claimed(BlockPos pos, long now) {
+        Long at = claims.get(pos.asLong());
+        return at != null && now - at < CLAIM_TICKS;
+    }
+
+    private Task claim(Task task, long now) {
+        if (claims.size() > 64) {
+            claims.values().removeIf(at -> now - at >= CLAIM_TICKS);
+        }
+        claims.put(task.pos().asLong(), now);
+        return task;
+    }
+
+    private int load(ColonyData.Project project, long now) {
+        int load = 0;
+        for (Map.Entry<UUID, ColonyData.Project> entry : assigned.entrySet()) {
+            Long at = assignedAt.get(entry.getKey());
+            if (entry.getValue() == project && at != null && now - at < 1200) {
+                load++;
             }
         }
-        while (!data().pendingRoad.isEmpty()) {
-            Pos pos = data().pendingRoad.getFirst();
+        return load;
+    }
+
+    public Task next(ServerLevel level, UUID builder) {
+        long now = level.getGameTime();
+        List<ColonyData.Project> active = active();
+        if (!active.isEmpty()) {
+            ColonyData.Project mine = assigned.get(builder);
+            if (mine == null || !active.contains(mine)) {
+                mine = active.getFirst();
+                for (ColonyData.Project project : active) {
+                    if (load(project, now) < load(mine, now)) {
+                        mine = project;
+                    }
+                }
+            }
+            assigned.put(builder, mine);
+            assignedAt.put(builder, now);
+            List<ColonyData.Project> order = new ArrayList<>();
+            order.add(mine);
+            for (ColonyData.Project project : active) {
+                if (project != mine) {
+                    order.add(project);
+                }
+            }
+            for (ColonyData.Project project : order) {
+                if (!data().projects.contains(project)) {
+                    continue;
+                }
+                Task task = projectTask(level, project, now);
+                if (task != null) {
+                    assigned.put(builder, project);
+                    return claim(task, now);
+                }
+            }
+        }
+        List<Pos> roads = data().pendingRoad;
+        for (int i = 0; i < roads.size(); ) {
+            Pos pos = roads.get(i);
             BlockPos column = new BlockPos(pos.x(), pos.y(), pos.z());
             if (!WorldUtil.loaded(level, column)) {
-                data().pendingRoad.removeFirst();
+                roads.remove(i);
                 continue;
             }
             BlockPos ground = WorldUtil.surface(level, pos.x(), pos.z()).below();
-            return new Task(Kind.ROAD, ground, null, null, null, ground.above());
-        }
-        while (!data().pendingTorches.isEmpty()) {
-            Pos pos = data().pendingTorches.getFirst();
-            BlockPos feet = WorldUtil.bp(pos);
-            if (!WorldUtil.loaded(level, feet) || !WorldUtil.isAirLike(level.getBlockState(feet))) {
-                data().pendingTorches.removeFirst();
+            if (claimed(ground, now)) {
+                i++;
                 continue;
             }
-            return new Task(Kind.TORCH, feet, null, null, null, feet);
+            return claim(new Task(Kind.ROAD, ground, null, null, null, ground.above()), now);
+        }
+        List<Pos> torches = data().pendingTorches;
+        for (int i = 0; i < torches.size(); ) {
+            BlockPos feet = WorldUtil.bp(torches.get(i));
+            if (!WorldUtil.loaded(level, feet) || !WorldUtil.isAirLike(level.getBlockState(feet))) {
+                torches.remove(i);
+                continue;
+            }
+            if (claimed(feet, now)) {
+                i++;
+                continue;
+            }
+            return claim(new Task(Kind.TORCH, feet, null, null, null, feet), now);
         }
         return colony.improvements().next(level);
     }
 
-    private Task projectTask(ServerLevel level, ColonyData.Project project) {
+    private Task projectTask(ServerLevel level, ColonyData.Project project, long now) {
+        Runtime rt = rt(project);
         if (project.phase.equals("clear")) {
-            if (clearList == null) {
-                clearList = clearList(level, project);
-                clearIndex = 0;
+            if (rt.clearList == null) {
+                rt.clearList = clearList(level, project);
+                rt.clearIndex = 0;
             }
-            while (clearIndex < clearList.size()) {
-                BlockPos pos = clearList.get(clearIndex);
-                BlockState state = level.getBlockState(pos);
-                if (state.isAir()) {
-                    clearIndex++;
+            List<BlockPos> list = rt.clearList;
+            while (rt.clearIndex < list.size() && level.getBlockState(list.get(rt.clearIndex)).isAir()) {
+                rt.clearIndex++;
+            }
+            for (int i = rt.clearIndex; i < list.size() && i < rt.clearIndex + LOOKAHEAD; i++) {
+                BlockPos pos = list.get(i);
+                if (level.getBlockState(pos).isAir() || claimed(pos, now)) {
                     continue;
                 }
-                return new Task(Kind.CLEAR, pos, null, null, null, groundStand(project, pos));
+                return new Task(Kind.CLEAR, pos, null, null, null, groundStand(project, pos), project);
             }
-            clearList = null;
+            if (rt.clearIndex < list.size()) {
+                return null;
+            }
+            rt.clearList = null;
             project.phase = "foundation";
             raiseCrane(level, project);
             project.cursor = 0;
             colony.markDirty();
         }
         if (project.phase.equals("foundation")) {
-            while (project.cursor < project.fill.size()) {
-                BlockPos pos = WorldUtil.bp(project.fill.get(project.cursor));
-                BlockState state = level.getBlockState(pos);
-                if (!WorldUtil.isAirLike(state) && state.getFluidState().isEmpty()) {
-                    project.cursor++;
+            while (project.cursor < project.fill.size() && filled(level, WorldUtil.bp(project.fill.get(project.cursor)))) {
+                project.cursor++;
+            }
+            for (int i = project.cursor; i < project.fill.size() && i < project.cursor + LOOKAHEAD; i++) {
+                BlockPos pos = WorldUtil.bp(project.fill.get(i));
+                if (filled(level, pos) || claimed(pos, now)) {
                     continue;
                 }
-                return new Task(Kind.FILL, pos, Blocks.COBBLESTONE.defaultBlockState(), null, null, groundStand(project, pos));
+                return new Task(Kind.FILL, pos, Blocks.COBBLESTONE.defaultBlockState(), null, null, groundStand(project, pos), project);
+            }
+            if (project.cursor < project.fill.size()) {
+                return null;
             }
             project.phase = "build";
             project.cursor = 0;
             colony.markDirty();
         }
         if (project.phase.equals("build")) {
-            if (cells == null) {
-                cells = cells(project);
+            if (rt.cells == null) {
+                rt.cells = cells(project);
             }
-            while (project.cursor < cells.size()) {
-                Blueprint.Cell cell = cells.get(project.cursor);
+            List<Blueprint.Cell> cells = rt.cells;
+            while (project.cursor < cells.size() && placed(level, project, cells.get(project.cursor))) {
+                project.cursor++;
+            }
+            for (int i = project.cursor; i < cells.size() && i < project.cursor + LOOKAHEAD; i++) {
+                Blueprint.Cell cell = cells.get(i);
                 BlockPos pos = world(project.building, cell.x(), cell.y(), cell.z());
-                BlockState target = parse(cell.state(), project.building.rotation);
-                BlockState current = level.getBlockState(pos);
-                if (current.getBlock() == target.getBlock() && sameShape(current, target)) {
-                    project.cursor++;
+                if (placed(level, project, cell) || claimed(pos, now)) {
                     continue;
                 }
+                BlockState target = parse(cell.state(), project.building.rotation);
                 BlockPos partner = null;
                 BlockState partnerState = null;
                 if (target.getBlock() instanceof DoorBlock && target.getValue(DoorBlock.HALF) == DoubleBlockHalf.LOWER) {
@@ -695,12 +833,27 @@ public final class Construction {
                     partner = pos.relative(target.getValue(BedBlock.FACING));
                     partnerState = target.setValue(BedBlock.PART, BedPart.HEAD);
                 }
-                return new Task(Kind.PLACE, pos, target, partner, partnerState, groundStand(project, pos));
+                return new Task(Kind.PLACE, pos, target, partner, partnerState, groundStand(project, pos), project);
+            }
+            if (project.cursor < cells.size()) {
+                return null;
             }
             finish(level, project);
             return null;
         }
         return null;
+    }
+
+    private static boolean filled(ServerLevel level, BlockPos pos) {
+        BlockState state = level.getBlockState(pos);
+        return !WorldUtil.isAirLike(state) && state.getFluidState().isEmpty();
+    }
+
+    private boolean placed(ServerLevel level, ColonyData.Project project, Blueprint.Cell cell) {
+        BlockPos pos = world(project.building, cell.x(), cell.y(), cell.z());
+        BlockState target = parse(cell.state(), project.building.rotation);
+        BlockState current = level.getBlockState(pos);
+        return current.getBlock() == target.getBlock() && sameShape(current, target);
     }
 
     private static boolean sameShape(BlockState current, BlockState target) {
@@ -718,11 +871,13 @@ public final class Construction {
     }
 
     public void completed(Task task) {
-        ColonyData.Project project = data().project;
+        claims.remove(task.pos().asLong());
+        ColonyData.Project project = task.project();
         switch (task.kind()) {
             case CLEAR -> {
-                if (clearList != null && clearIndex < clearList.size() && clearList.get(clearIndex).equals(task.pos())) {
-                    clearIndex++;
+                Runtime rt = project == null ? null : runtime.get(project);
+                if (rt != null && rt.clearList != null && rt.clearIndex < rt.clearList.size() && rt.clearList.get(rt.clearIndex).equals(task.pos())) {
+                    rt.clearIndex++;
                 }
             }
             case FILL -> {
@@ -731,11 +886,12 @@ public final class Construction {
                 }
             }
             case PLACE -> {
-                if (project != null && cells != null && project.cursor < cells.size()) {
-                    Blueprint.Cell cell = cells.get(project.cursor);
+                data().bump("blocks_placed", 1);
+                Runtime rt = project == null ? null : runtime.get(project);
+                if (rt != null && rt.cells != null && project.cursor < rt.cells.size()) {
+                    Blueprint.Cell cell = rt.cells.get(project.cursor);
                     if (world(project.building, cell.x(), cell.y(), cell.z()).equals(task.pos())) {
                         project.cursor++;
-                        data().bump("blocks_placed", 1);
                     }
                 }
             }
@@ -879,9 +1035,7 @@ public final class Construction {
             data().pen = pen;
         }
         data().buildings.add(building);
-        data().project = null;
-        cells = null;
-        clearList = null;
+        drop(project);
         data().bump("buildings", 1);
         int reach = (int) Math.ceil(Math.sqrt(Math.max(building.min.horizontalDistSq(data().center), building.max.horizontalDistSq(data().center))));
         data().radius = Math.min(SmartColonyConfig.get().maxColonyRadius, Math.max(data().radius, reach + 6));
@@ -1061,16 +1215,22 @@ public final class Construction {
         JsonObject lack = new JsonObject();
         missing.forEach(lack::addProperty);
         json.add("missing", lack);
-        ColonyData.Project project = data().project;
-        if (project != null) {
-            json.addProperty("blueprint", project.building.blueprint);
-            json.addProperty("phase", project.phase);
-            json.addProperty("cursor", project.cursor);
-            json.addProperty("cells", cells == null ? -1 : cells.size());
-            json.addProperty("clear", clearList == null ? -1 : clearList.size() - clearIndex);
-            json.addProperty("origin", project.building.origin.toString());
-            json.addProperty("rotation", project.building.rotation);
+        com.google.gson.JsonArray sites = new com.google.gson.JsonArray();
+        for (ColonyData.Project project : data().projects) {
+            Runtime rt = runtime.get(project);
+            JsonObject site = new JsonObject();
+            site.addProperty("blueprint", project.building.blueprint);
+            site.addProperty("phase", project.phase);
+            site.addProperty("cursor", project.cursor);
+            site.addProperty("cells", rt == null || rt.cells == null ? -1 : rt.cells.size());
+            site.addProperty("clear", rt == null || rt.clearList == null ? -1 : rt.clearList.size() - rt.clearIndex);
+            site.addProperty("origin", project.building.origin.toString());
+            site.addProperty("rotation", project.building.rotation);
+            site.addProperty("builders", load(project, level.getGameTime()));
+            sites.add(site);
         }
+        json.add("projects", sites);
+        json.addProperty("maxProjects", maxProjects());
         json.addProperty("pendingRoad", data().pendingRoad.size());
         json.addProperty("pendingTorches", data().pendingTorches.size());
         return json;
@@ -1082,10 +1242,8 @@ public final class Construction {
         if (project != null) {
             project.started = level.getGameTime();
             project.waitingSince = level.getGameTime();
-            data().project = project;
+            data().projects.add(project);
             recomputeRequired(project);
-            cells = null;
-            clearList = null;
             colony.markDirty();
             return true;
         }

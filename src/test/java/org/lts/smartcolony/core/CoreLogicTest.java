@@ -197,7 +197,7 @@ class CoreLogicTest {
         EnumMap<Role, Integer> ten = RoleAllocator.desired(many);
         assertEquals(10, ten.values().stream().mapToInt(Integer::intValue).sum());
         assertEquals(2, ten.get(Role.GUARD));
-        assertEquals(1, ten.get(Role.BUILDER));
+        assertEquals(2, ten.get(Role.BUILDER));
         assertTrue(ten.get(Role.MINER) >= 1);
         assertTrue(ten.get(Role.HERDER) <= 1);
     }
@@ -205,9 +205,9 @@ class CoreLogicTest {
     @Test
     void longBuildQueuesCallMoreBuilders() {
         RoleAllocator.Needs small = new RoleAllocator.Needs(40, 300, 300, 10, 500, 0, 20, true, Set.of(Role.MINER), 0);
-        assertEquals(2, RoleAllocator.desired(small).get(Role.BUILDER));
+        assertEquals(4, RoleAllocator.desired(small).get(Role.BUILDER));
         RoleAllocator.Needs wall = new RoleAllocator.Needs(40, 300, 300, 10, 500, 0, 2000, true, Set.of(Role.MINER), 0);
-        assertEquals(5, RoleAllocator.desired(wall).get(Role.BUILDER));
+        assertEquals(8, RoleAllocator.desired(wall).get(Role.BUILDER));
         assertEquals(40, RoleAllocator.desired(wall).values().stream().mapToInt(Integer::intValue).sum());
     }
 

@@ -210,6 +210,13 @@ public final class ColonyScreen extends Screen {
                     Component.translatable("smartcolony.building." + view.project()),
                     Component.translatable("smartcolony.phase." + view.phase())), x, y, TEXT_NORMAL, false);
             y += 14;
+            for (String site : view.sites()) {
+                String[] parts = site.split("\\|", 2);
+                graphics.text(font, Component.translatable("smartcolony.ui.project",
+                        Component.translatable("smartcolony.building." + parts[0]),
+                        Component.translatable("smartcolony.phase." + parts[1])), x, y, TEXT_NORMAL, false);
+                y += 14;
+            }
             if (!view.missing().isEmpty()) {
                 graphics.text(font, Component.translatable("smartcolony.ui.missing"), x, y + 4, STATUS_WARN, false);
                 y = items(graphics, view.missing(), x + 80, y, w - 80);

@@ -339,8 +339,10 @@ public final class Colony {
                 return true;
             }
         }
-        if (data.project != null && data.project.building.contains(p, 2)) {
-            return true;
+        for (ColonyData.Project project : data.projects) {
+            if (project.building.contains(p, 2)) {
+                return true;
+            }
         }
         if (data.pen != null && p.x() >= data.pen.min.x() - 2 && p.x() <= data.pen.max.x() + 2
                 && p.z() >= data.pen.min.z() - 2 && p.z() <= data.pen.max.z() + 2) {

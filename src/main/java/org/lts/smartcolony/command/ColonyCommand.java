@@ -130,12 +130,12 @@ public final class ColonyCommand {
         }
         source.sendSuccess(() -> stockLine, false);
         source.sendSuccess(() -> Component.translatable("smartcolony.command.food", colony.foodPoints(level)), false);
-        if (data.project != null) {
-            String missing = colony.construction().missing().isEmpty() ? "-" : colony.construction().missing().toString()
-                    .replace("minecraft:", "");
+        for (ColonyData.Project project : data.projects) {
+            String missing = !project.phase.equals("reserve") || colony.construction().missing().isEmpty() ? "-"
+                    : colony.construction().missing().toString().replace("minecraft:", "");
             source.sendSuccess(() -> Component.translatable("smartcolony.command.project",
-                    Component.translatable("smartcolony.building." + data.project.building.blueprint),
-                    Component.translatable("smartcolony.phase." + data.project.phase), missing), false);
+                    Component.translatable("smartcolony.building." + project.building.blueprint),
+                    Component.translatable("smartcolony.phase." + project.phase), missing), false);
         }
         if (data.mine != null) {
             source.sendSuccess(() -> Component.translatable("smartcolony.command.mine", data.mine.entrance.toString(),
@@ -306,7 +306,7 @@ public final class ColonyCommand {
             source.sendFailure(Component.translatable("smartcolony.command.unknown_blueprint", blueprint));
             return 0;
         }
-        if (colony.data().project != null) {
+        if (colony.data().projects.size() >= 3) {
             source.sendFailure(Component.translatable("smartcolony.command.busy"));
             return 0;
         }

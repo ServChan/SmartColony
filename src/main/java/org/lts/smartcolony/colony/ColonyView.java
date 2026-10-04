@@ -39,7 +39,8 @@ public record ColonyView(
         List<String> requests,
         String wallMaterial,
         int wallBuilt,
-        int wallTotal) {
+        int wallTotal,
+        List<String> sites) {
 
     public record RoleCount(String role, int count) {
     }
@@ -97,9 +98,16 @@ public record ColonyView(
         String project = null;
         String phase = null;
         List<ItemCount> missing = new ArrayList<>();
-        if (data.project != null) {
-            project = data.project.building.blueprint;
-            phase = data.project.phase;
+        List<String> sites = new ArrayList<>();
+        ColonyData.Project primary = colony.construction().primary();
+        for (ColonyData.Project other : data.projects) {
+            if (other != primary) {
+                sites.add(other.building.blueprint + "|" + other.phase);
+            }
+        }
+        if (primary != null) {
+            project = primary.building.blueprint;
+            phase = primary.phase;
             for (Map.Entry<String, Integer> entry : colony.construction().missing().entrySet()) {
                 missing.add(new ItemCount(entry.getKey(), entry.getValue()));
             }
@@ -127,6 +135,6 @@ public record ColonyView(
                 colony.foodPoints(level), project, phase, missing, mine, mineProgress, mineTotal, reputation,
                 Reputation.status(reputation).key(), villagers, journal, deals, new ArrayList<>(colony.requests()),
                 data.wall == null ? null : data.wall.material, data.wall == null ? 0 : data.wall.built,
-                data.wall == null ? 0 : data.wall.total);
+                data.wall == null ? 0 : data.wall.total, sites);
     }
 }
