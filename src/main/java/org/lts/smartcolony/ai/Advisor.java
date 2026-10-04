@@ -246,7 +246,7 @@ public final class Advisor {
         if (!stuck.isEmpty()) {
             hints.add(stuck.size() + " villager(s) cannot find a path: rescue them by id");
         }
-        if (colony.foodPoints(level) < population * 10) {
+        if (colony.foodPoints(level) < 150) {
             hints.add("food is low: more farmers or fishermen");
         }
         if (colony.defense().threatLevel() >= 0.5 && counts.getOrDefault(Role.GUARD, 0) < population / 5) {
@@ -333,6 +333,9 @@ public final class Advisor {
         if (targets.isEmpty()) {
             return "rejected: no known roles";
         }
+        if (targets.size() > 3) {
+            return "rejected: steer at most 3 roles at once, the colony balances the rest";
+        }
         roleTargets = targets;
         rolesUntil = level.getGameTime() + 2L * SmartColonyConfig.get().aiIntervalTicks;
         colony.planRoles(level);
@@ -397,6 +400,11 @@ public final class Advisor {
             return "rejected: " + item + " is not on the craft list";
         }
         count = Math.max(1, Math.min(16, count));
+        String id = Ids.mc(item);
+        int have = colony.stockOf(level, found -> found.equals(id));
+        if (have >= 4) {
+            return "rejected: the storage already holds " + have + " " + item;
+        }
         return colony.craft(level, Ids.mc(item), count) ? "crafted " + count + " " + item : "rejected: not enough materials for " + item;
     }
 
