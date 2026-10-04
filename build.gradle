@@ -91,6 +91,11 @@ test {
     useJUnitPlatform()
 }
 
+tasks.register("devbridgeJar", Jar) {
+    archiveBaseName = "smart-colony-devbridge"
+    from sourceSets.devbridge.output
+}
+
 jar {
     from("LICENSE") {
         rename { "${it}_${licenseArchiveName}" }

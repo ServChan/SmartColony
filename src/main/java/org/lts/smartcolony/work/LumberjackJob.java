@@ -30,6 +30,8 @@ public final class LumberjackJob extends Job {
     private int collectTicks;
     private long noAxeUntil;
     private int planted;
+    private long plantDay = -1;
+    private long plantPauseUntil;
 
     public LumberjackJob(Colonist colonist) {
         super(colonist);
@@ -102,7 +104,13 @@ public final class LumberjackJob extends Job {
                 noAxeUntil = level.getGameTime() + 600;
             }
         }
+        long day = level.getGameTime() / 24000L;
+        if (day != plantDay) {
+            plantDay = day;
+            planted = 0;
+        }
         if (colony().forest().count() < SmartColonyConfig.get().treeTarget && planted < 8
+                && level.getGameTime() >= plantPauseUntil
                 && (Inv.count(villager, stack -> stack.is(ItemTags.SAPLINGS)) > 0 || colony().stockOf(level, Ids::isSapling) > 0)) {
             phase = "plant";
             return;
@@ -262,12 +270,12 @@ public final class LumberjackJob extends Job {
             if (!atDepot(level, villager)) {
                 if (goDepot(level, villager) == Mover.Result.FAILED) {
                     phase = "start";
-                    planted = 99;
+                    plantPauseUntil = level.getGameTime() + 3000;
                 }
                 return;
             }
             if (supply(level, villager, stack -> stack.is(ItemTags.SAPLINGS) && !ItemIds.id(stack).contains("dark_oak"), 1, 6) == 0) {
-                planted = 99;
+                plantPauseUntil = level.getGameTime() + 3000;
                 phase = "start";
                 return;
             }
@@ -277,7 +285,7 @@ public final class LumberjackJob extends Job {
             plantTries++;
             if (plantSpot == null) {
                 if (plantTries > 10) {
-                    planted = 99;
+                    plantPauseUntil = level.getGameTime() + 3000;
                     phase = "start";
                 }
                 return;
@@ -311,7 +319,6 @@ public final class LumberjackJob extends Job {
             return;
         }
         depositAll(level, villager);
-        planted = 0;
         phase = "start";
     }
 }
