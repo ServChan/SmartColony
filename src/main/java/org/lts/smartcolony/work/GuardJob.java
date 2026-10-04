@@ -14,6 +14,7 @@ import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.animal.golem.IronGolem;
 import net.minecraft.world.entity.monster.Enemy;
+import net.minecraft.world.entity.monster.Creeper;
 import net.minecraft.world.entity.npc.villager.Villager;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
@@ -38,6 +39,7 @@ public final class GuardJob extends Job {
     private long nextGear;
     private int shotCooldown;
     private int meleeCooldown;
+    private int creeperBackOff;
     private int retargetIn;
     private int patrolIndex;
     private int pause;
@@ -316,6 +318,10 @@ public final class GuardJob extends Job {
         double distance = villager.distanceTo(target);
         armWeapon(villager, distance);
         boolean ranged = Tools.BOW.test(villager.getMainHandItem()) && hasArrows(villager);
+        if (target instanceof Creeper creeper) {
+            fightCreeper(level, villager, creeper, distance, ranged);
+            return;
+        }
         CombatMath.Stance stance = CombatMath.stance(ranged, distance, health, SmartColonyConfig.get().guardRetreatHealth);
         villager.getLookControl().setLookAt(target, 30.0F, 30.0F);
         switch (stance) {
@@ -357,6 +363,50 @@ public final class GuardJob extends Job {
                     strike(level, villager);
                 }
             }
+        }
+    }
+
+    private void fightCreeper(ServerLevel level, Villager villager, Creeper creeper, double distance, boolean ranged) {
+        villager.getLookControl().setLookAt(creeper, 30.0F, 30.0F);
+        boolean fuse = creeper.getSwellDir() > 0 || creeper.isIgnited();
+        if (creeperBackOff > 0) {
+            creeperBackOff--;
+        }
+        double safe = ranged ? 8.0 : 7.5;
+        if (fuse && distance < safe || creeperBackOff > 0 && distance < 6.0 || ranged && distance < 5.0) {
+            status = "keeping away from a creeper";
+            double[] away = CombatMath.retreatPoint(villager.getX(), villager.getZ(), creeper.getX(), creeper.getZ(), 6.0);
+            BlockPos spot = WorldUtil.surface(level, (int) Math.floor(away[0]), (int) Math.floor(away[1]));
+            if (Math.abs(spot.getY() - villager.getBlockY()) > 3) {
+                double[] side = CombatMath.strafePoint(villager.getX(), villager.getZ(), creeper.getX(), creeper.getZ(), 6.0, strafeLeft);
+                spot = WorldUtil.surface(level, (int) Math.floor(side[0]), (int) Math.floor(side[1]));
+                strafeLeft = !strafeLeft;
+            }
+            villager.getNavigation().moveTo(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5, 1.0);
+            if (ranged && !fuse && shotCooldown <= 0 && distance > 3.0 && clearShot(level, villager)) {
+                shoot(level, villager);
+            }
+            return;
+        }
+        if (ranged) {
+            villager.getNavigation().stop();
+            if (shotCooldown <= 0 && villager.hasLineOfSight(creeper) && clearShot(level, villager)) {
+                shoot(level, villager);
+            }
+            return;
+        }
+        if (fuse) {
+            villager.getNavigation().stop();
+            return;
+        }
+        if (distance > 2.4) {
+            villager.getNavigation().moveTo(creeper, 0.9);
+            return;
+        }
+        if (meleeCooldown <= 0) {
+            strike(level, villager);
+            creeperBackOff = 30;
+            colony().data().bump("creeper_hits", 1);
         }
     }
 

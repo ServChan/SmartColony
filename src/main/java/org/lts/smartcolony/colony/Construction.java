@@ -329,7 +329,7 @@ public final class Construction {
 
     private ColonyData.Project findSite(ServerLevel level, Blueprint blueprint, String wood) {
         BlockPos center = colony.center();
-        int maxDistance = data().radius + 10;
+        int maxDistance = data().radius + 28;
         double bestScore = Double.MAX_VALUE;
         ColonyData.Project best = null;
         for (int distance = 7; distance <= maxDistance; distance += 3) {
@@ -355,7 +355,7 @@ public final class Construction {
                             break;
                         }
                         boolean inside = x >= 0 && z >= 0 && x < sx && z < sz;
-                        int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, wx, wz) - 1;
+                        int y = groundY(level, wx, wz);
                         BlockPos top = new BlockPos(wx, y, wz);
                         boolean bad = blockedColumn(level, top);
                         if (inside) {
@@ -369,11 +369,19 @@ public final class Construction {
                 if (!ok) {
                     continue;
                 }
+                int paths = 0;
+                for (int x = 0; x < sx; x++) {
+                    for (int z = 0; z < sz; z++) {
+                        if (level.getBlockState(new BlockPos(ox + x, ground[x][z], oz + z)).is(Blocks.DIRT_PATH)) {
+                            paths++;
+                        }
+                    }
+                }
                 SiteEvaluator.Result result = SiteEvaluator.evaluate(ground, blocked);
                 if (!result.ok() || !accessible(level, blueprint, rotation, ox, oz, result.baseY())) {
                     continue;
                 }
-                double score = result.score() + distance * 0.6;
+                double score = result.score() + distance * 0.6 + paths * 3;
                 if (score < bestScore) {
                     bestScore = score;
                     best = project(blueprint, wood, ox, oz, rotation, result, ground);
@@ -394,7 +402,7 @@ public final class Construction {
             if (!WorldUtil.loaded(level, new BlockPos(x, 0, z))) {
                 return false;
             }
-            int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z) - 1;
+            int y = groundY(level, x, z);
             BlockPos top = new BlockPos(x, y, z);
             if (Math.abs(y - base) > 1 || !level.getFluidState(top).isEmpty() || colony.warehouse().contains(top.above())) {
                 return false;
@@ -403,19 +411,23 @@ public final class Construction {
         return true;
     }
 
+    private int groundY(ServerLevel level, int x, int z) {
+        int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z) - 1;
+        int floor = y - 8;
+        while (y > floor && WorldUtil.clearable(level.getBlockState(new BlockPos(x, y, z)))) {
+            y--;
+        }
+        return y;
+    }
+
     private boolean blockedColumn(ServerLevel level, BlockPos top) {
-        BlockState ground = level.getBlockState(top);
         if (!level.getFluidState(top).isEmpty() || !level.getFluidState(top.above()).isEmpty()) {
             return true;
         }
         if (colony.isProtected(top.above()) || colony.sites().onRoad(top)) {
             return true;
         }
-        if (level.getHeight(Heightmap.Types.MOTION_BLOCKING, top.getX(), top.getZ()) - 1 > top.getY()) {
-            return true;
-        }
-        return !(ground.is(BlockTags.DIRT) || ground.is(BlockTags.SAND) || ground.is(BlockTags.BASE_STONE_OVERWORLD)
-                || ground.is(Blocks.GRAVEL) || ground.is(Blocks.SNOW_BLOCK)) || ground.is(Blocks.DIRT_PATH) || ground.is(Blocks.FARMLAND);
+        return !WorldUtil.naturalGround(level.getBlockState(top));
     }
 
     private ColonyData.Project project(Blueprint blueprint, String wood, int ox, int oz, int rotation,

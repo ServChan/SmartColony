@@ -188,6 +188,18 @@ public final class MinerJob extends Job {
             }
         }
         BlockPos target = WorldUtil.bp(route.get(waypoint));
+        BlockPos blocker = tunnelBlocker(level, target);
+        if (blocker != null && villager.blockPosition().distSqr(target) <= 9) {
+            status = "reopening the tunnel";
+            Digger.Result dug = colonist.digger().tick(level, villager, blocker, true);
+            if (dug == Digger.Result.DONE) {
+                stash(level, villager, colonist.digger().takeDrops());
+                colony().data().bump("blocks_mined", 1);
+            } else if (dug == Digger.Result.FAILED) {
+                waypoint++;
+            }
+            return;
+        }
         Mover.Result result = move(level, villager, target, 1.3);
         if (result == Mover.Result.ARRIVED) {
             waypoint++;
@@ -204,6 +216,17 @@ public final class MinerJob extends Job {
             }
         }
         status = (back ? "climbing out " : "going down ") + waypoint + "/" + route.size();
+    }
+
+    private BlockPos tunnelBlocker(ServerLevel level, BlockPos feet) {
+        for (BlockPos pos : new BlockPos[] {feet, feet.above()}) {
+            BlockState state = level.getBlockState(pos);
+            if (!state.getCollisionShape(level, pos).isEmpty() && state.getFluidState().isEmpty()
+                    && state.getDestroySpeed(level, pos) >= 0) {
+                return pos;
+            }
+        }
+        return null;
     }
 
     private int nearestAhead(Villager villager) {

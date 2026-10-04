@@ -42,6 +42,7 @@ loom {
             name = "Dev Server with MCP bridge"
             source sourceSets.devbridge
             runDir "run-dev"
+            vmArg "-Dsmartcolony.bridge.port=25600"
         }
         devClient {
             client()

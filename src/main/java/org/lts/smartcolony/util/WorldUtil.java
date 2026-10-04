@@ -1,5 +1,7 @@
 package org.lts.smartcolony.util;
 
+import net.minecraft.world.level.block.LeavesBlock;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
@@ -61,5 +63,26 @@ public final class WorldUtil {
 
     public static void setBlock(ServerLevel level, BlockPos pos, BlockState state) {
         level.setBlock(pos, state, Block.UPDATE_ALL);
+    }
+
+    public static boolean naturalGround(BlockState state) {
+        return state.is(BlockTags.DIRT) || state.is(BlockTags.SAND) || state.is(Blocks.GRAVEL)
+                || state.is(BlockTags.BASE_STONE_OVERWORLD) || state.is(Blocks.DIRT_PATH) || state.is(Blocks.SNOW_BLOCK)
+                || state.is(Blocks.CLAY) || state.is(Blocks.POWDER_SNOW);
+    }
+
+    public static boolean clearable(BlockState state) {
+        if (state.isAir()) {
+            return true;
+        }
+        if (!state.getFluidState().isEmpty()) {
+            return false;
+        }
+        if (state.hasProperty(LeavesBlock.PERSISTENT)) {
+            return !state.getValue(LeavesBlock.PERSISTENT);
+        }
+        return state.canBeReplaced() || state.is(BlockTags.REPLACEABLE_BY_TREES) || state.is(BlockTags.FLOWERS)
+                || state.is(BlockTags.SAPLINGS) || state.is(Blocks.SNOW) || state.is(Blocks.BUSH) || state.is(Blocks.FIREFLY_BUSH)
+                || state.is(Blocks.SWEET_BERRY_BUSH) || state.is(Blocks.BROWN_MUSHROOM) || state.is(Blocks.RED_MUSHROOM);
     }
 }

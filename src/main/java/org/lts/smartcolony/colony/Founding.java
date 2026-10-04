@@ -189,13 +189,13 @@ public final class Founding {
                 }
                 int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, column.getX(), column.getZ()) - 1;
                 int floor = y - 8;
-                while (y > floor && clearable(level.getBlockState(column.atY(y)))) {
+                while (y > floor && WorldUtil.clearable(level.getBlockState(column.atY(y)))) {
                     y--;
                 }
                 BlockPos ground = column.atY(y);
                 if (!level.getFluidState(ground).isEmpty() || !level.getFluidState(ground.above()).isEmpty()) {
                     fault = Fault.WATER;
-                } else if (!naturalGround(level.getBlockState(ground))) {
+                } else if (!WorldUtil.naturalGround(level.getBlockState(ground))) {
                     blockers.add(ground);
                 }
                 grounds[k++] = y;
@@ -232,9 +232,9 @@ public final class Founding {
                     if (state.isAir()) {
                         continue;
                     }
-                    if (clearable(state)) {
+                    if (WorldUtil.clearable(state)) {
                         cost++;
-                    } else if (!(y <= ground && naturalGround(state)) && !blockers.contains(pos)) {
+                    } else if (!(y <= ground && WorldUtil.naturalGround(state)) && !blockers.contains(pos)) {
                         blockers.add(pos);
                     }
                 }
@@ -242,27 +242,6 @@ public final class Founding {
         }
         Layout placed = new Layout(new BlockPos(layout.origin().getX(), base, layout.origin().getZ()), layout.front(), layout.side(), base);
         return new Plan(placed, cost, blockers, fault);
-    }
-
-    private static boolean naturalGround(BlockState state) {
-        return state.is(BlockTags.DIRT) || state.is(BlockTags.SAND) || state.is(Blocks.GRAVEL)
-                || state.is(BlockTags.BASE_STONE_OVERWORLD) || state.is(Blocks.DIRT_PATH) || state.is(Blocks.SNOW_BLOCK)
-                || state.is(Blocks.CLAY) || state.is(Blocks.POWDER_SNOW);
-    }
-
-    private static boolean clearable(BlockState state) {
-        if (state.isAir()) {
-            return true;
-        }
-        if (!state.getFluidState().isEmpty()) {
-            return false;
-        }
-        if (state.hasProperty(LeavesBlock.PERSISTENT)) {
-            return !state.getValue(LeavesBlock.PERSISTENT);
-        }
-        return state.canBeReplaced() || state.is(BlockTags.REPLACEABLE_BY_TREES) || state.is(BlockTags.FLOWERS)
-                || state.is(BlockTags.SAPLINGS) || state.is(Blocks.SNOW) || state.is(Blocks.BUSH) || state.is(Blocks.FIREFLY_BUSH)
-                || state.is(Blocks.SWEET_BERRY_BUSH) || state.is(Blocks.BROWN_MUSHROOM) || state.is(Blocks.RED_MUSHROOM);
     }
 
     public static void showPreview(ServerPlayer player, Plan plan) {
