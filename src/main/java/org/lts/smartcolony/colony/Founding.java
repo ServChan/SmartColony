@@ -1,12 +1,15 @@
 package org.lts.smartcolony.colony;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.BlockTags;
@@ -17,6 +20,7 @@ import net.minecraft.world.level.block.BarrelBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
+import net.minecraft.world.level.block.LeavesBlock;
 import net.minecraft.world.level.block.WallSignBlock;
 import net.minecraft.world.level.block.entity.SignBlockEntity;
 import net.minecraft.world.level.block.entity.SignTextSlot;
@@ -74,13 +78,18 @@ public final class Founding {
             if (colony == null) {
                 ColonyManager.markFailed(bell.get(), level.getGameTime());
                 player.sendSystemMessage(Component.translatable("smartcolony.command.no_site"));
+                showPreview(player, planHere(level, player));
             }
         }
     }
 
     public static Colony found(ServerLevel level, BlockPos center) {
-        Layout layout = findLayout(level, center);
-        if (layout == null) {
+        Plan plan = findPlan(level, center);
+        return plan == null ? null : found(level, center, plan);
+    }
+
+    public static Colony found(ServerLevel level, BlockPos center, Plan plan) {
+        if (!plan.valid()) {
             return null;
         }
         ColonyData data = new ColonyData();
@@ -90,7 +99,8 @@ public final class Founding {
         data.center = WorldUtil.pos(center);
         data.radius = SmartColonyConfig.get().colonyRadius;
         data.founded = level.getGameTime();
-        build(level, layout, data);
+        build(level, plan.layout(), data);
+        PREVIEWS.removeIf(preview -> preview.level() == level);
         Colony colony = ColonyManager.register(data);
         colony.discoverFarms(level);
         for (Villager villager : level.getEntitiesOfClass(Villager.class, new AABB(center).inflate(data.radius, 16, data.radius), Villager::isAlive)) {
@@ -104,93 +114,224 @@ public final class Founding {
         return colony;
     }
 
-    record Layout(BlockPos origin, Direction front, Direction side, int baseY) {
+    public record Layout(BlockPos origin, Direction front, Direction side, int baseY) {
         BlockPos column(int i, int row) {
             return origin.relative(side, i).relative(front, row);
         }
     }
 
-    private static Layout findLayout(ServerLevel level, BlockPos center) {
-        Layout best = null;
-        double bestDistance = Double.MAX_VALUE;
-        for (int distance = 4; distance <= 20; distance++) {
+    public enum Fault {
+        NONE, STEEP, WATER
+    }
+
+    public record Plan(Layout layout, int cost, List<BlockPos> blockers, Fault fault) {
+        public boolean valid() {
+            return fault == Fault.NONE && blockers.isEmpty();
+        }
+
+        public Component reason() {
+            return switch (fault) {
+                case STEEP -> Component.translatable("smartcolony.site.steep");
+                case WATER -> Component.translatable("smartcolony.site.water");
+                default -> Component.translatable("smartcolony.site.blocked", blockers.size());
+            };
+        }
+    }
+
+    private record Preview(ServerLevel level, UUID player, Plan plan, long until) {
+    }
+
+    private static final int MAX_STEP = 4;
+    private static final List<Preview> PREVIEWS = new ArrayList<>();
+
+    public static Plan planHere(ServerLevel level, ServerPlayer player) {
+        Direction facing = player.getDirection();
+        Direction front = facing.getOpposite();
+        Direction side = front.getClockWise();
+        BlockPos origin = player.blockPosition().relative(facing, 3).relative(side, -2);
+        return evaluate(level, new Layout(origin, front, side, 0));
+    }
+
+    private static Plan findPlan(ServerLevel level, BlockPos center) {
+        Plan best = null;
+        int bestScore = Integer.MAX_VALUE;
+        for (int distance = 5; distance <= 28 && distance < bestScore; distance++) {
             for (Direction toward : Direction.Plane.HORIZONTAL) {
-                for (int shift = -distance; shift <= distance; shift += 2) {
-                    Direction front = toward.getOpposite();
-                    Direction side = front.getClockWise();
-                    BlockPos anchor = center.relative(toward, distance).relative(side, shift);
-                    BlockPos origin = anchor.relative(side, -2);
-                    Layout layout = check(level, new Layout(origin, front, side, 0));
-                    if (layout != null) {
-                        double d = layout.column(2, 1).distSqr(center);
-                        if (d < bestDistance) {
-                            bestDistance = d;
-                            best = layout;
-                        }
+                Direction front = toward.getOpposite();
+                Direction side = front.getClockWise();
+                for (int shift = -distance; shift <= distance; shift++) {
+                    BlockPos origin = center.relative(toward, distance).relative(side, shift - 2);
+                    Plan plan = evaluate(level, new Layout(origin, front, side, 0));
+                    if (plan == null || !plan.valid()) {
+                        continue;
+                    }
+                    int score = plan.cost() * 3 + distance;
+                    if (score < bestScore) {
+                        bestScore = score;
+                        best = plan;
                     }
                 }
             }
-            if (best != null) {
-                return best;
-            }
         }
-        return null;
+        return best;
     }
 
-    private static Layout check(ServerLevel level, Layout layout) {
-        List<Integer> heights = new ArrayList<>();
+    private static Plan evaluate(ServerLevel level, Layout layout) {
+        int[] grounds = new int[21];
+        List<BlockPos> blockers = new ArrayList<>();
+        Fault fault = Fault.NONE;
+        int k = 0;
         for (int i = -1; i <= 5; i++) {
-            for (int row = 0; row <= 1; row++) {
+            for (int row = 0; row <= 2; row++) {
                 BlockPos column = layout.column(i, row);
                 if (!WorldUtil.loaded(level, column)) {
                     return null;
                 }
                 int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, column.getX(), column.getZ()) - 1;
-                if (level.getHeight(Heightmap.Types.MOTION_BLOCKING, column.getX(), column.getZ()) - 1 > y) {
-                    return null;
+                int floor = y - 8;
+                while (y > floor && clearable(level.getBlockState(column.atY(y)))) {
+                    y--;
                 }
-                BlockPos top = new BlockPos(column.getX(), y, column.getZ());
-                BlockState ground = level.getBlockState(top);
-                if (!level.getFluidState(top).isEmpty()) {
-                    return null;
+                BlockPos ground = column.atY(y);
+                if (!level.getFluidState(ground).isEmpty() || !level.getFluidState(ground.above()).isEmpty()) {
+                    fault = Fault.WATER;
+                } else if (!naturalGround(level.getBlockState(ground))) {
+                    blockers.add(ground);
                 }
-                if (!(ground.is(BlockTags.DIRT) || ground.is(BlockTags.SAND) || ground.is(Blocks.GRAVEL)
-                        || ground.is(BlockTags.BASE_STONE_OVERWORLD)) || ground.is(Blocks.DIRT_PATH) || ground.is(Blocks.FARMLAND)) {
-                    return null;
-                }
-                heights.add(y);
+                grounds[k++] = y;
             }
         }
-        int min = heights.stream().mapToInt(Integer::intValue).min().orElse(0);
-        int max = heights.stream().mapToInt(Integer::intValue).max().orElse(0);
-        if (max - min > 1) {
-            return null;
+        int[] footprint = new int[14];
+        int m = 0;
+        for (int c = 0; c < grounds.length; c++) {
+            if (c % 3 != 2) {
+                footprint[m++] = grounds[c];
+            }
         }
-        BlockPos depot = layout.column(2, 2);
-        int depotY = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, depot.getX(), depot.getZ());
-        if (Math.abs(depotY - (max + 1)) > 1) {
-            return null;
+        Arrays.sort(footprint);
+        int base = footprint[footprint.length / 2];
+        int min = Arrays.stream(grounds).min().orElse(base);
+        int max = Arrays.stream(grounds).max().orElse(base);
+        if (fault == Fault.NONE && (max - base > MAX_STEP || base - min > MAX_STEP)) {
+            fault = Fault.STEEP;
         }
-        return new Layout(new BlockPos(layout.origin().getX(), max, layout.origin().getZ()), layout.front(), layout.side(), max);
+        int cost = 0;
+        k = 0;
+        for (int i = -1; i <= 5; i++) {
+            for (int row = 0; row <= 2; row++) {
+                BlockPos column = layout.column(i, row);
+                int ground = grounds[k++];
+                cost += Math.abs(ground - base);
+                if (level.getBlockState(column.atY(ground)).is(Blocks.DIRT_PATH)) {
+                    cost += 6;
+                }
+                int top = row < 2 ? base + 4 : base + 2;
+                for (int y = base + 1; y <= top; y++) {
+                    BlockPos pos = column.atY(y);
+                    BlockState state = level.getBlockState(pos);
+                    if (state.isAir()) {
+                        continue;
+                    }
+                    if (clearable(state)) {
+                        cost++;
+                    } else if (!(y <= ground && naturalGround(state)) && !blockers.contains(pos)) {
+                        blockers.add(pos);
+                    }
+                }
+            }
+        }
+        Layout placed = new Layout(new BlockPos(layout.origin().getX(), base, layout.origin().getZ()), layout.front(), layout.side(), base);
+        return new Plan(placed, cost, blockers, fault);
+    }
+
+    private static boolean naturalGround(BlockState state) {
+        return state.is(BlockTags.DIRT) || state.is(BlockTags.SAND) || state.is(Blocks.GRAVEL)
+                || state.is(BlockTags.BASE_STONE_OVERWORLD) || state.is(Blocks.DIRT_PATH) || state.is(Blocks.SNOW_BLOCK)
+                || state.is(Blocks.CLAY) || state.is(Blocks.POWDER_SNOW);
+    }
+
+    private static boolean clearable(BlockState state) {
+        if (state.isAir()) {
+            return true;
+        }
+        if (!state.getFluidState().isEmpty()) {
+            return false;
+        }
+        if (state.hasProperty(LeavesBlock.PERSISTENT)) {
+            return !state.getValue(LeavesBlock.PERSISTENT);
+        }
+        return state.canBeReplaced() || state.is(BlockTags.REPLACEABLE_BY_TREES) || state.is(BlockTags.FLOWERS)
+                || state.is(BlockTags.SAPLINGS) || state.is(Blocks.SNOW) || state.is(Blocks.BUSH) || state.is(Blocks.FIREFLY_BUSH)
+                || state.is(Blocks.SWEET_BERRY_BUSH) || state.is(Blocks.BROWN_MUSHROOM) || state.is(Blocks.RED_MUSHROOM);
+    }
+
+    public static void showPreview(ServerPlayer player, Plan plan) {
+        if (plan == null) {
+            return;
+        }
+        ServerLevel level = (ServerLevel) player.level();
+        PREVIEWS.removeIf(preview -> preview.player().equals(player.getUUID()));
+        PREVIEWS.add(new Preview(level, player.getUUID(), plan, level.getGameTime() + 600));
+    }
+
+    public static void tickPreviews(MinecraftServer server) {
+        if (PREVIEWS.isEmpty()) {
+            return;
+        }
+        PREVIEWS.removeIf(preview -> preview.level().getGameTime() > preview.until()
+                || server.getPlayerList().getPlayer(preview.player()) == null);
+        DustParticleOptions frame = new DustParticleOptions(0x40FF60, 1.4F);
+        DustParticleOptions blocked = new DustParticleOptions(0xFF3030, 1.8F);
+        for (Preview preview : PREVIEWS) {
+            ServerLevel level = preview.level();
+            if (level.getGameTime() % 10 != 0) {
+                continue;
+            }
+            ServerPlayer player = server.getPlayerList().getPlayer(preview.player());
+            if (player == null || player.level() != level) {
+                continue;
+            }
+            Layout layout = preview.plan().layout();
+            int base = layout.baseY();
+            for (int i = -1; i <= 5; i++) {
+                for (int row = 0; row <= 1; row++) {
+                    BlockPos column = layout.column(i, row);
+                    int top = row == 0 && i >= 0 && i <= 4 ? base + 3 : base + 1;
+                    for (int y = base + 1; y <= top; y++) {
+                        level.sendParticles(player, frame, true, true, column.getX() + 0.5, y + 0.5, column.getZ() + 0.5, 2, 0.2, 0.2, 0.2, 0.0);
+                    }
+                }
+            }
+            for (BlockPos pos : preview.plan().blockers()) {
+                level.sendParticles(player, blocked, true, true, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, 4, 0.3, 0.3, 0.3, 0.0);
+            }
+        }
     }
 
     private static void build(ServerLevel level, Layout layout, ColonyData data) {
         int base = layout.baseY();
         for (int i = -1; i <= 5; i++) {
-            for (int row = 0; row <= 1; row++) {
+            for (int row = 0; row <= 2; row++) {
                 BlockPos column = layout.column(i, row);
-                for (int y = base - 2; y <= base; y++) {
-                    BlockPos pos = new BlockPos(column.getX(), y, column.getZ());
-                    if (WorldUtil.isAirLike(level.getBlockState(pos))) {
-                        level.setBlock(pos, Blocks.COBBLESTONE.defaultBlockState(), Block.UPDATE_ALL);
+                int top = row < 2 ? base + 4 : base + 2;
+                for (int y = base + 1; y <= top; y++) {
+                    BlockPos pos = column.atY(y);
+                    if (!level.getBlockState(pos).isAir()) {
+                        level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
                     }
                 }
-                level.setBlock(new BlockPos(column.getX(), base, column.getZ()), Blocks.COBBLESTONE.defaultBlockState(), Block.UPDATE_ALL);
-                for (int y = base + 1; y <= base + 4; y++) {
-                    BlockPos pos = new BlockPos(column.getX(), y, column.getZ());
-                    if (!level.getBlockState(pos).isAir()) {
-                        level.destroyBlock(pos, true);
+                BlockState fill = row < 2 ? Blocks.COBBLESTONE.defaultBlockState() : Blocks.DIRT.defaultBlockState();
+                for (int y = base - 3; y < base; y++) {
+                    BlockPos pos = column.atY(y);
+                    if (WorldUtil.isAirLike(level.getBlockState(pos))) {
+                        level.setBlock(pos, fill, Block.UPDATE_ALL);
                     }
+                }
+                BlockPos floor = column.atY(base);
+                if (row < 2) {
+                    level.setBlock(floor, Blocks.COBBLESTONE.defaultBlockState(), Block.UPDATE_ALL);
+                } else if (WorldUtil.isAirLike(level.getBlockState(floor))) {
+                    level.setBlock(floor, Blocks.GRASS_BLOCK.defaultBlockState(), Block.UPDATE_ALL);
                 }
             }
         }

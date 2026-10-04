@@ -54,7 +54,8 @@ public final class ColonyCommand {
         dispatcher.register(Commands.literal("colony")
                 .executes(ColonyCommand::info)
                 .then(Commands.literal("info").executes(ColonyCommand::info))
-                .then(Commands.literal("found").executes(ColonyCommand::found))
+                .then(Commands.literal("found").executes(ColonyCommand::found)
+                        .then(Commands.literal("here").executes(ColonyCommand::foundHere)))
                 .then(Commands.literal("disband").executes(ColonyCommand::disband))
                 .then(Commands.literal("stock").executes(ColonyCommand::stock))
                 .then(Commands.literal("journal").executes(ColonyCommand::journal))
@@ -144,17 +145,46 @@ public final class ColonyCommand {
         CommandSourceStack source = context.getSource();
         ServerLevel level = source.getLevel();
         BlockPos pos = BlockPos.containing(source.getPosition());
-        if (ColonyManager.colonyNear(level, pos, 96) != null) {
+        BlockPos center = Founding.nearbyBell(level, pos, 48)
+                .orElseGet(() -> level.getHeightmapPos(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, pos));
+        if (ColonyManager.colonyNear(level, center, 96) != null) {
             source.sendFailure(Component.translatable("smartcolony.command.exists"));
             return 0;
         }
-        BlockPos center = Founding.nearbyBell(level, pos, 48)
-                .orElseGet(() -> level.getHeightmapPos(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, pos));
         Colony colony = Founding.found(level, center);
         if (colony == null) {
             source.sendFailure(Component.translatable("smartcolony.command.no_site"));
+            if (source.getEntity() instanceof net.minecraft.server.level.ServerPlayer player) {
+                Founding.showPreview(player, Founding.planHere(level, player));
+            }
             return 0;
         }
+        source.sendSuccess(() -> Component.translatable("smartcolony.command.founded", colony.data().name,
+                colony.colonists().size()), true);
+        return 1;
+    }
+
+    private static int foundHere(CommandContext<CommandSourceStack> context) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        CommandSourceStack source = context.getSource();
+        net.minecraft.server.level.ServerPlayer player = source.getPlayerOrException();
+        ServerLevel level = source.getLevel();
+        Founding.Plan plan = Founding.planHere(level, player);
+        if (plan == null) {
+            source.sendFailure(Component.translatable("smartcolony.site.unloaded"));
+            return 0;
+        }
+        BlockPos site = plan.layout().origin();
+        BlockPos center = Founding.nearbyBell(level, site, 48).orElse(site);
+        if (ColonyManager.colonyNear(level, center, 96) != null) {
+            source.sendFailure(Component.translatable("smartcolony.command.exists"));
+            return 0;
+        }
+        if (!plan.valid()) {
+            Founding.showPreview(player, plan);
+            source.sendFailure(Component.translatable("smartcolony.command.site_blocked", plan.reason()));
+            return 0;
+        }
+        Colony colony = Founding.found(level, center, plan);
         source.sendSuccess(() -> Component.translatable("smartcolony.command.founded", colony.data().name,
                 colony.colonists().size()), true);
         return 1;

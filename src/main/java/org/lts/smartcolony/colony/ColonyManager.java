@@ -159,6 +159,7 @@ public final class ColonyManager {
             return;
         }
         ticks++;
+        Founding.tickPreviews(current);
         boolean dirty = false;
         for (Colony colony : new ArrayList<>(COLONIES.values())) {
             ServerLevel level = levelOf(colony);

@@ -16,7 +16,7 @@ Turns a vanilla village into a self-managing colony: categorized storage, lumber
 
 ### Возможности
 
-- **Основание.** Когда игрок рядом с колоколом деревни и вокруг есть хотя бы 3 взрослых жителя, колония основывается сама (или командой `/colony found`). У колокола строится склад: 5 столбиков бочек с табличками — Древесина, Недра, Амбар, Животноводство, Арсенал, плюс верстак и печь.
+- **Основание.** Когда игрок рядом с колоколом деревни и вокруг есть хотя бы 3 взрослых жителя, колония основывается сама (или командой `/colony found`). У колокола строится склад: 5 столбиков бочек с табличками — Древесина, Недра, Амбар, Животноводство, Арсенал, плюс верстак и печь. Место выбирается в 5–28 блоках от колокола: площадка выравнивается (до 4 блоков подсыпки или срезки), трава, тропинки, снег и листва убираются, а дома, заборы, грядки и другие постройки не трогаются. Если места нет, перед игроком на 30 секунд появляется голограмма склада: зелёное — склад, красное — что мешает.
 - **Склад по категориям.** Каждый предмет сортируется в свою категорию; если категория переполнена — в соседнюю. Когда склад заполняется на 75–90%, строители возводят складской навес на 6 бочек.
 - **Роли.** Колония сама распределяет жителей по ролям исходя из запасов и нужд, учитывая их ванильную профессию (фермер → фермер, рыбак → рыбак, оружейник → стражник и т. д.). Роль держится минимум минуту, чтобы жители не метались. Рабочая смена — с 1000 до 10500 тиков дня; ночью и в свободное время жители живут по ванильным правилам (спят, торгуют, общаются).
 - **Лесоруб** отличает природные деревья от построек (по непостоянной листве и отсутствию досок, стекла, дверей рядом), спиливает ствол целиком снизу вверх, срезает только осиротевшую листву, собирает брёвна, саженцы и яблоки, сажает саженец на пень и подсаживает лес, если он редеет. Когда дерева на складе слишком много, лесорубы отдыхают.
@@ -39,6 +39,7 @@ Turns a vanilla village into a self-managing colony: categorized storage, lumber
 
 - `/colony` или `/colony info` — жители по ролям, заполнение складов, запас еды, стройка и чего не хватает, шахта, ваша репутация;
 - `/colony found` — основать колонию у ближайшего колокола;
+- `/colony found here` — поставить склад прямо перед собой (по голограмме);
 - `/colony stock` — содержимое складов по категориям;
 - `/colony journal` — последние события колонии;
 - `/colony market` — последние сделки рынка и список нужд;
@@ -79,7 +80,7 @@ Turns a vanilla village into a self-managing colony: categorized storage, lumber
 
 ### Features
 
-- **Founding.** When a player is near a village bell with at least 3 adult villagers around, the colony founds itself (or use `/colony found`). A storage is built next to the bell: 5 columns of barrels with signs — Timber, Mine, Granary, Livestock, Arsenal — plus a crafting table and a furnace.
+- **Founding.** When a player is near a village bell with at least 3 adult villagers around, the colony founds itself (or use `/colony found`). A storage is built next to the bell: 5 columns of barrels with signs — Timber, Mine, Granary, Livestock, Arsenal — plus a crafting table and a furnace. The spot is picked 5–28 blocks from the bell: the ground is levelled (up to 4 blocks of fill or cut), grass, paths, snow and leaves are cleared, and houses, fences, farms and other buildings are never touched. If there is no room, a hologram of the storage appears in front of the player for 30 seconds: green is the storage, red is what is in the way.
 - **Categorized storage.** Each item goes to its category, overflowing into the others. At 75–90% fill builders add a storage shed with 6 more barrels.
 - **Roles.** The colony assigns jobs from its stock and needs, preferring each villager's vanilla profession (farmer → farmer, fisherman → fisherman, weaponsmith → guard, …). A role is kept for at least a minute. The work shift is day ticks 1000–10500; at night and in free time villagers follow vanilla behaviour (sleep, trade, socialise).
 - **Lumberjack** tells natural trees from buildings (non-persistent leaves, no planks/glass/doors nearby), fells the whole trunk bottom-up, clears only the orphaned leaves, collects logs, saplings and apples, replants the stump and plants more saplings when the forest thins. When the storage holds enough wood, lumberjacks rest.
@@ -102,6 +103,7 @@ No key bindings — everything goes through `/colony`:
 
 - `/colony` or `/colony info` — members by role, storage fill, food, construction and what it lacks, mine, your reputation;
 - `/colony found` — found a colony at the nearest bell;
+- `/colony found here` — place the storage right in front of you (follow the hologram);
 - `/colony stock` — storage contents by category;
 - `/colony journal` — recent colony events;
 - `/colony market` — recent market deals and current needs;
