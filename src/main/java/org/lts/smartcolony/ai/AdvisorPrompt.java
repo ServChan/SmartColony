@@ -27,8 +27,9 @@ public final class AdvisorPrompt {
                  "actions": [ ... at most 6 ... ]}
 
                 Allowed actions:
-                {"type":"roles","targets":{"builder":4,"miner":5}} sets head counts for the listed roles for the next two \
-                reviews; roles you leave out are filled automatically. Keep the sum below the number of adults.
+                {"type":"roles","targets":{"builder":4,"miner":5}} overrides the colony's own balancing for at most 3 roles \
+                for the next two reviews; the rest is filled automatically. Use it only to fix a clear imbalance, never to \
+                copy the current numbers.
                 {"type":"build","blueprint":"house_family"} starts a building site; optional "x" and "z" give a preferred \
                 place near the colony (world coordinates). At most 3 sites exist at once.
                 {"type":"craft","item":"stone_pickaxe","count":2} crafts tools, torches, beds, chests, bread and similar \
