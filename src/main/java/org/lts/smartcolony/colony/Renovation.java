@@ -46,8 +46,8 @@ public final class Renovation {
     public record Room(List<BlockPos> cells, List<BlockPos> doors, int beds) {
         public String key() {
             long min = Long.MAX_VALUE;
-            for (BlockPos cell : cells) {
-                min = Math.min(min, cell.asLong());
+            for (BlockPos door : doors) {
+                min = Math.min(min, door.asLong());
             }
             BlockPos first = BlockPos.of(min);
             return first.getX() + "," + first.getY() + "," + first.getZ();

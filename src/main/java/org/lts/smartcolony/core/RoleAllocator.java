@@ -33,13 +33,14 @@ public final class RoleAllocator {
         if (adults >= 3) {
             guards = (int) Math.round(adults * 0.2 + needs.threat());
             guards = Math.max(1, Math.min(guards, Math.max(1, adults / 3)));
+            if (!needs.equippable().contains(Role.GUARD)) {
+                guards = 1;
+            }
         }
         int builders = 0;
         if (needs.builderBacklog() > 0 && adults >= 4) {
-            builders = adults >= 22 ? 4 : adults >= 14 ? 3 : adults >= 8 ? 2 : 1;
-            if (adults >= 12) {
-                builders = Math.min(Math.max(builders, adults / 5), builders + Math.min(adults / 8, needs.builderBacklog() / 250));
-            }
+            int cap = adults < 8 ? 1 : Math.max(2, adults / 5);
+            builders = Math.min(cap, 1 + needs.builderBacklog() / 120);
         }
         int workers = adults - guards - builders;
         result.put(Role.GUARD, guards);

@@ -131,8 +131,13 @@ public final class Construction {
     }
 
     public boolean hasWork(ServerLevel level) {
-        return !active().isEmpty() || !data().pendingRoad.isEmpty() || !data().pendingTorches.isEmpty()
+        return !active().isEmpty() || !data().pendingRoad.isEmpty() || !data().pendingTorches.isEmpty() && torchesAvailable(level)
                 || colony.improvements().hasWork(level);
+    }
+
+    private boolean torchesAvailable(ServerLevel level) {
+        Stock stock = colony.warehouse().stock(level);
+        return stock.get(Ids.mc("torch")) > 0 || CraftPlanner.plan(stock, Ids.mc("torch"), 1).isPresent();
     }
 
     public int backlog(ServerLevel level) {
@@ -140,7 +145,7 @@ public final class Construction {
             return 0;
         }
         int work = active().size() * 250;
-        work += data().pendingRoad.size() + data().pendingTorches.size();
+        work += data().pendingRoad.size() + (torchesAvailable(level) ? data().pendingTorches.size() : 0);
         if (colony.improvements().hasWork(level)) {
             work += data().orders.size();
         }

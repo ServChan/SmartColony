@@ -623,6 +623,14 @@ public final class Colony {
         if (canEquip(level, stock, List.of(Ids.mc("fishing_rod")))) {
             equippable.add(Role.FISHERMAN);
         }
+        if (canEquip(level, stock, org.lts.smartcolony.work.Tools.SWORDS) || canEquip(level, stock, org.lts.smartcolony.work.Tools.AXES)) {
+            equippable.add(Role.GUARD);
+        }
+        for (Map.Entry<UUID, Colonist> entry : colonists.entrySet()) {
+            if (!(level.getEntity(entry.getKey()) instanceof Villager) && entry.getValue().role() != Role.IDLE) {
+                adults++;
+            }
+        }
         int wood = stock.sum(Ids::isLog) + stock.sum(Ids::isPlanks) / 4;
         int stone = stock.get(Ids.mc("cobblestone")) + stock.get(Ids.mc("cobbled_deepslate"));
         int iron = stock.get(Ids.mc("iron_ingot")) + stock.get(Ids.mc("raw_iron"));
@@ -645,7 +653,14 @@ public final class Colony {
         Set<String> locked = new java.util.HashSet<>();
         Map<String, Villager> loaded = new HashMap<>();
         for (Map.Entry<UUID, Colonist> entry : colonists.entrySet()) {
-            if (!(level.getEntity(entry.getKey()) instanceof Villager villager) || villager.isBaby()) {
+            if (!(level.getEntity(entry.getKey()) instanceof Villager villager)) {
+                if (entry.getValue().role() != Role.IDLE) {
+                    current.put(entry.getKey().toString(), entry.getValue().role());
+                    locked.add(entry.getKey().toString());
+                }
+                continue;
+            }
+            if (villager.isBaby()) {
                 continue;
             }
             String key = entry.getKey().toString();
@@ -658,7 +673,7 @@ public final class Colony {
             }
             loaded.put(key, villager);
         }
-        Map<String, Role> changes = RoleAllocator.reassign(current, affinity, locked, desired, 1);
+        Map<String, Role> changes = RoleAllocator.reassign(current, affinity, locked, desired, Math.max(1, adults / 10));
         for (Map.Entry<String, Role> change : changes.entrySet()) {
             Villager villager = loaded.get(change.getKey());
             Colonist colonist = colonists.get(UUID.fromString(change.getKey()));
