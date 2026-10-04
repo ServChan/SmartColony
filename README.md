@@ -24,35 +24,34 @@ Turns a vanilla village into a self-managing colony: categorized storage, lumber
 - **Фермер** собирает спелый урожай и тут же пересаживает, засевает пустую пашню, вспахивает новую землю у воды, когда еды мало, находит новые водоёмы под поля, а если воды рядом нет — приносит её ведром и делает пруд-оросительный. Без семян рвёт траву ради семян.
 - **Рыбак** ищет открытую воду, удит по ванильной таблице улова; часть сырой рыбы и мяса колония запекает (печь «виртуальная», топливо — уголь/древесный уголь/доски/брёвна со склада).
 - **Пастух** заводит загон (его строит строитель), ловит диких коров, овец, свиней и кур на поводок и заводит внутрь, кормит пары для размножения, стрижёт овец, собирает яйца и шерсть, держит лимит поголовья (по умолчанию 6 на вид) и при нехватке мяса забивает лишних. Животных из чужих загонов и в воде не трогает.
-- **Строитель** строит по чертежам (малый и семейный дом, складской навес, загон, пост стражи), выбирая ровное место на краю колонии, к которому можно подойти от входа. Стройка начинается только когда на складе есть 100% материалов (недостающее колония сначала крафтит: доски, двери, полублоки, кровати, факелы, стёкла). Если чего-то нет — показывает, чего не хватает, и пока строит то, на что материалов хватает. Площадку расчищает, подсыпает фундамент из булыжника (не больше 3 блоков, чтобы дом не висел над обрывом), ставит блоки слоями, двери и кровати целиком. Окна без стекла заменяются заборами, кровать нужного цвета — кроватью из имеющейся шерсти.
+- **Строитель** строит по чертежам (малый и семейный дом, дом с двором, складской навес, загон, пост стражи, кузница, рынок, амбар, сторожевая башня, часовня), выбирая ровное место на краю колонии, к которому можно подойти от входа. Стройка начинается только когда на складе есть 100% материалов (недостающее колония сначала крафтит: доски, двери, полублоки, кровати, факелы, стёкла). Если чего-то нет — показывает, чего не хватает, и пока строит то, на что материалов хватает. Площадку расчищает, подсыпает фундамент из булыжника (не больше 3 блоков, чтобы дом не висел над обрывом), ставит блоки слоями, двери и кровати целиком. Окна без стекла заменяются заборами, кровать нужного цвета — кроватью из имеющейся шерсти.
+- **Стройплощадки и ремонт.** Одновременно идут две-три стройки, над каждой стоит кран из заборов (разбирается после). Готовые здания получают выровненную площадку 3×3 у входа и декор по типу здания; старые дома деревни постепенно перестраиваются. Здания и стена проверяются, недостающие блоки восстанавливаются.
+- **Стена.** Через двое суток колония обносит стеной все свои здания, поля, загоны и склад: булыжник, доски и перила из заборов, столбы из брёвен, башни 3×3 через каждые 40 блоков, двери там, где стену пересекают тропы, фонари у ворот. Если снаружи земля выше основания стены, стена поднимается вместе с ней. При перепланировке старая стена разбирается на материалы.
+- **Тревога, опыт, праздники.** Враг внутри деревни — колокол звонит, жители прячутся по домам, стража выходит. Жители получают опыт роли (уровни 1–5): быстрее копают и строят, стража сильнее бьёт. Каждый третий день в полдень у колокола праздник. У колокола скамейки, вдоль дорог деревья.
 - **Демография.** Нужда в домах считается по кроватям и числу жителей. При свободных кроватях и запасе еды колония подкармливает жителей хлебом и у них рождаются дети; дети вырастают и тоже получают работу.
 - **Дороги и фонари.** От двери каждого нового здания прокладывается тропа (A*-поиск по поверхности) к ближайшей дороге или складу; тёмные места у дорог и дверей получают столбик-забор с факелом.
 - **Стражники** берут меч, лук, стрелы и броню со склада (колония крафтит недостающее), днём патрулируют периметр и вход в шахту, ночью стоят на самых опасных направлениях (колония запоминает, откуда приходят мобы). В бою: стреляют, только если на линии огня нет жителя, голема или мирного игрока, отходят от подбегающих врагов, при здоровье ниже 35% уходят к складу лечиться едой. Недостижимые цели бросают, за границу колонии далеко не гонятся, после боя собирают лут.
 - **Големы.** На каждые 6 взрослых колония держит железного голема (до 4): выковывает нового за 20 слитков и чинит раненых по слитку.
 - **Внутренний рынок.** Излишки (например, морковь сверх 64) продаются по настоящим сделкам жителей колонии за изумруды; изумруды тратятся на то, чего колонии не хватает (инструменты, стрелы, кровати), — тоже через реальные предложения жителей, с учётом их лимитов.
 - **Кражи и репутация.** Колония сверяет содержимое склада, пока игрок держит его открытым. Взял без оплаты — это кража: репутация падает пропорционально стоимости (цены — в изумрудах, с поправкой на дефицит). Положил изумруды на ту же сумму — это покупка; положил лишнее — пожертвование и плюс к репутации. Сломанная бочка склада — тоже кража. Нападение на жителя — минус 8, убийство — минус 60. Статусы: союзник, гость, нарушитель, враг колонии. Враг — стражи и големы атакуют его (жители получают ванильные «сплетни», поэтому и ванильные големы реагируют). Репутация понемногу восстанавливается сама.
+- **ИИ-советник (необязательно).** Локальная модель через Ollama или OpenAI-совместимый API раз в несколько минут смотрит на состояние колонии и может поправить не больше трёх ролей при явном перекосе, заказать постройку, крафт и спасение застрявшего жителя. По умолчанию выключен (`aiEnabled: false`). Без советника колония работает так же.
 - **Безопасность жителей.** Рабочие при виде монстра на время отпускаются к ванильному поведению (убегают); тонущих выталкивает на сушу; застрявших далеко от игрока колония переставляет на место.
 
 ### Управление
 
-Клавиш нет — всё через команду `/colony`:
-
-- `/colony` или `/colony info` — жители по ролям, заполнение складов, запас еды, стройка и чего не хватает, шахта, ваша репутация;
-- `/colony found` — основать колонию у ближайшего колокола;
 - клавиша **K** (меняется в настройках управления) или `/colony` — окно колонии с вкладками «Обзор», «Склад», «Жители», «Журнал», «Рынок»; `/colony stock`, `/colony journal`, `/colony market` открывают нужную вкладку;
-- key **K** (rebindable in Controls) or `/colony` — colony window with Overview, Storage, Villagers, Journal and Market tabs; `/colony stock`, `/colony journal`, `/colony market` open the matching tab;
+- `/colony info` — то же окно на вкладке «Обзор»: жители по ролям, заполнение складов, запас еды, стройка и чего не хватает, шахта, ваша репутация (если на клиенте нет мода, ответы этих команд приходят в чат);
+- `/colony found` — основать колонию у ближайшего колокола;
 - `/colony found here` — поставить склад прямо перед собой (по голограмме);
-- `/colony stock` — содержимое складов по категориям;
-- `/colony journal` — последние события колонии;
-- `/colony market` — последние сделки рынка и список нужд;
 - `/colony reputation` — ваша репутация у колонии;
-- `/colony build <чертёж>` — заказать постройку (`house_small`, `house_family`, `storage_shed`, `guard_post`, `pen`);
+- `/colony build <чертёж>` — заказать постройку (`house_small`, `house_family`, `house_garden`, `storage_shed`, `guard_post`, `pen`, `blacksmith`, `market`, `barn`, `watchtower`, `chapel`);
+- `/colony ai` — состояние ИИ-советника и его последние мысли; `/colony ai on|off` — включить или выключить его для этой колонии, `/colony ai now` — спросить сразу, `/colony ai reload` — перечитать конфиг;
 - `/colony role <жители> <роль|auto>` — закрепить роль (`lumberjack`, `miner`, `farmer`, `fisherman`, `herder`, `builder`, `guard`, `idle`) или вернуть автоматический выбор;
 - `/colony disband` — распустить колонию (жители возвращаются к ванильному поведению, постройки остаются).
 
 ### Настройки
 
-Файл `config/smartcolony.json` (создаётся при первом запуске): авто-основание, минимум жителей, радиус колонии и его максимум, начало и конец смены, подписи ролей над жителями, сообщения в чат, разрешение переставлять застрявших жителей, скорость стройки, целевая глубина шахты, плотность и радиус леса, цена и число големов, лимит животных, период рынка, порог отступления стражи, порог «дерева достаточно», атака стражей на врагов-игроков. Данные колоний хранятся в мире: `<мир>/smartcolony/colonies.json` (с резервной копией `.bak`).
+Файл `config/smartcolony.json` (создаётся при первом запуске): авто-основание, минимум жителей, радиус колонии и его максимум, начало и конец смены, подписи ролей над жителями, сообщения в чат, разрешение переставлять застрявших жителей, скорость стройки, целевая глубина шахты, плотность и радиус леса, цена и число големов, лимит животных, период рынка, порог отступления стражи, порог «дерева достаточно», атака стражей на врагов-игроков. ИИ-советник: `aiEnabled`, `aiApi` (`ollama` или `openai`), `aiEndpoint` (по умолчанию `http://127.0.0.1:11434`), `aiModel` (по умолчанию `gemma4:latest`), `aiApiKey` (только для OpenAI-совместимого API), `aiLanguage`, `aiIntervalTicks`, `aiTimeoutSeconds`, разрешения `aiCanAssignRoles`, `aiCanBuild`, `aiCanCraft`, `aiCanRescue`. Данные колоний хранятся в мире: `<мир>/smartcolony/colonies.json` (с резервной копией `.bak`).
 
 ### Установка
 
@@ -70,7 +69,7 @@ Turns a vanilla village into a self-managing colony: categorized storage, lumber
 
 ### Для разработки: MCP-мост
 
-В отдельном source set `src/devbridge` лежит отладочный мод `smartcolony_devbridge`: MCP-сервер на `http://127.0.0.1:25599/mcp` с инструментами `status`, `brief`, `colony`, `command`, `wait`, `blocks`, `topmap`, `log`, `found`, `role`, `give`, `build`, `entities`. Он не попадает в релизный jar. Запуск: `.\gradlew.bat runDevServer` (безоконный сервер в `run-dev/`) или `.\gradlew.bat runDevClient`. Чтобы удалить мост целиком: удалите папку `src/devbridge`, файл `.mcp.json`, блок `sourceSets { devbridge … }`, строку `"smartcolony_devbridge" { … }` в `loom.mods` и обе записи `devServer`/`devClient` в `loom.runs` из `build.gradle`.
+В отдельном source set `src/devbridge` лежит отладочный мод `smartcolony_devbridge`: MCP-сервер на `http://127.0.0.1:25599/mcp` с инструментами `status`, `brief`, `colony`, `command`, `wait`, `blocks`, `topmap`, `log`, `found`, `role`, `give`, `build`, `entities`, `site`, `rooms`, `wall`, `paste`, `ai`. Он не попадает в релизный jar. Запуск: `.\gradlew.bat runDevServer` (безоконный сервер в `run-dev/`) или `.\gradlew.bat runDevClient`. Чтобы удалить мост целиком: удалите папку `src/devbridge`, файл `.mcp.json`, блок `sourceSets { devbridge … }`, строку `"smartcolony_devbridge" { … }` в `loom.mods` и обе записи `devServer`/`devClient` в `loom.runs` из `build.gradle`.
 
 ---
 
@@ -90,33 +89,34 @@ Turns a vanilla village into a self-managing colony: categorized storage, lumber
 - **Farmer** harvests ripe crops and replants at once, sows empty farmland, tills new land by water when food is short, finds new water for fields and, without water nearby, carries a bucket to dig an irrigation pond. Without seeds, breaks grass for seeds.
 - **Fisherman** finds open water and fishes using the vanilla fishing loot table; the colony cooks part of the raw fish and meat (fuel: coal, charcoal, planks or logs from storage).
 - **Herder** gets a pen (built by a builder), leashes wild cows, sheep, pigs and chickens and leads them in, breeds pairs, shears sheep, gathers eggs and wool, keeps a population cap (6 per species by default) and culls extras when meat runs low. Animals in other pens or in water are left alone.
-- **Builder** builds from blueprints (small and family house, storage shed, animal pen, guard post) on flat land at the colony edge that can be reached from the entrance. Construction starts only with 100% of the materials in storage (the colony crafts what it can first: planks, doors, slabs, beds, torches, panes). Missing items are shown, and meanwhile the colony builds whatever it can afford. The site is cleared, a cobblestone foundation fills gaps (at most 3 blocks so nothing hangs over a cliff), blocks go up layer by layer, doors and beds as pairs. Windows without glass become fences; a bed of the wanted colour is replaced by one made of available wool.
+- **Builder** builds from blueprints (small and family house, house with a yard, storage shed, animal pen, guard post, blacksmith, market, barn, watchtower, chapel) on flat land at the colony edge that can be reached from the entrance. Construction starts only with 100% of the materials in storage (the colony crafts what it can first: planks, doors, slabs, beds, torches, panes). Missing items are shown, and meanwhile the colony builds whatever it can afford. The site is cleared, a cobblestone foundation fills gaps (at most 3 blocks so nothing hangs over a cliff), blocks go up layer by layer, doors and beds as pairs. Windows without glass become fences; a bed of the wanted colour is replaced by one made of available wool.
+- **Building sites and repairs.** Two or three sites run at once, each under a fence crane that is taken down afterwards. Finished buildings get a levelled 3x3 entrance apron and decor by building type; old village houses are renovated over time. Buildings and the wall are inspected and missing blocks repaired.
+- **Wall.** After two days the colony walls in all its buildings, farms, pens and the storage: cobblestone, planks and a fence rail, log posts, 3x3 towers every 40 columns, doors where paths cross the wall, lanterns at the gates. Where the ground outside is higher than the wall base, the wall rises with it. When the wall is redrawn, the old line is taken down for its materials.
+- **Alarm, skills, festivals.** An enemy inside the village rings the bell, villagers hide at home and guards come out. Villagers gain role experience (levels 1-5) that speeds digging and building and adds guard damage. Every third day at noon the colony holds a festival at the bell. Benches stand around the bell and trees along the roads.
 - **Demography.** Housing demand follows beds versus population. With free beds and food in stock the colony feeds villagers bread and children are born; children grow up and get jobs.
 - **Roads and lights.** Every new building gets a path (A* over the surface) from its door to the nearest road or the storage; dark spots by roads and doors get a fence post with a torch.
 - **Guards** take a sword, bow, arrows and armour from storage (the colony crafts what is missing), patrol the edge and the mine entrance by day and hold the most dangerous directions at night (the colony remembers where mobs come from). In combat they only shoot when no villager, golem or peaceful player is in the line of fire, back away from charging enemies, retreat to the storage to heal with food below 35% health, drop unreachable targets, do not chase far beyond the colony and pick up loot afterwards.
 - **Golems.** One iron golem per 6 adults (up to 4): a new one costs 20 ingots, wounded ones are repaired with an ingot each.
 - **Internal market.** Surpluses (e.g. carrots above 64) are sold for emeralds through the real trades of the colony's villagers; emeralds buy what the colony lacks (tools, arrows, beds) through real offers too, respecting their stock limits.
 - **Theft and reputation.** While a player has a storage barrel open the colony tracks its contents. Taking without paying is theft: reputation drops by the value taken (prices in emeralds, adjusted for scarcity). Leaving emeralds worth the goods is a purchase; leaving more is a donation and raises reputation. Breaking a storage barrel counts as theft. Hitting a villager costs 8, killing one 60. Statuses: ally, guest, suspect, enemy of the colony. Enemies are attacked by guards and golems (villagers also get vanilla gossip, so vanilla golems react). Reputation slowly recovers on its own.
+- **AI advisor (optional).** A local model through Ollama or an OpenAI-compatible API looks at the colony every few minutes and may fix at most three roles when there is a clear imbalance, order a building, crafting or a rescue of a stuck villager. Off by default (`aiEnabled: false`); the colony works the same without it.
 - **Villager safety.** Workers who see a monster are briefly handed back to vanilla behaviour (they flee); drowning workers are pushed to land; stuck workers far from the player are moved into place.
 
 ### Controls
 
-No key bindings — everything goes through `/colony`:
-
-- `/colony` or `/colony info` — members by role, storage fill, food, construction and what it lacks, mine, your reputation;
+- key **K** (rebindable in Controls) or `/colony` — colony window with Overview, Storage, Villagers, Journal and Market tabs; `/colony stock`, `/colony journal`, `/colony market` open the matching tab;
+- `/colony info` — the same window on the Overview tab: members by role, storage fill, food, construction and what it lacks, mine, your reputation (without the mod on the client these commands answer in chat);
 - `/colony found` — found a colony at the nearest bell;
 - `/colony found here` — place the storage right in front of you (follow the hologram);
-- `/colony stock` — storage contents by category;
-- `/colony journal` — recent colony events;
-- `/colony market` — recent market deals and current needs;
 - `/colony reputation` — your reputation with the colony;
-- `/colony build <blueprint>` — order a building (`house_small`, `house_family`, `storage_shed`, `guard_post`, `pen`);
+- `/colony build <blueprint>` — order a building (`house_small`, `house_family`, `house_garden`, `storage_shed`, `guard_post`, `pen`, `blacksmith`, `market`, `barn`, `watchtower`, `chapel`);
+- `/colony ai` — AI advisor status and its latest thoughts; `/colony ai on|off` — turn it on or off for this colony, `/colony ai now` — ask right away, `/colony ai reload` — reload the config;
 - `/colony role <villagers> <role|auto>` — lock a role (`lumberjack`, `miner`, `farmer`, `fisherman`, `herder`, `builder`, `guard`, `idle`) or return to automatic choice;
 - `/colony disband` — disband the colony (villagers return to vanilla behaviour, buildings stay).
 
 ### Configuration
 
-`config/smartcolony.json` (created on first launch): auto-founding, minimum villagers, colony radius and its maximum, shift start and end, role names above villagers, chat messages, moving stuck villagers, build speed, mine target depth, forest density and radius, golem price and count, animal cap, market period, guard retreat threshold, "enough wood" threshold, guards attacking enemy players. Colony data lives in the world: `<world>/smartcolony/colonies.json` (with a `.bak` copy).
+`config/smartcolony.json` (created on first launch): auto-founding, minimum villagers, colony radius and its maximum, shift start and end, role names above villagers, chat messages, moving stuck villagers, build speed, mine target depth, forest density and radius, golem price and count, animal cap, market period, guard retreat threshold, "enough wood" threshold, guards attacking enemy players. AI advisor: `aiEnabled`, `aiApi` (`ollama` or `openai`), `aiEndpoint` (default `http://127.0.0.1:11434`), `aiModel` (default `gemma4:latest`), `aiApiKey` (OpenAI-compatible API only), `aiLanguage`, `aiIntervalTicks`, `aiTimeoutSeconds`, permissions `aiCanAssignRoles`, `aiCanBuild`, `aiCanCraft`, `aiCanRescue`. Colony data lives in the world: `<world>/smartcolony/colonies.json` (with a `.bak` copy).
 
 ### Installation
 
@@ -134,7 +134,7 @@ Output: `build/libs/smart-colony-1.0.0.jar`.
 
 ### Development: MCP bridge
 
-A separate source set `src/devbridge` holds the debug mod `smartcolony_devbridge`: an MCP server at `http://127.0.0.1:25599/mcp` with the tools `status`, `brief`, `colony`, `command`, `wait`, `blocks`, `topmap`, `log`, `found`, `role`, `give`, `build`, `entities`. It is not part of the release jar. Run it with `.\gradlew.bat runDevServer` (headless server in `run-dev/`) or `.\gradlew.bat runDevClient`. To remove the bridge entirely: delete `src/devbridge`, `.mcp.json`, the `sourceSets { devbridge … }` block, the `"smartcolony_devbridge" { … }` entry in `loom.mods` and both `devServer`/`devClient` entries in `loom.runs` of `build.gradle`.
+A separate source set `src/devbridge` holds the debug mod `smartcolony_devbridge`: an MCP server at `http://127.0.0.1:25599/mcp` with the tools `status`, `brief`, `colony`, `command`, `wait`, `blocks`, `topmap`, `log`, `found`, `role`, `give`, `build`, `entities`, `site`, `rooms`, `wall`, `paste`, `ai`. It is not part of the release jar. Run it with `.\gradlew.bat runDevServer` (headless server in `run-dev/`) or `.\gradlew.bat runDevClient`. To remove the bridge entirely: delete `src/devbridge`, `.mcp.json`, the `sourceSets { devbridge … }` block, the `"smartcolony_devbridge" { … }` entry in `loom.mods` and both `devServer`/`devClient` entries in `loom.runs` of `build.gradle`.
 
 ## Лицензия / License
 
