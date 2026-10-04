@@ -40,7 +40,7 @@ class ResourcesTest {
     void everyTranslationKeyInCodeExists() throws IOException {
         Set<String> keys = lang("en_us").keySet();
         Pattern literal = Pattern.compile("\"(smartcolony\\.[a-z_]+\\.[a-z_]+)\"");
-        try (Stream<Path> files = Files.walk(Path.of("src/main/java"))) {
+        try (Stream<Path> files = Stream.concat(Files.walk(Path.of("src/main/java")), Files.walk(Path.of("src/client/java")))) {
             for (Path file : files.filter(p -> p.toString().endsWith(".java")).toList()) {
                 Matcher matcher = literal.matcher(Files.readString(file));
                 while (matcher.find()) {

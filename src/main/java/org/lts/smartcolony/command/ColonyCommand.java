@@ -83,6 +83,11 @@ public final class ColonyCommand {
         return colony;
     }
 
+    private static boolean openUi(CommandSourceStack source, Colony colony, String tab) {
+        return source.getEntity() instanceof net.minecraft.server.level.ServerPlayer player
+                && org.lts.smartcolony.colony.ColonyUi.open(player, colony, tab);
+    }
+
     private static MutableComponent header(Colony colony) {
         return Component.translatable("smartcolony.command.header", colony.data().name).withStyle(ChatFormatting.GOLD);
     }
@@ -92,6 +97,9 @@ public final class ColonyCommand {
         Colony colony = colony(source);
         if (colony == null) {
             return 0;
+        }
+        if (openUi(source, colony, "overview")) {
+            return 1;
         }
         ServerLevel level = source.getLevel();
         ColonyData data = colony.data();
@@ -208,6 +216,9 @@ public final class ColonyCommand {
         if (colony == null) {
             return 0;
         }
+        if (openUi(source, colony, "storage")) {
+            return 1;
+        }
         source.sendSuccess(() -> header(colony), false);
         Map<String, Integer> stock = colony.warehouse().stock(source.getLevel()).sorted();
         for (Category category : Category.values()) {
@@ -230,6 +241,9 @@ public final class ColonyCommand {
         if (colony == null) {
             return 0;
         }
+        if (openUi(source, colony, "journal")) {
+            return 1;
+        }
         source.sendSuccess(() -> header(colony), false);
         List<String> lines = colony.data().journal;
         for (String line : lines.subList(Math.max(0, lines.size() - 12), lines.size())) {
@@ -245,6 +259,9 @@ public final class ColonyCommand {
         Colony colony = colony(source);
         if (colony == null) {
             return 0;
+        }
+        if (openUi(source, colony, "market")) {
+            return 1;
         }
         source.sendSuccess(() -> header(colony), false);
         List<Market.Deal> ledger = colony.economy().market().ledger();
@@ -267,6 +284,9 @@ public final class ColonyCommand {
         Colony colony = colony(source);
         if (colony == null) {
             return 0;
+        }
+        if (openUi(source, colony, "overview")) {
+            return 1;
         }
         var player = source.getPlayerOrException();
         int value = colony.reputation(player.getUUID());

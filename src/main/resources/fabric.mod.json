@@ -8,7 +8,8 @@
   "license": "MIT",
   "environment": "*",
   "entrypoints": {
-    "main": ["org.lts.smartcolony.SmartColony"]
+    "main": ["org.lts.smartcolony.SmartColony"],
+    "client": ["org.lts.smartcolony.client.SmartColonyClient"]
   },
   "mixins": ["smartcolony.mixins.json"],
   "depends": {
@@ -19,6 +20,7 @@
     "fabric-lifecycle-events-v1": "*",
     "fabric-command-api-v2": "*",
     "fabric-entity-events-v1": "*",
-    "fabric-events-interaction-v0": "*"
+    "fabric-events-interaction-v0": "*",
+    "fabric-key-mapping-api-v1": "*"
   }
 }

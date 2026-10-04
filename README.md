@@ -39,6 +39,8 @@ Turns a vanilla village into a self-managing colony: categorized storage, lumber
 
 - `/colony` или `/colony info` — жители по ролям, заполнение складов, запас еды, стройка и чего не хватает, шахта, ваша репутация;
 - `/colony found` — основать колонию у ближайшего колокола;
+- клавиша **K** (меняется в настройках управления) или `/colony` — окно колонии с вкладками «Обзор», «Склад», «Жители», «Журнал», «Рынок»; `/colony stock`, `/colony journal`, `/colony market` открывают нужную вкладку;
+- key **K** (rebindable in Controls) or `/colony` — colony window with Overview, Storage, Villagers, Journal and Market tabs; `/colony stock`, `/colony journal`, `/colony market` open the matching tab;
 - `/colony found here` — поставить склад прямо перед собой (по голограмме);
 - `/colony stock` — содержимое складов по категориям;
 - `/colony journal` — последние события колонии;
