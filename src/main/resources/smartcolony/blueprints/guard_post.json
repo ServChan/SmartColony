@@ -2,15 +2,98 @@
   "id": "guard_post",
   "kind": "guard_post",
   "beds": 0,
-  "door": [2, 0],
+  "door": [
+    3,
+    1
+  ],
   "palette": {
     "C": "minecraft:cobblestone",
+    "L": "minecraft:$wood_log",
+    "X": "minecraft:$wood_log[axis=x]",
+    "Z": "minecraft:$wood_log[axis=z]",
+    "P": "minecraft:$wood_planks",
+    "e": "minecraft:$wood_stairs[facing=east,half=bottom]",
+    "w": "minecraft:$wood_stairs[facing=west,half=bottom]",
+    "n": "minecraft:$wood_stairs[facing=north,half=bottom]",
+    "s": "minecraft:$wood_stairs[facing=south,half=bottom]",
+    "l": "minecraft:$wood_slab[type=bottom]",
     "F": "minecraft:$wood_fence",
-    "T": "minecraft:torch"
+    "R": "minecraft:barrel[facing=up]",
+    "V": "minecraft:hay_block",
+    "M": "minecraft:lantern[hanging=false]"
   },
   "layers": [
-    ["CCCCC", "CCCCC", "CCCCC", "CCCCC", "CCCCC"],
-    ["FF.FF", "F...F", "F...F", "F...F", "FFFFF"],
-    ["T...T", ".....", ".....", ".....", "T...T"]
+    [
+      "  CCC  ",
+      " CCCCC ",
+      " CPPPC ",
+      " CPPPC ",
+      " CPPPC ",
+      " CCCCC ",
+      "       "
+    ],
+    [
+      ".......",
+      ".LF.FL.",
+      ".F...F.",
+      ".F...F.",
+      ".FR.VF.",
+      ".LFFFL.",
+      "......."
+    ],
+    [
+      ".......",
+      ".L...L.",
+      ".......",
+      ".......",
+      "....M..",
+      ".L...L.",
+      "......."
+    ],
+    [
+      ".......",
+      ".LXXXL.",
+      ".Z...Z.",
+      ".Z...Z.",
+      ".Z...Z.",
+      ".LXXXL.",
+      "......."
+    ],
+    [
+      "esssssw",
+      "e.....w",
+      "e.....w",
+      "e.....w",
+      "e.....w",
+      "e.....w",
+      "ennnnnw"
+    ],
+    [
+      ".......",
+      ".esssw.",
+      ".e...w.",
+      ".e...w.",
+      ".e...w.",
+      ".ennnw.",
+      "......."
+    ],
+    [
+      ".......",
+      ".......",
+      "..esw..",
+      "..ePw..",
+      "..enw..",
+      ".......",
+      "......."
+    ],
+    [
+      ".......",
+      ".......",
+      ".......",
+      "...l...",
+      ".......",
+      ".......",
+      "......."
+    ]
   ]
 }

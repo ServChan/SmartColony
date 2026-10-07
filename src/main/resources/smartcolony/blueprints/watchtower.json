@@ -3,89 +3,151 @@
   "kind": "tower",
   "beds": 0,
   "door": [
-    2,
-    0
+    3,
+    1
   ],
   "palette": {
     "C": "minecraft:cobblestone",
     "L": "minecraft:$wood_log",
+    "X": "minecraft:$wood_log[axis=x]",
+    "Z": "minecraft:$wood_log[axis=z]",
     "P": "minecraft:$wood_planks",
+    "G": "minecraft:glass_pane",
+    "D": "minecraft:$wood_door[facing=south,half=lower,hinge=left,open=false]",
+    "U": "minecraft:$wood_door[facing=south,half=upper,hinge=left,open=false]",
+    "e": "minecraft:$wood_stairs[facing=east,half=bottom]",
+    "w": "minecraft:$wood_stairs[facing=west,half=bottom]",
+    "n": "minecraft:$wood_stairs[facing=north,half=bottom]",
+    "s": "minecraft:$wood_stairs[facing=south,half=bottom]",
+    "E": "minecraft:$wood_stairs[facing=west,half=top]",
+    "Y": "minecraft:$wood_stairs[facing=east,half=top]",
+    "N": "minecraft:$wood_stairs[facing=south,half=top]",
+    "S": "minecraft:$wood_stairs[facing=north,half=top]",
+    "l": "minecraft:$wood_slab[type=bottom]",
+    "u": "minecraft:$wood_slab[type=top]",
     "F": "minecraft:$wood_fence",
-    "A": "minecraft:ladder[facing=north]",
-    "S": "minecraft:$wood_slab[type=bottom]",
-    "T": "minecraft:torch",
-    "G": "minecraft:glass_pane"
+    "q": "minecraft:wall_torch[facing=east]",
+    "p": "minecraft:wall_torch[facing=west]",
+    "M": "minecraft:lantern[hanging=false]",
+    "^": "minecraft:ladder[facing=north]"
   },
   "layers": [
     [
-      "CCCCC",
-      "CCCCC",
-      "CCCCC",
-      "CCCCC",
-      "CCCCC"
+      "  CCC  ",
+      " CCCCC ",
+      " CPPPC ",
+      " CPPPC ",
+      " CPPPC ",
+      " CCCCC ",
+      "       "
     ],
     [
-      "LC.CL",
-      "C...C",
-      "C...C",
-      "C.A.C",
-      "LCCCL"
+      ".......",
+      ".LCDCL.",
+      ".C...C.",
+      ".C...C.",
+      ".C.^.C.",
+      ".LCCCL.",
+      "......."
     ],
     [
-      "LC.CL",
-      "C...C",
-      "C...C",
-      "C.A.C",
-      "LCCCL"
+      ".......",
+      ".LCUCL.",
+      ".Cq.pC.",
+      ".C...C.",
+      ".C.^.C.",
+      ".LCCCL.",
+      "......."
     ],
     [
-      "LCCCL",
-      "C...C",
-      "G...G",
-      "C.A.C",
-      "LCCCL"
+      ".......",
+      ".LCGCL.",
+      ".C...C.",
+      ".G...G.",
+      ".C.^.C.",
+      ".LCGCL.",
+      "......."
     ],
     [
-      "LCCCL",
-      "C...C",
-      "C...C",
-      "C.A.C",
-      "LCCCL"
+      "uNNNNNu",
+      "YLXXXLE",
+      "YZ...ZE",
+      "YZ...ZE",
+      "YZ.^.ZE",
+      "YLXXXLE",
+      "uSSSSSu"
     ],
     [
-      "LCCCL",
-      "C...C",
-      "G...G",
-      "C.A.C",
-      "LCCCL"
+      "PPPPPPP",
+      "PPPPPPP",
+      "PPPPPPP",
+      "PPPPPPP",
+      "PPP^PPP",
+      "PPPPPPP",
+      "PPPPPPP"
     ],
     [
-      "PPPPP",
-      "PPPPP",
-      "PPPPP",
-      "PPAPP",
-      "PPPPP"
+      "LFFFFFL",
+      "F.....F",
+      "F.....F",
+      "F.....F",
+      "F.....F",
+      "F.....F",
+      "LFFFFFL"
     ],
     [
-      "LFFFL",
-      "FT..F",
-      "F...F",
-      "F.A.F",
-      "LFFFL"
+      "L..M..L",
+      ".......",
+      ".......",
+      ".......",
+      ".......",
+      ".......",
+      "L..M..L"
     ],
     [
-      "L...L",
-      ".....",
-      ".....",
-      ".....",
-      "L...L"
+      "L.....L",
+      ".......",
+      ".......",
+      ".......",
+      ".......",
+      ".......",
+      "L.....L"
     ],
     [
-      "SSSSS",
-      "SSSSS",
-      "SSSSS",
-      "SSSSS",
-      "SSSSS"
+      "esssssw",
+      "e.....w",
+      "e.....w",
+      "e.....w",
+      "e.....w",
+      "e.....w",
+      "ennnnnw"
+    ],
+    [
+      ".......",
+      ".esssw.",
+      ".e...w.",
+      ".e...w.",
+      ".e...w.",
+      ".ennnw.",
+      "......."
+    ],
+    [
+      ".......",
+      ".......",
+      "..esw..",
+      "..e.w..",
+      "..enw..",
+      ".......",
+      "......."
+    ],
+    [
+      ".......",
+      ".......",
+      ".......",
+      "...l...",
+      ".......",
+      ".......",
+      "......."
     ]
   ]
 }

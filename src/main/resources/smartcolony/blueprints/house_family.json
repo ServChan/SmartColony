@@ -29,7 +29,9 @@
     "r": "minecraft:wall_torch[facing=north]",
     "K": "minecraft:crafting_table",
     "R": "minecraft:barrel[facing=up]",
-    "O": "minecraft:composter"
+    "O": "minecraft:composter",
+    "M": "minecraft:lantern[hanging=false]",
+    "W": "minecraft:barrel[facing=north]"
   },
   "layers": [
     [
@@ -48,17 +50,17 @@
       ".F.....F.",
       "..R...O..",
       ".LCCDCCL.",
-      ".CR...RC.",
-      ".C.....C.",
-      ".C.....C.",
-      ".CB...BC.",
-      ".CH.K.HC.",
+      "ZCR...RC.",
+      "ZC.....C.",
+      "ZC.....CW",
+      "ZCB...BC.",
+      "ZCH.K.HC.",
       ".LCCCCCL.",
       "........."
     ],
     [
       ".F.....F.",
-      "...r.r...",
+      "..Mr.r...",
       ".LGPUPGL.",
       "1P.....P2",
       ".G.....G.",

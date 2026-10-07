@@ -2,15 +2,64 @@
   "id": "pen",
   "kind": "pen",
   "beds": 0,
-  "door": [4, 0],
+  "door": [
+    4,
+    0
+  ],
   "palette": {
+    "L": "minecraft:$wood_log",
+    "l": "minecraft:$wood_slab[type=bottom]",
     "F": "minecraft:$wood_fence",
-    "G": "minecraft:$wood_fence_gate[facing=north,open=false,in_wall=false,powered=false]",
-    "T": "minecraft:torch"
+    "T": "minecraft:torch",
+    "R": "minecraft:barrel[facing=up]",
+    "V": "minecraft:hay_block",
+    "M": "minecraft:lantern[hanging=false]",
+    "f": "minecraft:$wood_fence_gate[facing=north,open=false,in_wall=false,powered=false]"
   },
   "layers": [
-    ["         ", "         ", "         ", "         ", "         ", "         ", "         ", "         ", "         "],
-    ["FFFFGFFFF", "F.......F", "F.......F", "F.......F", "F.......F", "F.......F", "F.......F", "F.......F", "FFFFFFFFF"],
-    ["T.......T", ".........", ".........", ".........", ".........", ".........", ".........", ".........", "T.......T"]
+    [
+      "         ",
+      "         ",
+      "         ",
+      "         ",
+      "         ",
+      "         ",
+      "         ",
+      "         ",
+      "         "
+    ],
+    [
+      "LFFLfLFFL",
+      "FVV.....F",
+      "FV......F",
+      "F.......F",
+      "L.......L",
+      "F.......F",
+      "F.......F",
+      "F....RlRF",
+      "LFFFLFFFL"
+    ],
+    [
+      "L..L.L..L",
+      ".........",
+      ".........",
+      ".........",
+      "L.......L",
+      ".........",
+      ".........",
+      ".........",
+      "L...L...L"
+    ],
+    [
+      "T..M.M..T",
+      ".........",
+      ".........",
+      ".........",
+      "T.......T",
+      ".........",
+      ".........",
+      ".........",
+      "T...T...T"
+    ]
   ]
 }
