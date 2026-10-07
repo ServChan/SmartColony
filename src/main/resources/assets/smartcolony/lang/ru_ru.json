@@ -155,5 +155,14 @@
   "smartcolony.ui.trader_empty": "Сейчас нечем торговать",
   "smartcolony.ui.trader_buys": "Покупает у вас",
   "smartcolony.ui.trader_sells": "Продаёт вам",
-  "smartcolony.ui.trader_uses": "до %s раз"
+  "smartcolony.ui.trader_uses": "до %s раз",
+  "smartcolony.building.townhall_1": "ратуша: бревенчатый зал",
+  "smartcolony.building.townhall_2": "ратуша: каменный цоколь, крыльцо и флигели",
+  "smartcolony.building.townhall_3": "ратуша: второй этаж и балкон",
+  "smartcolony.building.townhall_4": "ратуша: башня с часами",
+  "smartcolony.building.townhall_5": "ратуша: парадный зал",
+  "smartcolony.chat.townhall_stage": "Ратуша достроена: этап %s из %s.",
+  "smartcolony.ui.townhall": "Ратуша: этап %s из %s · следующий при %s жителях",
+  "smartcolony.ui.townhall_max": "Ратуша: этап %s из %s (последний)",
+  "smartcolony.ui.townhall_none": "Ратуша: ещё не построена · от %s жителей"
 }

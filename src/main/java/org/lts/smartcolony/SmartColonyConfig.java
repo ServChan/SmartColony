@@ -40,6 +40,7 @@ public final class SmartColonyConfig {
     public int marketIntervalTicks = 2400;
     public float guardRetreatHealth = 0.35f;
     public int woodSurplus = 320;
+    public int[] townHallAdults = {4, 10, 18, 28, 40};
     public boolean guardsAttackEnemyPlayers = true;
     public boolean aiEnabled = false;
     public String aiApi = "ollama";
@@ -119,6 +120,7 @@ public final class SmartColonyConfig {
         marketIntervalTicks = clamp(marketIntervalTicks, 200, 72000);
         guardRetreatHealth = Math.max(0.05f, Math.min(0.9f, guardRetreatHealth));
         woodSurplus = clamp(woodSurplus, 64, 100000);
+        townHallAdults = org.lts.smartcolony.core.TownHall.thresholds(townHallAdults);
         aiApi = aiApi == null || !aiApi.trim().equalsIgnoreCase("openai") ? "ollama" : "openai";
         aiEndpoint = aiEndpoint == null || aiEndpoint.isBlank() ? "http://127.0.0.1:11434" : aiEndpoint.trim();
         aiModel = aiModel == null || aiModel.isBlank() ? "gemma4:latest" : aiModel.trim();

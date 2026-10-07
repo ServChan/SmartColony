@@ -155,5 +155,14 @@
   "smartcolony.ui.trader_empty": "Nada que intercambiar ahora",
   "smartcolony.ui.trader_buys": "Te compra",
   "smartcolony.ui.trader_sells": "Te vende",
-  "smartcolony.ui.trader_uses": "hasta %s veces"
+  "smartcolony.ui.trader_uses": "hasta %s veces",
+  "smartcolony.building.townhall_1": "ayuntamiento: sala de madera",
+  "smartcolony.building.townhall_2": "ayuntamiento: base de piedra, porche y alas",
+  "smartcolony.building.townhall_3": "ayuntamiento: piso superior y balcón",
+  "smartcolony.building.townhall_4": "ayuntamiento: torre del reloj",
+  "smartcolony.building.townhall_5": "ayuntamiento: gran salón cívico",
+  "smartcolony.chat.townhall_stage": "Ayuntamiento terminado: etapa %s de %s.",
+  "smartcolony.ui.townhall": "Ayuntamiento: etapa %s de %s · la siguiente con %s aldeanos",
+  "smartcolony.ui.townhall_max": "Ayuntamiento: etapa %s de %s (final)",
+  "smartcolony.ui.townhall_none": "Ayuntamiento: aún sin construir · desde %s aldeanos"
 }

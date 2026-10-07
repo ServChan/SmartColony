@@ -58,6 +58,11 @@ public final class Paths {
     }
 
     public BlockPos hub() {
+        for (ColonyData.Building building : data().buildings) {
+            if (org.lts.smartcolony.core.TownHall.stageOf(building.blueprint) > 0 && building.door != null) {
+                return WorldUtil.bp(building.door).relative(outward(building), 2).below();
+            }
+        }
         return colony.center();
     }
 

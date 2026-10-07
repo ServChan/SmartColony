@@ -9,11 +9,13 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.npc.villager.Villager;
+import org.lts.smartcolony.SmartColonyConfig;
 import org.lts.smartcolony.core.Category;
 import org.lts.smartcolony.core.ColonyData;
 import org.lts.smartcolony.core.ItemClassifier;
 import org.lts.smartcolony.core.Reputation;
 import org.lts.smartcolony.core.Role;
+import org.lts.smartcolony.core.TownHall;
 import org.lts.smartcolony.core.TradePlanner;
 import org.lts.smartcolony.work.Colonist;
 
@@ -46,7 +48,9 @@ public record ColonyView(
         String advisorState,
         String advisorText,
         String age,
-        TraderInfo trader) {
+        TraderInfo trader,
+        int townHall,
+        int townHallNeeds) {
 
     public record TraderOffer(String give, int giveCount, String result, int resultCount, int uses) {
     }
@@ -161,6 +165,8 @@ public record ColonyView(
                 data.wall == null ? null : data.wall.material, data.wall == null ? 0 : data.wall.built,
                 data.wall == null ? 0 : data.wall.total, sites, colony.advisor().active() || !colony.advisor().state().equals("off")
                         ? colony.advisor().state() : "off",
-                colony.advisor().state().equals("error") ? colony.advisor().error() : colony.advisor().thoughts(), data.age, traderInfo);
+                colony.advisor().state().equals("error") ? colony.advisor().error() : colony.advisor().thoughts(), data.age, traderInfo,
+                TownHall.stage(data), TownHall.stage(data) >= TownHall.STAGES ? 0
+                : TownHall.requiredAdults(TownHall.stage(data) + 1, SmartColonyConfig.get().townHallAdults));
     }
 }

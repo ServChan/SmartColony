@@ -471,7 +471,8 @@ public final class Improvements {
         List<ColonyData.Building> buildings = data().buildings;
         if (!buildings.isEmpty()) {
             ColonyData.Building building = buildings.get(Math.floorMod(inspectBuilding++, buildings.size()));
-            for (org.lts.smartcolony.core.Blueprint.Cell cell : colony.construction().cells(building, building.swaps)) {
+            for (org.lts.smartcolony.core.Blueprint.Cell cell : colony.construction().upgrading(building)
+                    ? List.<org.lts.smartcolony.core.Blueprint.Cell>of() : colony.construction().cells(building, building.swaps)) {
                 BlockPos pos = colony.construction().world(building, cell.x(), cell.y(), cell.z());
                 if (!WorldUtil.loaded(level, pos) || !missing(level, pos)) {
                     continue;
