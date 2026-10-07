@@ -132,6 +132,8 @@
   "smartcolony.building.fletcher_hut": "Fletcher's hut",
   "smartcolony.building.bakery": "Bakery",
   "smartcolony.chat.iron_age": "The iron age has begun: the forge is smelting iron.",
+  "smartcolony.chat.lamp_posts": "The first street lamp stands: posts with torches now line the village paths.",
+  "smartcolony.chat.lantern_posts": "The first lantern post stands: the village paths now glow with lanterns.",
   "smartcolony.ui.age": "Age: %s",
   "smartcolony.age.stone": "Stone Age",
   "smartcolony.age.iron": "Iron Age",

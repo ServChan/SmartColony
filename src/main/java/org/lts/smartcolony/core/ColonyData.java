@@ -31,6 +31,13 @@ public final class ColonyData {
     public List<Pos> roads = new ArrayList<>();
     public List<Pos> pendingRoad = new ArrayList<>();
     public List<Pos> pendingTorches = new ArrayList<>();
+    public Map<String, String> roadStyle = new LinkedHashMap<>();
+    public List<Target> targets = new ArrayList<>();
+    public List<Lamp> lamps = new ArrayList<>();
+    public int pathVersion;
+    public int scanIndex;
+    public int scanRadius;
+    public boolean scanDone;
     public List<Pos> plantedTrees = new ArrayList<>();
     public List<Order> orders = new ArrayList<>();
     public Map<String, Integer> renovated = new LinkedHashMap<>();
@@ -73,6 +80,31 @@ public final class ColonyData {
             this.state = state;
             this.tag = tag;
         }
+    }
+
+    public static final class Target {
+        public Pos pos = new Pos(0, 0, 0);
+        public String kind = "";
+        public int dx;
+        public int dz;
+        public boolean main;
+        public int state;
+        public int tries;
+        public long retryAt;
+    }
+
+    public static final class Lamp {
+        public Pos pos = new Pos(0, 0, 0);
+        public int tier = 1;
+        public int armX;
+        public int armZ;
+        public String base = "minecraft:cobblestone";
+        public String wood = "oak";
+        public String phase = "build";
+        public Pos replaces;
+        public int replacesTier;
+        public boolean inPlace;
+        public long since;
     }
 
     public static final class Wall {
