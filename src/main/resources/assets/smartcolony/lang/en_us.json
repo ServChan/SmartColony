@@ -128,5 +128,19 @@
   "smartcolony.ui.kindergarten.no": "Kindergarten: none yet, children roam freely",
   "smartcolony.role.fletcher": "Fletcher",
   "smartcolony.role.smith": "Smith",
-  "smartcolony.role.cook": "Cook"
+  "smartcolony.role.cook": "Cook",
+  "smartcolony.trader.name": "%s trader",
+  "smartcolony.chat.trader_hired": "A trader has settled at the market square.",
+  "smartcolony.chat.trader_died": "The colony trader died. A new one will be hired in a day.",
+  "smartcolony.chat.trader_enemy": "The trader refuses to deal with an enemy of the colony.",
+  "smartcolony.chat.trader_nothing": "The trader has nothing to trade right now. Come back later.",
+  "smartcolony.chat.trader_trade": "Fair trading with the colony trader. Reputation %s (now %s, %s).",
+  "smartcolony.ui.trader": "Colony trader",
+  "smartcolony.ui.trader_none": "No trader yet. Build a market square to hire one.",
+  "smartcolony.ui.trader_arriving": "The market is ready. The trader arrives soon.",
+  "smartcolony.ui.trader_hired": "The trader is at the market",
+  "smartcolony.ui.trader_empty": "Nothing to trade right now",
+  "smartcolony.ui.trader_buys": "Buys from you",
+  "smartcolony.ui.trader_sells": "Sells to you",
+  "smartcolony.ui.trader_uses": "up to %s times"
 }
