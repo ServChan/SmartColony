@@ -612,8 +612,20 @@ public final class Construction {
                 colony.journal(level, "dropped a duplicate " + id + " site at " + project.building.origin);
                 abandon(level, project);
                 cooldown.remove(id);
+                continue;
+            }
+            if (TreeFarmPlan.ID.equals(id) && project.phase.equals("reserve") && !nurseryStillWanted(level)) {
+                colony.journal(level, "dropped the tree nursery site: the colony is too small for it yet");
+                abandon(level, project);
             }
         }
+    }
+
+    private boolean nurseryStillWanted(ServerLevel level) {
+        boolean basics = data().buildings.stream().anyMatch(b -> "house".equals(b.kind))
+                && data().buildings.stream().anyMatch(b -> "storage".equals(b.kind));
+        return TreeFarmPlan.needed(colony.adultCount(level), (int) built(TreeFarmPlan.ID), basics,
+                TreeFarmPlan.forestThin(colony.forest().count()));
     }
 
     void abandon(ServerLevel level, ColonyData.Project project) {
