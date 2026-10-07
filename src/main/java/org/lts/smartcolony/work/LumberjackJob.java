@@ -22,6 +22,7 @@ import org.lts.smartcolony.util.ItemIds;
 import org.lts.smartcolony.util.WorldUtil;
 
 public final class LumberjackJob extends Job {
+    private static final int WOOD_ENOUGH = 256;
     private BlockPos tree;
     private List<BlockPos> logs = new ArrayList<>();
     private List<BlockPos> leaves = new ArrayList<>();
@@ -116,6 +117,11 @@ public final class LumberjackJob extends Job {
         if (level.getGameTime() >= plantPauseUntil && hasSapling
                 && (farmPlot || colony().forest().count() < SmartColonyConfig.get().treeTarget && planted < 8)) {
             phase = "plant";
+            return;
+        }
+        if (colony().stockOf(level, Ids::isLog) >= WOOD_ENOUGH && !farmPlot) {
+            status = "enough wood in storage";
+            idle(level, 600);
             return;
         }
         tree = colony().forest().claim(level, colonist.uuid(), villager.blockPosition());
@@ -218,8 +224,10 @@ public final class LumberjackJob extends Job {
             phase = "replant";
             return;
         }
-        ItemEntity loot = nearestLoot(level, villager, 7.0, stack -> stack.is(ItemTags.LOGS) || stack.is(ItemTags.SAPLINGS)
-                || stack.is(net.minecraft.world.item.Items.APPLE) || stack.is(net.minecraft.world.item.Items.STICK));
+        boolean wantSaplings = colony().stockOf(level, Ids::isSapling) < 96 && Inv.count(villager, stack -> stack.is(ItemTags.SAPLINGS)) < 16;
+        boolean wantSticks = colony().stockOf(level, id -> id.equals(Ids.mc("stick"))) < 64;
+        ItemEntity loot = nearestLoot(level, villager, 7.0, stack -> stack.is(ItemTags.LOGS) || wantSaplings && stack.is(ItemTags.SAPLINGS)
+                || stack.is(net.minecraft.world.item.Items.APPLE) || wantSticks && stack.is(net.minecraft.world.item.Items.STICK));
         if (loot == null) {
             phase = "replant";
             return;

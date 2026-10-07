@@ -100,6 +100,14 @@ public final class RoleAllocator {
             }
             if (best == null) {
                 best = Role.LUMBERJACK;
+                for (Role spare : new Role[] {Role.MINER, Role.FARMER, Role.FISHERMAN}) {
+                    Integer cap = caps.get(spare);
+                    boolean usable = spare == Role.FARMER || needs.equippable().contains(spare);
+                    if (usable && (cap == null || result.get(spare) < cap)) {
+                        best = spare;
+                        break;
+                    }
+                }
             }
             result.merge(best, 1, Integer::sum);
             left--;

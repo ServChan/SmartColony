@@ -41,6 +41,7 @@ public final class StorageRecovery {
         }
         lastCheck = now;
         if (!lost(level)) {
+            expand(level);
             return;
         }
         BlockPos depot = colony.depot();
@@ -153,6 +154,66 @@ public final class StorageRecovery {
         colony.journal(level, "all storage containers were lost: a villager crafted a chest from " + ChestCraft.PLANKS_PER_CHEST
                 + " planks and placed it at " + spot.toShortString());
         colony.notify(level, Component.translatable("smartcolony.chat.storage_rebuilt"));
+        colony.markDirty();
+    }
+
+    private static final double FULL = 0.95;
+    private static final int MAX_EXTRA = 8;
+
+    private void expand(ServerLevel level) {
+        java.util.Map<Category, Double> fill = colony.fill(level);
+        Category fullest = null;
+        double worst = 0;
+        for (java.util.Map.Entry<Category, Double> entry : fill.entrySet()) {
+            if (entry.getValue() > worst) {
+                worst = entry.getValue();
+                fullest = entry.getKey();
+            }
+        }
+        if (fullest == null || worst < FULL || colony.data().stat("storage_expanded") >= MAX_EXTRA) {
+            return;
+        }
+        for (Category category : Category.values()) {
+            List<Pos> list = colony.data().storage.get(category);
+            if (list == null || list.isEmpty()) {
+                fullest = category;
+                break;
+            }
+        }
+        BlockPos depot = colony.depot();
+        if (!WorldUtil.loaded(level, depot)) {
+            return;
+        }
+        BlockPos spot = spot(level, depot);
+        if (spot == null) {
+            return;
+        }
+        String item = null;
+        for (String candidate : new String[] {Ids.mc("barrel"), Ids.mc("chest")}) {
+            if (colony.warehouse().take(level, candidate, 1) == 1) {
+                item = candidate;
+                break;
+            }
+        }
+        if (item == null && colony.craft(level, Ids.mc("chest"), 1) && colony.warehouse().take(level, Ids.mc("chest"), 1) == 1) {
+            item = Ids.mc("chest");
+        }
+        if (item == null) {
+            return;
+        }
+        Direction facing = Direction.getApproximateNearest(depot.getX() - spot.getX(), 0, depot.getZ() - spot.getZ());
+        if (!facing.getAxis().isHorizontal()) {
+            facing = Direction.NORTH;
+        }
+        BlockState state = item.equals(Ids.mc("barrel"))
+                ? Blocks.BARREL.defaultBlockState().setValue(net.minecraft.world.level.block.BarrelBlock.FACING, Direction.UP)
+                : Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, facing);
+        level.setBlock(spot, state, net.minecraft.world.level.block.Block.UPDATE_ALL);
+        colony.data().storage.computeIfAbsent(fullest, key -> new ArrayList<>()).add(WorldUtil.pos(spot));
+        colony.warehouse().invalidate();
+        colony.data().bump("storage_expanded", 1);
+        colony.journal(level, "storage was full: added a " + Ids.path(item) + " for " + fullest.name().toLowerCase(java.util.Locale.ROOT)
+                + " at " + spot.toShortString());
         colony.markDirty();
     }
 }

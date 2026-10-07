@@ -82,7 +82,7 @@ final class SiteCheck {
                 boolean inside = x >= 0 && z >= 0 && x < sx && z < sz;
                 if (inside) {
                     ground[x][z] = column.ground();
-                    blocked[x][z] = !column.surface().buildable();
+                    blocked[x][z] = !column.surface().buildable() && column.surface() != TerrainMap.Surface.TREE;
                     columns[x][z] = column;
                     if (column.surface() == TerrainMap.Surface.PATH) {
                         paths++;

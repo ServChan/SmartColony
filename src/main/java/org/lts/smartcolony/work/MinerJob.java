@@ -255,7 +255,12 @@ public final class MinerJob extends Job {
         }
     }
 
+    private String lastReturn = "";
+
     private void beginReturn() {
+        if (status != null && !status.startsWith("climbing") && !status.startsWith("going")) {
+            lastReturn = status;
+        }
         ColonyData.Mine mine = colony().data().mine;
         returning = true;
         if (mine == null) {
@@ -319,7 +324,7 @@ public final class MinerJob extends Job {
                 waypoint++;
             }
         }
-        status = (back ? "climbing out " : "going down ") + waypoint + "/" + route.size();
+        status = (back ? "climbing out " : "going down ") + waypoint + "/" + route.size() + (back && !lastReturn.isEmpty() ? " (" + lastReturn + ")" : "");
     }
 
     private BlockPos tunnelBlocker(ServerLevel level, BlockPos feet) {
@@ -352,14 +357,17 @@ public final class MinerJob extends Job {
         if (mine.progress >= plan.size()) {
             colony().mineExhausted(level);
             beginReturn();
+            lastReturn = "mine worked out";
             return;
         }
         if (!Tools.PICKAXE.test(villager.getMainHandItem())) {
             beginReturn();
+            lastReturn = "no pickaxe in hand";
             return;
         }
         if (cargoFull(villager) || cellsThisTrip >= CELLS_PER_TRIP || !colony().workTime(level)
                 || villager.getHealth() < villager.getMaxHealth() * 0.5F) {
+            lastReturn = cargoFull(villager) ? "cargo full" : cellsThisTrip >= CELLS_PER_TRIP ? "trip done" : !colony().workTime(level) ? "shift over" : "hurt";
             beginReturn();
             return;
         }
@@ -454,10 +462,8 @@ public final class MinerJob extends Job {
                 beginReturn();
                 return;
             }
-            if (!fillWithCobble(level, villager, floor)) {
-                status = "no cobblestone for the floor";
-                beginReturn();
-                return;
+            if (!fillWithCobble(level, villager, floor) && !fillFromStorage(level, villager, floor)) {
+                colony().data().bump("mine_floor_gaps", 1);
             }
         }
         if (cell.kind() == MinePlan.Kind.QUARRY) {
@@ -610,6 +616,16 @@ public final class MinerJob extends Job {
             colony().data().bump("fluids_sealed", 1);
         }
         return true;
+    }
+
+    private boolean fillFromStorage(ServerLevel level, Villager villager, BlockPos pos) {
+        for (String id : new String[] {"cobblestone", "cobbled_deepslate", "dirt", "andesite", "diorite", "granite", "tuff"}) {
+            if (colony().warehouse().take(level, Ids.mc(id), 1) == 1) {
+                Placer.place(level, villager, pos, org.lts.smartcolony.colony.Construction.parse(Ids.mc(id), 0));
+                return true;
+            }
+        }
+        return false;
     }
 
     private boolean fillWithCobble(ServerLevel level, Villager villager, BlockPos pos) {
