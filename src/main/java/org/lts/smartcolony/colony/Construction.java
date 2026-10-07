@@ -41,6 +41,7 @@ import org.lts.smartcolony.core.Pos;
 import org.lts.smartcolony.core.Role;
 import org.lts.smartcolony.core.SiteEvaluator;
 import org.lts.smartcolony.core.Stock;
+import org.lts.smartcolony.core.Tech;
 import org.lts.smartcolony.util.WorldUtil;
 
 public final class Construction {
@@ -213,8 +214,16 @@ public final class Construction {
             order.add("guard_post");
         }
         Stock stock = colony.warehouse().stock(level);
-        if (adults >= 8 && built("blacksmith") == 0 && stock.get(Ids.mc("iron_ingot")) >= 12) {
-            order.add("blacksmith");
+        int rawIron = stock.get(Ids.mc("raw_iron")) + stock.get(Ids.mc("iron_ore")) + stock.get(Ids.mc("deepslate_iron_ore"));
+        if (adults >= 6 && built(Tech.FORGE_BLUEPRINT) == 0 && (rawIron >= 6 || stock.get(Ids.mc("iron_ingot")) >= 12)) {
+            order.add(Tech.FORGE_BLUEPRINT);
+        }
+        if (adults >= 7 && built(Tech.FLETCHER_BLUEPRINT) == 0 && colony.desired().getOrDefault(Role.FLETCHER, 0) > 0
+                && CraftPlanner.plan(stock, Ids.mc("fletching_table"), 1).isPresent()) {
+            order.add(Tech.FLETCHER_BLUEPRINT);
+        }
+        if (adults >= 8 && built(Tech.BAKERY_BLUEPRINT) == 0 && colony.desired().getOrDefault(Role.COOK, 0) > 0) {
+            order.add(Tech.BAKERY_BLUEPRINT);
         }
         if (adults >= 10 && built("market") == 0) {
             order.add("market");

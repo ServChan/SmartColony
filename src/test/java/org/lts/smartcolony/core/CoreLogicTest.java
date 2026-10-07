@@ -73,12 +73,63 @@ class CoreLogicTest {
 
     @Test
     void smeltingNeedsFuel() {
-        Stock noFuel = new Stock(Map.of(mc("raw_iron"), 3));
+        Stock noFuel = new Stock(Map.of(mc("raw_iron"), 3)).grant(Set.of(Tech.FORGE));
         assertFalse(CraftPlanner.plan(noFuel, mc("iron_ingot"), 3).isPresent());
-        Stock withCoal = new Stock(Map.of(mc("raw_iron"), 3, mc("coal"), 1));
+        Stock withCoal = new Stock(Map.of(mc("raw_iron"), 3, mc("coal"), 1)).grant(Set.of(Tech.FORGE));
         CraftPlanner.Plan plan = CraftPlanner.plan(withCoal, mc("iron_ingot"), 3).orElseThrow();
         assertEquals(-1, plan.delta().get(mc("coal")));
         assertEquals(-3, plan.delta().get(mc("raw_iron")));
+    }
+
+    @Test
+    void rawMetalNeedsAForge() {
+        Map<String, Integer> raw = Map.of(mc("raw_iron"), 3, mc("raw_copper"), 3, mc("raw_gold"), 3, mc("coal"), 5);
+        Stock noForge = new Stock(raw);
+        assertFalse(CraftPlanner.plan(noForge, mc("iron_ingot"), 1).isPresent());
+        assertFalse(CraftPlanner.plan(noForge, mc("copper_ingot"), 1).isPresent());
+        assertFalse(CraftPlanner.plan(noForge, mc("gold_ingot"), 1).isPresent());
+        assertFalse(CraftPlanner.plan(noForge, mc("iron_pickaxe"), 1).isPresent());
+        Stock forged = new Stock(raw).grant(Set.of(Tech.FORGE));
+        assertTrue(CraftPlanner.plan(forged, mc("iron_ingot"), 3).isPresent());
+        assertTrue(CraftPlanner.plan(forged, mc("copper_ingot"), 1).isPresent());
+        assertTrue(CraftPlanner.plan(forged, mc("gold_ingot"), 1).isPresent());
+        assertTrue(CraftPlanner.plan(forged.copy(), mc("iron_ingot"), 1).isPresent());
+        assertTrue(forged.copy().has(Tech.FORGE));
+    }
+
+    @Test
+    void otherSmeltingAndIronBlocksNeedNoForge() {
+        Stock stock = new Stock(Map.of(mc("sand"), 2, mc("coal"), 1, mc("iron_block"), 1));
+        assertTrue(CraftPlanner.plan(stock, mc("glass"), 2).isPresent());
+        assertTrue(CraftPlanner.plan(stock, mc("iron_ingot"), 5).isPresent());
+    }
+
+    @Test
+    void forgeCapabilityComesFromTheBlacksmithBlueprint() {
+        assertTrue(Tech.capabilities(List.of("house_small")).isEmpty());
+        assertTrue(Tech.capabilities(List.of("house_small", "blacksmith")).contains(Tech.FORGE));
+    }
+
+    @Test
+    void smithSmeltsRawIronOnlyWithAForge() {
+        EnumMap<Role, Integer> roles = new EnumMap<>(Role.class);
+        roles.put(Role.GUARD, 2);
+        Stock stock = new Stock(Map.of(mc("raw_iron"), 12, mc("coal"), 4, mc("stick"), 6));
+        assertTrue(CrafterNeeds.wants(Role.SMITH, new CrafterNeeds.Context(stock, roles, 12, 2)).stream()
+                .noneMatch(w -> w.smelt()));
+        stock.grant(Set.of(Tech.FORGE));
+        var wants = CrafterNeeds.wants(Role.SMITH, new CrafterNeeds.Context(stock, roles, 12, 2));
+        assertEquals(mc("iron_ingot"), wants.get(0).item());
+        assertTrue(wants.get(0).smelt());
+        assertEquals(8, wants.get(0).count());
+    }
+
+    @Test
+    void fletchingTableAndSmokerCanBeCrafted() {
+        Stock stock = new Stock(Map.of(mc("flint"), 2, mc("oak_planks"), 4, mc("oak_log"), 4, mc("cobblestone"), 8));
+        assertTrue(CraftPlanner.plan(stock, mc("fletching_table"), 1).isPresent());
+        assertTrue(CraftPlanner.plan(stock, mc("smoker"), 1).isPresent());
+        assertFalse(CraftPlanner.plan(new Stock(Map.of(mc("oak_planks"), 4)), mc("fletching_table"), 1).isPresent());
     }
 
     @Test

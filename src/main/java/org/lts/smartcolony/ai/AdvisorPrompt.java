@@ -19,8 +19,10 @@ public final class AdvisorPrompt {
                 nearby. Idle villagers do nothing. Children cannot work.
 
                 Buildings (blueprint ids): house_small (1 bed), house_family (2 beds), house_garden (2 beds), storage_shed, \
-                pen, guard_post, watchtower, blacksmith, market, barn, chapel, kindergarten. New houses need beds, beds need wool, wool \
-                comes from sheep in the pen. Every block is paid from the storage. A site waits in phase "reserve" until \
+                pen, guard_post, watchtower, blacksmith (the forge), fletcher_hut, bakery, market, barn, chapel, \
+                kindergarten. New houses need beds, beds need wool, wool comes from sheep in the pen. Iron ingots can \
+                only be smelted once the blacksmith (the forge) is built; techAge in the snapshot is stone until the forge \
+                has produced iron, then iron. Every block is paid from the storage. A site waits in phase "reserve" until \
                 all materials are there, so do not start sites the colony cannot pay for. Population grows only while \
                 there are free beds.
 

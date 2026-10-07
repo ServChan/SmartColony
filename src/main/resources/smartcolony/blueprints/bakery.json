@@ -1,0 +1,170 @@
+{
+  "id": "bakery",
+  "kind": "bakery",
+  "beds": 0,
+  "door": [
+    4,
+    2
+  ],
+  "palette": {
+    "C": "minecraft:cobblestone",
+    "c": "minecraft:cobblestone_wall",
+    "L": "minecraft:$wood_log",
+    "X": "minecraft:$wood_log[axis=x]",
+    "Z": "minecraft:$wood_log[axis=z]",
+    "P": "minecraft:$wood_planks",
+    "G": "minecraft:glass_pane",
+    "D": "minecraft:$wood_door[facing=south,half=lower,hinge=left,open=false]",
+    "U": "minecraft:$wood_door[facing=south,half=upper,hinge=left,open=false]",
+    "n": "minecraft:$wood_stairs[facing=north,half=bottom]",
+    "s": "minecraft:$wood_stairs[facing=south,half=bottom]",
+    "l": "minecraft:$wood_slab[type=bottom]",
+    "F": "minecraft:$wood_fence",
+    "1": "minecraft:$wood_trapdoor[facing=west,half=top,open=true]",
+    "3": "minecraft:$wood_trapdoor[facing=north,half=top,open=true]",
+    "r": "minecraft:wall_torch[facing=north]",
+    "q": "minecraft:wall_torch[facing=east]",
+    "p": "minecraft:wall_torch[facing=west]",
+    "T": "minecraft:torch",
+    "K": "minecraft:crafting_table",
+    "R": "minecraft:barrel[facing=up]",
+    "V": "minecraft:hay_block",
+    "&": "minecraft:furnace[facing=north]",
+    "W": "minecraft:barrel[facing=north]",
+    "#": "minecraft:smoker[facing=north]"
+  },
+  "layers": [
+    [
+      "   CCC    ",
+      "   CCC    ",
+      " CCCCCCCC ",
+      " CPPPPPPC ",
+      " CPPPPPPC ",
+      " CPPPCCCC ",
+      " CPPPCCCC ",
+      " CCCCCCCC ",
+      "          "
+    ],
+    [
+      "..........",
+      ".F.....RF.",
+      ".LCCDCCCL.",
+      ".CW....VC.",
+      ".Cl....lC.",
+      ".CW.....CR",
+      ".CWK.#&&C.",
+      ".LCCCCCCL.",
+      ".........."
+    ],
+    [
+      "..........",
+      ".F.3.3.3F.",
+      ".LGPUPGPL.",
+      "1P......P.",
+      ".G......G.",
+      "1P......P.",
+      ".P......P.",
+      ".LPGPCCCL.",
+      ".........."
+    ],
+    [
+      "..........",
+      ".T......T.",
+      ".LXXXXXXL.",
+      ".Z......Z.",
+      ".Zq....pZ.",
+      ".Z...r..Z.",
+      ".Z.r....Z.",
+      ".LXXXCCCL.",
+      ".........."
+    ],
+    [
+      "..........",
+      "ssssssssss",
+      ".P......P.",
+      ".P......P.",
+      ".P......P.",
+      ".P......P.",
+      ".P......P.",
+      ".P...CCCP.",
+      "nnnnnnnnnn"
+    ],
+    [
+      "..........",
+      "..........",
+      "ssssssssss",
+      ".P......P.",
+      ".G......G.",
+      ".P......P.",
+      ".P......P.",
+      "nnnnnCCCnn",
+      ".........."
+    ],
+    [
+      "..........",
+      "..........",
+      "..........",
+      "ssssssssss",
+      ".P......P.",
+      ".P......P.",
+      "nnnnnnnnnn",
+      ".....CCC..",
+      ".........."
+    ],
+    [
+      "..........",
+      "..........",
+      "..........",
+      "..........",
+      "ssssssssss",
+      "nnnnnnnnnn",
+      "..........",
+      ".....CCC..",
+      ".........."
+    ],
+    [
+      "..........",
+      "..........",
+      "..........",
+      "..........",
+      "..........",
+      "..........",
+      "..........",
+      ".....CCC..",
+      ".........."
+    ],
+    [
+      "..........",
+      "..........",
+      "..........",
+      "..........",
+      "..........",
+      "..........",
+      "..........",
+      ".....CCC..",
+      ".........."
+    ],
+    [
+      "..........",
+      "..........",
+      "..........",
+      "..........",
+      "..........",
+      "..........",
+      "..........",
+      ".....CCC..",
+      ".........."
+    ],
+    [
+      "..........",
+      "..........",
+      "..........",
+      "..........",
+      "..........",
+      "..........",
+      "..........",
+      ".....ccc..",
+      ".........."
+    ]
+  ]
+}

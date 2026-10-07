@@ -52,6 +52,8 @@ public final class RecipeBook {
         craft(Ids.mc("iron_block"), 1, Ids.mc("iron_ingot"), 9);
         craft(Ids.mc("anvil"), 1, Ids.mc("iron_block"), 3, Ids.mc("iron_ingot"), 4);
         craft(Ids.mc("smithing_table"), 1, Ids.mc("iron_ingot"), 2, Recipe.GROUP_PLANKS, 4);
+        craft(Ids.mc("fletching_table"), 1, Ids.mc("flint"), 2, Recipe.GROUP_PLANKS, 4);
+        craft(Ids.mc("smoker"), 1, Ids.mc("furnace"), 1, Recipe.GROUP_LOGS, 4);
         craft(Ids.mc("composter"), 1, Recipe.GROUP_WOODEN_SLAB, 7);
         craft(Ids.mc("iron_ingot"), 9, Ids.mc("iron_block"), 1);
         craft(Ids.mc("bread"), 1, Ids.mc("wheat"), 3);
@@ -67,9 +69,9 @@ public final class RecipeBook {
         tools("iron", Ids.mc("iron_ingot"));
         armor("iron", Ids.mc("iron_ingot"));
         armor("leather", Ids.mc("leather"));
-        smelt(Ids.mc("iron_ingot"), Ids.mc("raw_iron"));
-        smelt(Ids.mc("copper_ingot"), Ids.mc("raw_copper"));
-        smelt(Ids.mc("gold_ingot"), Ids.mc("raw_gold"));
+        smeltAt(Tech.FORGE, Ids.mc("iron_ingot"), Ids.mc("raw_iron"));
+        smeltAt(Tech.FORGE, Ids.mc("copper_ingot"), Ids.mc("raw_copper"));
+        smeltAt(Tech.FORGE, Ids.mc("gold_ingot"), Ids.mc("raw_gold"));
         smelt(Ids.mc("glass"), Ids.mc("sand"));
         smelt(Ids.mc("glass"), Ids.mc("red_sand"));
         smelt(Ids.mc("stone"), Ids.mc("cobblestone"));
@@ -112,6 +114,10 @@ public final class RecipeBook {
             inputs.merge((String) pairs[i], (Integer) pairs[i + 1], Integer::sum);
         }
         BY_OUTPUT.computeIfAbsent(output, key -> new ArrayList<>()).add(new Recipe(output, count, inputs, false));
+    }
+
+    private static void smeltAt(String requires, String output, String input) {
+        BY_OUTPUT.computeIfAbsent(output, key -> new ArrayList<>()).add(new Recipe(output, 1, Map.of(input, 1), true, requires));
     }
 
     private static void smelt(String output, String input) {

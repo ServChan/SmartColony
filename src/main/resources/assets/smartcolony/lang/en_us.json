@@ -23,7 +23,7 @@
   "smartcolony.building.guard_post": "guard post",
   "smartcolony.building.pen": "animal pen",
   "smartcolony.building.house_garden": "house with a yard",
-  "smartcolony.building.blacksmith": "blacksmith",
+  "smartcolony.building.blacksmith": "Forge",
   "smartcolony.building.market": "market square",
   "smartcolony.building.barn": "barn",
   "smartcolony.building.watchtower": "watchtower",
@@ -128,5 +128,11 @@
   "smartcolony.ui.kindergarten.no": "Kindergarten: none yet, children roam freely",
   "smartcolony.role.fletcher": "Fletcher",
   "smartcolony.role.smith": "Smith",
-  "smartcolony.role.cook": "Cook"
+  "smartcolony.role.cook": "Cook",
+  "smartcolony.building.fletcher_hut": "Fletcher's hut",
+  "smartcolony.building.bakery": "Bakery",
+  "smartcolony.chat.iron_age": "The iron age has begun: the forge is smelting iron.",
+  "smartcolony.ui.age": "Age: %s",
+  "smartcolony.age.stone": "Stone Age",
+  "smartcolony.age.iron": "Iron Age"
 }

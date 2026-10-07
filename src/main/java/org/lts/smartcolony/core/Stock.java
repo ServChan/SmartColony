@@ -1,12 +1,16 @@
 package org.lts.smartcolony.core;
 
+import java.util.Collection;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.function.Predicate;
 
 public final class Stock {
     private final Map<String, Integer> counts = new LinkedHashMap<>();
+    private final Set<String> capabilities = new LinkedHashSet<>();
 
     public Stock() {
     }
@@ -60,7 +64,22 @@ public final class Stock {
     }
 
     public Stock copy() {
-        return new Stock(counts);
+        Stock copy = new Stock(counts);
+        copy.capabilities.addAll(capabilities);
+        return copy;
+    }
+
+    public Stock grant(Collection<String> granted) {
+        capabilities.addAll(granted);
+        return this;
+    }
+
+    public boolean has(String capability) {
+        return capability == null || capability.isEmpty() || capabilities.contains(capability);
+    }
+
+    public Set<String> capabilities() {
+        return java.util.Collections.unmodifiableSet(capabilities);
     }
 
     public boolean isEmpty() {

@@ -23,6 +23,7 @@ import org.lts.smartcolony.core.Blueprints;
 import org.lts.smartcolony.core.ColonyData;
 import org.lts.smartcolony.core.Ids;
 import org.lts.smartcolony.core.Role;
+import org.lts.smartcolony.core.Tech;
 import org.lts.smartcolony.work.Colonist;
 import org.lts.smartcolony.work.Mover;
 
@@ -147,6 +148,8 @@ public final class Advisor {
         root.addProperty("ageDays", (level.getGameTime() - data.founded) / 24000L);
         root.addProperty("center", pos(colony.center()));
         root.addProperty("radius", data.radius);
+        root.addProperty("techAge", data.age);
+        root.addProperty("forgeBuilt", data.buildings.stream().anyMatch(b -> Tech.FORGE_BLUEPRINT.equals(b.blueprint)));
         int beds = (int) level.getPoiManager().getCountInRange(type -> type.is(net.minecraft.world.entity.ai.village.poi.PoiTypes.HOME),
                 colony.center(), data.radius + 16, net.minecraft.world.entity.ai.village.poi.PoiManager.Occupancy.ANY);
         root.addProperty("beds", beds);

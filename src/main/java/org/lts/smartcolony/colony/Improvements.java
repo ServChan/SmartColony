@@ -19,6 +19,7 @@ import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import org.lts.smartcolony.core.ColonyData;
 import org.lts.smartcolony.core.Ids;
 import org.lts.smartcolony.core.Pos;
+import org.lts.smartcolony.core.Tech;
 import org.lts.smartcolony.core.WallPlanner;
 import org.lts.smartcolony.util.WorldUtil;
 
@@ -419,6 +420,20 @@ public final class Improvements {
         data().orders.add(new ColonyData.Order(WorldUtil.pos(pos), state, DECOR));
     }
 
+    public boolean queueForgeUpgrade(ServerLevel level, ColonyData.Building forge) {
+        net.minecraft.world.level.block.Rotation rotation = net.minecraft.world.level.block.Rotation.values()[Math.floorMod(forge.rotation, 4)];
+        String facing = rotation.rotate(Direction.EAST).getSerializedName();
+        BlockPos anvil = colony.construction().world(forge, Tech.FORGE_ANVIL[0], Tech.FORGE_ANVIL[1], Tech.FORGE_ANVIL[2]);
+        BlockPos table = colony.construction().world(forge, Tech.FORGE_SMITHING_TABLE[0], Tech.FORGE_SMITHING_TABLE[1], Tech.FORGE_SMITHING_TABLE[2]);
+        if (!WorldUtil.loaded(level, anvil) || !WorldUtil.loaded(level, table)) {
+            return false;
+        }
+        queueOnce(anvil, "minecraft:anvil[facing=" + facing + "]");
+        queueOnce(table, "minecraft:smithing_table");
+        colony.markDirty();
+        return true;
+    }
+
     private void queueOnce(BlockPos pos, String state) {
         Pos at = WorldUtil.pos(pos);
         if (data().orders.stream().noneMatch(order -> order.pos.equals(at))) {
@@ -699,7 +714,8 @@ public final class Improvements {
         List<String> decor = switch (building.kind) {
             case "house" -> List.of("minecraft:barrel[facing=up]", "minecraft:composter");
             case "barn" -> List.of("minecraft:hay_block", "minecraft:hay_block");
-            case "workshop", "storage" -> List.of("minecraft:barrel[facing=up]", "minecraft:barrel[facing=up]");
+            case "workshop", "storage", "bakery" -> List.of("minecraft:barrel[facing=up]", "minecraft:barrel[facing=up]");
+            case "fletchery" -> List.of("minecraft:hay_block");
             case "market" -> List.of("minecraft:barrel[facing=up]", "minecraft:hay_block");
             case "guard_post" -> List.of("minecraft:hay_block");
             case "tower" -> List.of("minecraft:barrel[facing=up]");

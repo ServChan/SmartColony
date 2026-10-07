@@ -1,0 +1,126 @@
+{
+  "id": "fletcher_hut",
+  "kind": "fletchery",
+  "beds": 0,
+  "door": [
+    4,
+    2
+  ],
+  "palette": {
+    "C": "minecraft:cobblestone",
+    "L": "minecraft:$wood_log",
+    "X": "minecraft:$wood_log[axis=x]",
+    "Z": "minecraft:$wood_log[axis=z]",
+    "P": "minecraft:$wood_planks",
+    "G": "minecraft:glass_pane",
+    "D": "minecraft:$wood_door[facing=south,half=lower,hinge=left,open=false]",
+    "U": "minecraft:$wood_door[facing=south,half=upper,hinge=left,open=false]",
+    "e": "minecraft:$wood_stairs[facing=east,half=bottom]",
+    "w": "minecraft:$wood_stairs[facing=west,half=bottom]",
+    "l": "minecraft:$wood_slab[type=bottom]",
+    "F": "minecraft:$wood_fence",
+    "1": "minecraft:$wood_trapdoor[facing=west,half=top,open=true]",
+    "2": "minecraft:$wood_trapdoor[facing=east,half=top,open=true]",
+    "3": "minecraft:$wood_trapdoor[facing=north,half=top,open=true]",
+    "r": "minecraft:wall_torch[facing=north]",
+    "q": "minecraft:wall_torch[facing=east]",
+    "p": "minecraft:wall_torch[facing=west]",
+    "T": "minecraft:torch",
+    "K": "minecraft:crafting_table",
+    "V": "minecraft:hay_block",
+    "W": "minecraft:barrel[facing=north]",
+    "*": "minecraft:fletching_table"
+  },
+  "layers": [
+    [
+      " CCCCCCC   ",
+      " CCCCCCC C ",
+      " CCCCCCC C ",
+      " CPPPPPC C ",
+      " CPPPPPC C ",
+      " CPPPPPC C ",
+      " CCCCCCC   ",
+      "           "
+    ],
+    [
+      ".L.....L...",
+      "...........",
+      ".LCCDCCL.F.",
+      ".CW...VC.V.",
+      ".CW....C.F.",
+      ".C.*KWWC...",
+      ".LCCCCCL...",
+      "..........."
+    ],
+    [
+      ".Lq...pL...",
+      ".3.3.3.3...",
+      ".LGPUPGL.F.",
+      "1P.....P2V.",
+      ".G.....G.F.",
+      "1P.....P2..",
+      ".LPPGPPL...",
+      "..........."
+    ],
+    [
+      ".LXXXXXL...",
+      "...........",
+      ".LXXXXXL.F.",
+      ".Z.....Z.V.",
+      ".Zq...pZ.F.",
+      ".Z.r.r.Z...",
+      ".LXXXXXL...",
+      "..........."
+    ],
+    [
+      "ePPPPPPPw..",
+      "e.......w..",
+      "ePPPPPPPwT.",
+      "e.......w..",
+      "e.......wT.",
+      "e.......w..",
+      "ePPPPPPPw..",
+      "e.......w.."
+    ],
+    [
+      ".ePPPPPw...",
+      ".e.....w...",
+      ".ePPGPPw...",
+      ".e.....w...",
+      ".e.....w...",
+      ".e.....w...",
+      ".ePPPPPw...",
+      ".e.....w..."
+    ],
+    [
+      "..ePPPw....",
+      "..e...w....",
+      "..ePPPw....",
+      "..e...w....",
+      "..e...w....",
+      "..e...w....",
+      "..ePPPw....",
+      "..e...w...."
+    ],
+    [
+      "...ePw.....",
+      "...ePw.....",
+      "...ePw.....",
+      "...ePw.....",
+      "...ePw.....",
+      "...ePw.....",
+      "...ePw.....",
+      "...ePw....."
+    ],
+    [
+      "....l......",
+      "....l......",
+      "....l......",
+      "....l......",
+      "....l......",
+      "....l......",
+      "....l......",
+      "....l......"
+    ]
+  ]
+}

@@ -58,6 +58,7 @@ public final class Colony {
     private final Set<String> requests = new LinkedHashSet<>();
     private final Set<UUID> ownedNames = new java.util.HashSet<>();
     private EnumMap<Role, Integer> desired = new EnumMap<>(Role.class);
+    private final IronAge ironAge;
     private boolean dirty;
     private long ticks;
     private long lastStorageWarning;
@@ -74,6 +75,7 @@ public final class Colony {
         this.improvements = new Improvements(this);
         this.theft = new TheftWatcher(this);
         this.advisor = new org.lts.smartcolony.ai.Advisor(this);
+        this.ironAge = new IronAge(this);
         for (Map.Entry<String, ColonyData.Member> entry : data.members.entrySet()) {
             UUID uuid = UUID.fromString(entry.getKey());
             Colonist colonist = new Colonist(uuid, this);
@@ -573,6 +575,9 @@ public final class Colony {
         }
         if (ticks % 100 == 13) {
             construction.tick(level);
+        }
+        if (ticks % 100 == 57) {
+            ironAge.tick(level);
         }
         economy.tick(level, ticks);
         migration.tick(level);
