@@ -165,5 +165,7 @@
   "smartcolony.chat.townhall_stage": "Ayuntamiento terminado: etapa %s de %s.",
   "smartcolony.ui.townhall": "Ayuntamiento: etapa %s de %s · la siguiente con %s aldeanos",
   "smartcolony.ui.townhall_max": "Ayuntamiento: etapa %s de %s (final)",
-  "smartcolony.ui.townhall_none": "Ayuntamiento: aún sin construir · desde %s aldeanos"
+  "smartcolony.ui.townhall_none": "Ayuntamiento: aún sin construir · desde %s aldeanos",
+  "smartcolony.building.dock": "Embarcadero",
+  "smartcolony.building.fisher_hut": "Cabaña de pescador"
 }

@@ -22,10 +22,12 @@ import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.SlabBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
+import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.level.levelgen.Heightmap;
 import org.lts.smartcolony.core.ColonyData;
 import org.lts.smartcolony.core.Ids;
 import org.lts.smartcolony.core.PathStyle;
+import org.lts.smartcolony.core.Pier;
 import org.lts.smartcolony.core.Pos;
 import org.lts.smartcolony.core.RoadRouter;
 import org.lts.smartcolony.core.Stock;
@@ -92,6 +94,8 @@ public final class Paths {
         long main = d.roadStyle.values().stream().filter(s -> PathStyle.base(s).equals(PathStyle.MAIN)).count();
         d.stats.put("road_cells", d.roads.size());
         d.stats.put("main_street_cells", (int) main);
+        d.stats.put("pier_cells", (int) d.roadStyle.values().stream().filter(PathStyle::pier).count());
+        d.stats.put("pier_posts", (int) d.roadStyle.values().stream().filter(s -> PathStyle.pier(s) && PathStyle.post(s)).count());
         d.stats.put("path_targets_open", (int) d.targets.stream().filter(t -> t.state == 0).count());
     }
 
@@ -126,6 +130,7 @@ public final class Paths {
     private static final int NATURAL = 0;
     private static final int PATH = 1;
     private static final int OTHER = 2;
+    private static final int PIER = 3;
 
     private final class Field implements RoadRouter.Grid {
         final ServerLevel level;
@@ -177,7 +182,7 @@ public final class Paths {
             BlockPos ground = new BlockPos(x, y, z);
             BlockState state = level.getBlockState(ground);
             if (!state.getFluidState().isEmpty() || !level.getFluidState(ground.above()).isEmpty()) {
-                return Cell.BLOCKED;
+                return pierCell(ground);
             }
             if (state.is(Blocks.FARMLAND) || state.is(Blocks.MUD) || state.is(BlockTags.ICE) || state.is(BlockTags.LEAVES)
                     || state.is(Blocks.MAGMA_BLOCK) || state.is(Blocks.CAMPFIRE) || state.is(Blocks.SOUL_CAMPFIRE)) {
@@ -202,6 +207,25 @@ public final class Paths {
                 return new Cell(y, state.is(BlockTags.BASE_STONE_OVERWORLD) ? 2.5 : 0.9, OTHER);
             }
             return Cell.BLOCKED;
+        }
+
+        private Cell pierCell(BlockPos top) {
+            if (!level.getFluidState(top).isSourceOfType(Fluids.WATER) || !level.getFluidState(top.above()).isEmpty()) {
+                return Cell.BLOCKED;
+            }
+            int depth = 0;
+            BlockPos cursor = top;
+            while (depth <= Pier.MAX_DEPTH + 1 && !level.getFluidState(cursor).isEmpty()) {
+                cursor = cursor.below();
+                depth++;
+            }
+            if (!Pier.shallow(depth) || !WorldUtil.solidFloor(level, cursor)) {
+                return Cell.BLOCKED;
+            }
+            if (!free(top.above()) || !free(top.above(2)) || reserved(top.above())) {
+                return Cell.BLOCKED;
+            }
+            return new Cell(top.getY(), Pier.cost(depth), PIER);
         }
 
         @Override
@@ -307,6 +331,9 @@ public final class Paths {
         Field field = new Field(level);
         BlockPos from = approach(field, pick);
         List<int[]> path = from == null ? List.of() : RoadRouter.route(field, from.getX(), from.getZ(), MAX_NODES);
+        if (path.stream().filter(c -> field.cell(c[0], c[1]).kind() == PIER).count() > Pier.MAX_ROUTE_CELLS) {
+            path = List.of();
+        }
         if (path.isEmpty()) {
             pick.tries++;
             pick.retryAt = now + 3000L * pick.tries;
@@ -337,13 +364,31 @@ public final class Paths {
         for (int[] cell : RoadRouter.stepCells(path, field)) {
             steps.add(BlockPos.asLong(cell[0], 0, cell[1]));
         }
+        boolean[] water = new boolean[path.size()];
+        for (int i = 0; i < water.length; i++) {
+            water[i] = field.cell(path.get(i)[0], path.get(i)[1]).kind() == PIER;
+        }
+        int[] marks = Pier.markers(water);
         int added = 0;
-        for (int[] cell : path) {
-            added += addCell(field, cell[0], cell[1], main ? PathStyle.MAIN : PathStyle.PLAIN, steps.contains(BlockPos.asLong(cell[0], 0, cell[1])));
+        for (int i = 0; i < path.size(); i++) {
+            int[] cell = path.get(i);
+            String style = main ? PathStyle.MAIN : PathStyle.PLAIN;
+            if (water[i]) {
+                style = PathStyle.PIER;
+                if ((marks[i] & Pier.POST) != 0) {
+                    style = PathStyle.with(style, PathStyle.POST);
+                }
+                if ((marks[i] & Pier.LAMP) != 0) {
+                    style = PathStyle.with(style, PathStyle.LAMP);
+                }
+            }
+            added += addCell(field, cell[0], cell[1], style, steps.contains(BlockPos.asLong(cell[0], 0, cell[1])));
         }
         if (main) {
             for (int[] cell : RoadRouter.widen(path, field)) {
-                added += addCell(field, cell[0], cell[1], PathStyle.SIDE, false);
+                if (field.cell(cell[0], cell[1]).kind() != PIER) {
+                    added += addCell(field, cell[0], cell[1], PathStyle.SIDE, false);
+                }
             }
         }
         return added;
@@ -368,7 +413,7 @@ public final class Paths {
         if (!full.equals(PathStyle.PLAIN)) {
             d.roadStyle.put(name, full);
         }
-        boolean built = cell.kind() != NATURAL && !step;
+        boolean built = cell.kind() != NATURAL && cell.kind() != PIER && !step;
         if (built) {
             if (!d.roads.contains(pos)) {
                 d.roads.add(pos);
@@ -380,7 +425,7 @@ public final class Paths {
         return built ? 0 : 1;
     }
 
-    public void build(ServerLevel level, Villager villager, BlockPos ground) {
+    public boolean build(ServerLevel level, Villager villager, BlockPos ground) {
         String style = styleAt(ground.getX(), ground.getZ());
         BlockPos above = ground.above();
         BlockState up = level.getBlockState(above);
@@ -389,8 +434,21 @@ public final class Paths {
             if (WorldUtil.isAirLike(up) && up.getFluidState().isEmpty()) {
                 level.destroyBlock(above, false, villager);
             } else {
-                return;
+                return true;
             }
+        }
+        if (PathStyle.pier(style)) {
+            if (!buildPier(level, villager, ground, style)) {
+                return false;
+            }
+            if (PathStyle.step(style) && !ownSlab && WorldUtil.isAirLike(level.getBlockState(above))) {
+                BlockState slab = slab(level);
+                if (slab != null) {
+                    Placer.place(level, villager, above, slab);
+                    colony.data().bump("street_steps", 1);
+                }
+            }
+            return true;
         }
         BlockState state = level.getBlockState(ground);
         Stock stock = colony.warehouse().stock(level);
@@ -433,6 +491,111 @@ public final class Paths {
                 colony.data().bump("street_steps", 1);
             }
         }
+        return true;
+    }
+
+    private boolean openWater(ServerLevel level, BlockPos side) {
+        if (!WorldUtil.loaded(level, side) || !level.getFluidState(side).isSourceOfType(Fluids.WATER)) {
+            return false;
+        }
+        if (PathStyle.pier(styleAt(side.getX(), side.getZ())) || reserved(side.above())) {
+            return false;
+        }
+        return true;
+    }
+
+    private String takeKind(ServerLevel level, String suffix, boolean craftable) {
+        String preferred = colony.construction().preferredWood(level);
+        List<String> woods = new ArrayList<>();
+        woods.add(preferred);
+        for (String wood : Construction.OVERWORLD_WOODS) {
+            if (!wood.equals(preferred)) {
+                woods.add(wood);
+            }
+        }
+        for (String wood : woods) {
+            String id = Ids.mc(wood + suffix);
+            if (colony.warehouse().take(level, id, 1) == 1) {
+                return id;
+            }
+        }
+        if (craftable) {
+            String id = Ids.mc(preferred + suffix);
+            if (colony.craft(level, id, 1) && colony.warehouse().take(level, id, 1) == 1) {
+                return id;
+            }
+        }
+        colony.request(Ids.mc(preferred + suffix));
+        return null;
+    }
+
+    private boolean buildPier(ServerLevel level, Villager villager, BlockPos deck, String style) {
+        BlockState here = level.getBlockState(deck);
+        if (here.getFluidState().isEmpty() && !here.isAir() && !here.is(BlockTags.PLANKS)) {
+            return true;
+        }
+        if (!here.is(BlockTags.PLANKS)) {
+            String planks = takeKind(level, "_planks", true);
+            if (planks == null) {
+                return false;
+            }
+            Placer.place(level, villager, deck, parse(planks));
+            colony.data().bump("pier_blocks", 1);
+        }
+        if (PathStyle.post(style)) {
+            BlockPos post = deck.below();
+            int guard = 0;
+            while (guard++ <= Pier.MAX_DEPTH + 1 && !level.getFluidState(post).isEmpty()) {
+                String log = takeKind(level, "_log", false);
+                if (log == null) {
+                    return false;
+                }
+                Placer.place(level, villager, post, parse(log));
+                colony.data().bump("pier_blocks", 1);
+                post = post.below();
+            }
+        }
+        Direction[] sides = {Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST};
+        boolean[] open = new boolean[4];
+        for (int i = 0; i < 4; i++) {
+            open[i] = openWater(level, deck.relative(sides[i]));
+        }
+        boolean[] rails = Pier.railing(!open[0], !open[1], !open[2], !open[3]);
+        BlockPos lamp = null;
+        for (int i = 0; i < 4; i++) {
+            if (!rails[i]) {
+                continue;
+            }
+            BlockPos rail = deck.relative(sides[i]).above();
+            if (!level.getBlockState(rail).is(BlockTags.WOODEN_FENCES)) {
+                if (!WorldUtil.isAirLike(level.getBlockState(rail))) {
+                    continue;
+                }
+                String fence = takeKind(level, "_fence", true);
+                if (fence == null) {
+                    return false;
+                }
+                Placer.place(level, villager, rail, parse(fence));
+                colony.data().bump("pier_blocks", 1);
+            }
+            if (lamp == null) {
+                lamp = rail;
+            }
+        }
+        if (lamp != null && PathStyle.lamp(style) && WorldUtil.isAirLike(level.getBlockState(lamp.above()))) {
+            String light = Tech.ironAge(data().age) && takeOrCraft(level, Ids.mc("lantern")) ? Ids.mc("lantern")
+                    : takeOrCraft(level, Ids.mc("torch")) ? Ids.mc("torch") : null;
+            if (light != null) {
+                BlockState lit = parse(light);
+                if (lit != null && lit.canSurvive(level, lamp.above())) {
+                    Placer.place(level, villager, lamp.above(), lit);
+                    colony.data().bump("pier_lamps", 1);
+                } else {
+                    colony.warehouse().give(level, light, 1);
+                }
+            }
+        }
+        return true;
     }
 
     private boolean takeOrCraft(ServerLevel level, String id) {

@@ -154,7 +154,11 @@ public final class BuilderJob extends Job {
                 return place(level, villager);
             }
             case ROAD -> {
-                road(level, villager, pos);
+                if (!road(level, villager, pos)) {
+                    task = null;
+                    wait = 100;
+                    return false;
+                }
                 return true;
             }
             case ORDER -> {
@@ -280,8 +284,8 @@ public final class BuilderJob extends Job {
         return true;
     }
 
-    private void road(ServerLevel level, Villager villager, BlockPos ground) {
-        colony().construction().paths().build(level, villager, ground);
+    private boolean road(ServerLevel level, Villager villager, BlockPos ground) {
+        return colony().construction().paths().build(level, villager, ground);
     }
 
     private void deposit(ServerLevel level, Villager villager) {

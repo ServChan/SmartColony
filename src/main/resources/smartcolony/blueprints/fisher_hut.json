@@ -1,0 +1,90 @@
+{
+  "id": "fisher_hut",
+  "kind": "fisher",
+  "beds": 0,
+  "door": [
+    2,
+    1
+  ],
+  "palette": {
+    "L": "minecraft:$wood_log",
+    "X": "minecraft:$wood_log[axis=x]",
+    "Z": "minecraft:$wood_log[axis=z]",
+    "P": "minecraft:$wood_planks",
+    "G": "minecraft:glass_pane",
+    "D": "minecraft:$wood_door[facing=south,half=lower,hinge=left,open=false]",
+    "U": "minecraft:$wood_door[facing=south,half=upper,hinge=left,open=false]",
+    "e": "minecraft:$wood_stairs[facing=east,half=bottom]",
+    "w": "minecraft:$wood_stairs[facing=west,half=bottom]",
+    "l": "minecraft:$wood_slab[type=bottom]",
+    "r": "minecraft:wall_torch[facing=north]",
+    "S": "minecraft:smoker[facing=west,lit=false]",
+    "W": "minecraft:barrel[facing=north]",
+    "R": "minecraft:barrel[facing=up]"
+  },
+  "layers": [
+    [
+      " PPP ",
+      "PPPPP",
+      "PPPPP",
+      "PPPPP",
+      "PPPPP",
+      "PPPPP",
+      "     "
+    ],
+    [
+      ".....",
+      "LPDPL",
+      "PW..P",
+      "P..SP",
+      "PWR.P",
+      "LPPPL",
+      "....."
+    ],
+    [
+      ".....",
+      "LGUGL",
+      "P...P",
+      "G...G",
+      "P.r.P",
+      "LPPPL",
+      "....."
+    ],
+    [
+      ".....",
+      "LXXXL",
+      "Z...Z",
+      "Z...Z",
+      "Z...Z",
+      "LXXXL",
+      "....."
+    ],
+    [
+      ".....",
+      "ePPPw",
+      "ePPPw",
+      "ePPPw",
+      "ePPPw",
+      "ePPPw",
+      "....."
+    ],
+    [
+      ".....",
+      ".ePw.",
+      ".ePw.",
+      ".ePw.",
+      ".ePw.",
+      ".ePw.",
+      "....."
+    ],
+    [
+      ".....",
+      "..l..",
+      "..l..",
+      "..l..",
+      "..l..",
+      "..l..",
+      "....."
+    ]
+  ]
+}

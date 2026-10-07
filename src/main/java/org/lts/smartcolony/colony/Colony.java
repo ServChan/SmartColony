@@ -29,11 +29,14 @@ import org.lts.smartcolony.core.ColonyCodec;
 import org.lts.smartcolony.core.ColonyData;
 import org.lts.smartcolony.core.CraftPlanner;
 import org.lts.smartcolony.core.Ids;
+import org.lts.smartcolony.core.Pier;
 import org.lts.smartcolony.core.Pos;
 import org.lts.smartcolony.core.Reputation;
 import org.lts.smartcolony.core.Role;
 import org.lts.smartcolony.core.RoleAllocator;
 import org.lts.smartcolony.core.Stock;
+import org.lts.smartcolony.core.StringSupply;
+import org.lts.smartcolony.core.TerrainMap;
 import org.lts.smartcolony.util.ItemIds;
 import org.lts.smartcolony.util.WorldUtil;
 import org.lts.smartcolony.work.Colonist;
@@ -315,8 +318,24 @@ public final class Colony {
         };
     }
 
+    private long waterCheckedAt = -100000;
+    private boolean waterVillage;
+
+    public boolean waterVillage(ServerLevel level) {
+        long now = level.getGameTime();
+        if (now - waterCheckedAt >= 6000) {
+            waterCheckedAt = now;
+            TerrainMap map = survey.map();
+            waterVillage = map != null && Pier.waterVillage(map.counts()[TerrainMap.Surface.WATER.ordinal()], map.columns());
+        }
+        return waterVillage;
+    }
+
     public boolean craft(ServerLevel level, String id, int count) {
         Stock stock = warehouse.stock(level);
+        if (id.equals(Ids.mc("bow")) && !StringSupply.bowAllowed(stock.get(Ids.mc("string")), waterVillage(level))) {
+            return false;
+        }
         var plan = CraftPlanner.plan(stock, id, count);
         if (plan.isEmpty()) {
             return false;

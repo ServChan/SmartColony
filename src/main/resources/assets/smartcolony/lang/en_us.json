@@ -165,5 +165,7 @@
   "smartcolony.chat.townhall_stage": "The town hall is complete: stage %s of %s.",
   "smartcolony.ui.townhall": "Town hall: stage %s of %s · next at %s villagers",
   "smartcolony.ui.townhall_max": "Town hall: stage %s of %s (final)",
-  "smartcolony.ui.townhall_none": "Town hall: not built yet · from %s villagers"
+  "smartcolony.ui.townhall_none": "Town hall: not built yet · from %s villagers",
+  "smartcolony.building.dock": "Dock",
+  "smartcolony.building.fisher_hut": "Fisher hut"
 }

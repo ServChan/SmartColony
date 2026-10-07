@@ -17,6 +17,7 @@ import org.lts.smartcolony.core.ItemClassifier;
 import org.lts.smartcolony.core.Reputation;
 import org.lts.smartcolony.core.Role;
 import org.lts.smartcolony.core.Stock;
+import org.lts.smartcolony.core.StringSupply;
 import org.lts.smartcolony.core.TradePlanner;
 import org.lts.smartcolony.util.ItemIds;
 
@@ -58,6 +59,10 @@ final class TraderTrades {
         }
         needs.addAll(TradePlanner.crafterNeeds(stock, products));
         needs.addAll(TradePlanner.essentials(stock));
+        int stringWanted = StringSupply.tradeCount(stock.get(Ids.mc("string")), stock.get(Ids.mc("fishing_rod")), colony.waterVillage(level));
+        if (stringWanted > 0) {
+            needs.add(new TradePlanner.Need(Ids.mc("string"), stringWanted, TradePlanner.PRIORITY_REQUEST));
+        }
         needs.removeIf(need -> !tradable(need.id()));
         int adults = colony.adultCount(level);
         Map<String, Integer> surplus = new HashMap<>();

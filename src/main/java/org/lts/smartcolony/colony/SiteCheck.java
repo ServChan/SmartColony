@@ -5,11 +5,14 @@ import com.google.gson.JsonObject;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
+import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import org.lts.smartcolony.core.Blueprint;
 import org.lts.smartcolony.core.Blueprints;
 import org.lts.smartcolony.core.ColonyData;
 import org.lts.smartcolony.core.Ids;
+import org.lts.smartcolony.core.Pier;
 import org.lts.smartcolony.core.Pos;
 import org.lts.smartcolony.core.PreBuildCheck;
 import org.lts.smartcolony.core.SiteEvaluator;
@@ -32,9 +35,10 @@ final class SiteCheck {
         TerrainMap.Column at(int x, int z);
     }
 
-    record Sample(Status status, int[][] ground, boolean[][] blocked, int paths, TerrainMap.Column[][] columns) {
+    record Sample(Status status, int[][] ground, boolean[][] blocked, int paths, TerrainMap.Column[][] columns,
+                  boolean[][] water, int waterColumns) {
         static Sample of(Status status) {
-            return new Sample(status, null, null, 0, null);
+            return new Sample(status, null, null, 0, null, null, 0);
         }
     }
 
@@ -56,22 +60,25 @@ final class SiteCheck {
         this.construction = construction;
     }
 
-    Sample fromMap(int ox, int oz, int sx, int sz, int ring) {
+    Sample fromMap(int ox, int oz, int sx, int sz, int ring, boolean water) {
         TerrainMap map = colony.survey().map();
         if (map == null) {
             return Sample.of(Status.UNKNOWN);
         }
-        return sample(map::column, ox, oz, sx, sz, ring);
+        return sample(map::column, ox, oz, sx, sz, ring, water);
     }
 
-    Sample fromWorld(ServerLevel level, int ox, int oz, int sx, int sz, int ring, ColonyData.Project ignore) {
-        return sample((x, z) -> colony.survey().sample(level, x, z, ignore), ox, oz, sx, sz, ring);
+    Sample fromWorld(ServerLevel level, int ox, int oz, int sx, int sz, int ring, ColonyData.Project ignore, boolean water) {
+        return sample((x, z) -> colony.survey().sample(level, x, z, ignore), ox, oz, sx, sz, ring, water);
     }
 
-    private Sample sample(Source source, int ox, int oz, int sx, int sz, int ring) {
+    private Sample sample(Source source, int ox, int oz, int sx, int sz, int ring, boolean water) {
         int[][] ground = new int[sx][sz];
         boolean[][] blocked = new boolean[sx][sz];
+        boolean[][] pond = new boolean[sx][sz];
         TerrainMap.Column[][] columns = new TerrainMap.Column[sx][sz];
+        Set<Long> roads = null;
+        int ponds = 0;
         int paths = 0;
         for (int x = -ring; x < sx + ring; x++) {
             for (int z = -ring; z < sz + ring; z++) {
@@ -81,8 +88,19 @@ final class SiteCheck {
                 }
                 boolean inside = x >= 0 && z >= 0 && x < sx && z < sz;
                 if (inside) {
-                    ground[x][z] = column.ground();
-                    blocked[x][z] = !column.surface().buildable() && column.surface() != TerrainMap.Surface.TREE;
+                    boolean shallow = water && column.surface() == TerrainMap.Surface.WATER && Pier.shallow(column.depth());
+                    if (shallow) {
+                        if (roads == null) {
+                            roads = construction.paths().roadColumns();
+                        }
+                        shallow = !roads.contains(BlockPos.asLong(ox + x, 0, oz + z));
+                    }
+                    pond[x][z] = shallow;
+                    if (shallow) {
+                        ponds++;
+                    }
+                    ground[x][z] = shallow ? column.ground() + column.depth() : column.ground();
+                    blocked[x][z] = !shallow && !column.surface().buildable() && column.surface() != TerrainMap.Surface.TREE;
                     columns[x][z] = column;
                     if (column.surface() == TerrainMap.Surface.PATH) {
                         paths++;
@@ -92,7 +110,7 @@ final class SiteCheck {
                 }
             }
         }
-        return new Sample(Status.OK, ground, blocked, paths, columns);
+        return new Sample(Status.OK, ground, blocked, paths, columns, pond, ponds);
     }
 
     private static int[] limits(Blueprint blueprint, boolean relaxed) {
@@ -109,7 +127,8 @@ final class SiteCheck {
         int sz = blueprint.rotatedSizeZ(building.rotation);
         int ox = building.origin.x();
         int oz = building.origin.z();
-        Sample sample = fromWorld(level, ox, oz, sx, sz, 0, project);
+        boolean wet = Pier.waterKind(blueprint.kind());
+        Sample sample = fromWorld(level, ox, oz, sx, sz, 0, project, wet);
         if (sample.status() != Status.OK) {
             return new Report(true, null, "footprint is not loaded", null, null, 0, 0);
         }
@@ -125,16 +144,21 @@ final class SiteCheck {
         if (lockBase) {
             int[] easy = limits(blueprint, false);
             result = SiteEvaluator.evaluateAt(sample.ground(), sample.blocked(), building.origin.y(),
-                    easy[0] + LOCKED_EXTRA_FILL, Integer.MAX_VALUE);
+                    easy[0] + LOCKED_EXTRA_FILL, Integer.MAX_VALUE, sample.water());
         } else {
-            result = SiteEvaluator.evaluate(sample.ground(), sample.blocked(), limits(blueprint, false)[0], limits(blueprint, false)[1]);
+            result = SiteEvaluator.evaluate(sample.ground(), sample.blocked(), limits(blueprint, false)[0], limits(blueprint, false)[1],
+                    sample.water());
             if (!result.ok() && "house".equals(blueprint.kind())) {
-                result = SiteEvaluator.evaluate(sample.ground(), sample.blocked(), limits(blueprint, true)[0], limits(blueprint, true)[1]);
+                result = SiteEvaluator.evaluate(sample.ground(), sample.blocked(), limits(blueprint, true)[0], limits(blueprint, true)[1],
+                        sample.water());
             }
+        }
+        if (result.ok() && !Pier.enoughWater(blueprint.kind(), sample.waterColumns(), sx * sz)) {
+            result = new SiteEvaluator.Result(false, 0, 0, 0, 0, 0, Double.MAX_VALUE);
         }
         boolean feasible = result.ok() && (lockBase || construction.accessible(level, blueprint, building.rotation, ox, oz, result.baseY()));
         ColonyData.Project fresh = result.ok()
-                ? construction.project(blueprint, building.wood, ox, oz, building.rotation, result, sample.ground()) : null;
+                ? construction.project(blueprint, building.wood, ox, oz, building.rotation, result, sample.ground(), sample.columns()) : null;
         PreBuildCheck.Verdict verdict = PreBuildCheck.decide(feasible, building.origin.y(), project.fill,
                 fresh == null ? building.origin.y() : result.baseY(), fresh == null ? project.fill : fresh.fill);
         return new Report(false, verdict, reason(sample, result, feasible, building, project, fresh, changed, compared), result, fresh,
@@ -215,12 +239,14 @@ final class SiteCheck {
         Pos oldMax = project.building.max;
         Pos oldDoor = project.building.door;
         java.util.List<Pos> oldFill = project.fill;
+        java.util.List<Pos> oldStilts = project.stilts;
         Map<String, Integer> oldRequired = project.required;
         project.building.origin = fresh.building.origin;
         project.building.min = fresh.building.min;
         project.building.max = fresh.building.max;
         project.building.door = fresh.building.door;
         project.fill = fresh.fill;
+        project.stilts = fresh.stilts;
         construction.recomputeRequired(level, project);
         if (!project.reserved.isEmpty() && !settleReserve(level, project)) {
             project.building.origin = oldOrigin;
@@ -228,6 +254,7 @@ final class SiteCheck {
             project.building.max = oldMax;
             project.building.door = oldDoor;
             project.fill = oldFill;
+            project.stilts = oldStilts;
             project.required = oldRequired;
             colony.request(Ids.mc("cobblestone"));
             next.put(project, level.getGameTime() + RETRY_TICKS);
@@ -270,6 +297,7 @@ final class SiteCheck {
         construction.lowerCrane(level, project);
         project.building = moved.building;
         project.fill = moved.fill;
+        project.stilts = moved.stilts;
         project.phase = "reserve";
         project.cursor = 0;
         construction.recomputeRequired(level, project);
