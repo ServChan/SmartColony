@@ -487,9 +487,43 @@ public final class Colony {
             return pos.getX() >= mine.corner.x() - 1 && pos.getX() <= mine.corner.x() + mine.width
                     && pos.getZ() >= mine.corner.z() - 1 && pos.getZ() <= mine.corner.z() + mine.width;
         }
-        double dx = pos.getX() - mine.entrance.x();
-        double dz = pos.getZ() - mine.entrance.z();
-        return pos.getY() < mine.entrance.y() - 1 && dx * dx + dz * dz <= (double) (mine.depth + 6) * (mine.depth + 6);
+        if (pos.getY() >= mine.entrance.y() - 1) {
+            return false;
+        }
+        java.util.Set<Long> cells = tunnelCells(mine);
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dz = -1; dz <= 1; dz++) {
+                for (int dy = -1; dy <= 1; dy++) {
+                    if (cells.contains(BlockPos.asLong(pos.getX() + dx, pos.getY() + dy, pos.getZ() + dz))) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    private java.util.Set<Long> tunnel = java.util.Set.of();
+    private ColonyData.Mine tunnelMine;
+    private int tunnelProgress = -1;
+
+    private java.util.Set<Long> tunnelCells(ColonyData.Mine mine) {
+        if (mine == tunnelMine && mine.progress == tunnelProgress) {
+            return tunnel;
+        }
+        org.lts.smartcolony.core.DigPlan plan = mine.plan();
+        java.util.Set<Long> cells = new java.util.HashSet<>();
+        int dug = Math.min(mine.progress + 1, plan.size());
+        for (int i = 0; i < dug; i++) {
+            org.lts.smartcolony.core.MinePlan.Cell cell = plan.cell(i);
+            for (int h = 0; h < cell.height(); h++) {
+                cells.add(BlockPos.asLong(cell.feet().x(), cell.feet().y() + h, cell.feet().z()));
+            }
+        }
+        tunnel = cells;
+        tunnelMine = mine;
+        tunnelProgress = mine.progress;
+        return cells;
     }
 
     private void clearMineOfStrangers(ServerLevel level) {

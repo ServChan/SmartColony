@@ -729,6 +729,12 @@ public final class Construction {
 
     public Task next(ServerLevel level, UUID builder) {
         long now = level.getGameTime();
+        if (data().orders.size() > 40 && Math.floorMod(builder.hashCode(), 3) == 0) {
+            Task order = colony.improvements().next(level);
+            if (order != null) {
+                return order;
+            }
+        }
         List<ColonyData.Project> active = active();
         if (!active.isEmpty()) {
             ColonyData.Project mine = assigned.get(builder);
