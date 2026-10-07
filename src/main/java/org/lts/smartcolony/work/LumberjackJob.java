@@ -65,6 +65,8 @@ public final class LumberjackJob extends Job {
     public void onRelease(ServerLevel level, Villager villager) {
         super.onRelease(level, villager);
         colony().forest().release(colonist.uuid());
+        colony().treeFarm().release(colonist.uuid());
+        plantSpot = null;
         tree = null;
     }
 
@@ -109,9 +111,10 @@ public final class LumberjackJob extends Job {
             plantDay = day;
             planted = 0;
         }
-        if (colony().forest().count() < SmartColonyConfig.get().treeTarget && planted < 8
-                && level.getGameTime() >= plantPauseUntil
-                && (Inv.count(villager, stack -> stack.is(ItemTags.SAPLINGS)) > 0 || colony().stockOf(level, Ids::isSapling) > 0)) {
+        boolean hasSapling = Inv.count(villager, stack -> stack.is(ItemTags.SAPLINGS)) > 0 || colony().stockOf(level, Ids::isSapling) > 0;
+        boolean farmPlot = colony().treeFarm().exists() && colony().treeFarm().freePlots(level, colonist.uuid()) > 0;
+        if (level.getGameTime() >= plantPauseUntil && hasSapling
+                && (farmPlot || colony().forest().count() < SmartColonyConfig.get().treeTarget && planted < 8)) {
             phase = "plant";
             return;
         }
@@ -156,6 +159,9 @@ public final class LumberjackJob extends Job {
         if (index >= logs.size()) {
             colony().forest().felled(tree);
             colony().data().bump("trees_felled", 1);
+            if (colony().treeFarm().contains(tree)) {
+                colony().data().bump("farm_trees_felled", 1);
+            }
             gainXp(level, villager, 3);
             wait = 30;
             phase = "settle";
@@ -241,6 +247,9 @@ public final class LumberjackJob extends Job {
         }
         if (plantSapling(level, villager, spot, sapling)) {
             colony().data().bump("saplings_planted", 1);
+            if (colony().treeFarm().contains(spot)) {
+                colony().data().bump("farm_saplings_planted", 1);
+            }
         }
         colony().forest().release(colonist.uuid());
         tree = null;
@@ -252,7 +261,7 @@ public final class LumberjackJob extends Job {
         }
         Block block = blockItem.getBlock();
         BlockState state = block.defaultBlockState();
-        if (!state.canSurvive(level, spot)) {
+        if (!WorldUtil.isAirLike(level.getBlockState(spot)) || !state.canSurvive(level, spot)) {
             return false;
         }
         villager.getLookControl().setLookAt(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5);
@@ -266,8 +275,22 @@ public final class LumberjackJob extends Job {
     private BlockPos plantSpot;
     private int plantTries;
 
+    private boolean wildPlantingWanted() {
+        return colony().forest().count() < SmartColonyConfig.get().treeTarget && planted < 8;
+    }
+
+    private ItemStack pickSapling(Villager villager, String wood) {
+        ItemStack sapling = Inv.find(villager, stack -> stack.is(ItemTags.SAPLINGS) && !ItemIds.id(stack).contains("dark_oak")
+                && Ids.path(ItemIds.id(stack)).startsWith(wood + "_"));
+        if (sapling.isEmpty()) {
+            sapling = Inv.find(villager, stack -> stack.is(ItemTags.SAPLINGS) && !ItemIds.id(stack).contains("dark_oak"));
+        }
+        return sapling;
+    }
+
     private void plantTrip(ServerLevel level, Villager villager) {
-        if (Inv.count(villager, stack -> stack.is(ItemTags.SAPLINGS)) == 0) {
+        String wood = colony().construction().preferredWood(level);
+        if (pickSapling(villager, wood).isEmpty()) {
             if (!atDepot(level, villager)) {
                 if (goDepot(level, villager) == Mover.Result.FAILED) {
                     phase = "start";
@@ -275,17 +298,29 @@ public final class LumberjackJob extends Job {
                 }
                 return;
             }
-            if (supply(level, villager, stack -> stack.is(ItemTags.SAPLINGS) && !ItemIds.id(stack).contains("dark_oak"), 1, 6) == 0) {
+            int got = supply(level, villager, stack -> stack.is(ItemTags.SAPLINGS) && !ItemIds.id(stack).contains("dark_oak")
+                    && Ids.path(ItemIds.id(stack)).startsWith(wood + "_"), 1, 6);
+            if (got == 0) {
+                got = supply(level, villager, stack -> stack.is(ItemTags.SAPLINGS) && !ItemIds.id(stack).contains("dark_oak"), 1, 6);
+            }
+            if (got == 0) {
                 plantPauseUntil = level.getGameTime() + 3000;
                 phase = "start";
                 return;
             }
         }
         if (plantSpot == null) {
-            plantSpot = colony().findPlantingSpot(level, level.getRandom());
-            plantTries++;
+            plantSpot = colony().treeFarm().claimPlot(level, colonist.uuid(), villager.blockPosition());
+            boolean wild = false;
+            if (plantSpot == null && wildPlantingWanted()) {
+                plantSpot = colony().findPlantingSpot(level, level.getRandom());
+                wild = true;
+            }
             if (plantSpot == null) {
-                if (plantTries > 10) {
+                if (!wild) {
+                    phase = "start";
+                } else if (++plantTries > 10) {
+                    plantTries = 0;
                     plantPauseUntil = level.getGameTime() + 3000;
                     phase = "start";
                 }
@@ -294,18 +329,31 @@ public final class LumberjackJob extends Job {
         }
         Mover.Result result = move(level, villager, plantSpot, 2.2);
         if (result == Mover.Result.FAILED) {
+            colony().treeFarm().release(colonist.uuid());
             plantSpot = null;
+            plantTries++;
+            if (plantTries > 6) {
+                plantTries = 0;
+                plantPauseUntil = level.getGameTime() + 3000;
+                phase = "start";
+            }
             return;
         }
         if (result == Mover.Result.ARRIVED) {
-            ItemStack sapling = Inv.find(villager, stack -> stack.is(ItemTags.SAPLINGS));
+            ItemStack sapling = pickSapling(villager, wood);
+            boolean inFarm = colony().treeFarm().contains(plantSpot);
             if (plantSapling(level, villager, plantSpot, sapling)) {
-                planted++;
+                if (inFarm) {
+                    colony().data().bump("farm_saplings_planted", 1);
+                } else {
+                    planted++;
+                }
                 colony().data().bump("saplings_planted", 1);
             }
+            colony().treeFarm().release(colonist.uuid());
             plantSpot = null;
             plantTries = 0;
-            if (planted >= 4 || Inv.count(villager, stack -> stack.is(ItemTags.SAPLINGS)) == 0) {
+            if (pickSapling(villager, wood).isEmpty()) {
                 phase = "start";
             }
         }

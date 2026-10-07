@@ -221,7 +221,7 @@ final class SiteCheck {
         project.building.max = fresh.building.max;
         project.building.door = fresh.building.door;
         project.fill = fresh.fill;
-        construction.recomputeRequired(project);
+        construction.recomputeRequired(level, project);
         if (!project.reserved.isEmpty() && !settleReserve(level, project)) {
             project.building.origin = oldOrigin;
             project.building.min = oldMin;
@@ -272,7 +272,7 @@ final class SiteCheck {
         project.fill = moved.fill;
         project.phase = "reserve";
         project.cursor = 0;
-        construction.recomputeRequired(project);
+        construction.recomputeRequired(level, project);
         construction.resetPlan(project);
         reserveFootprint(level, project);
         colony.journal(level, "moved " + name + " from " + from + " to " + project.building.origin + " because the land changed (" + report.reason() + ")");

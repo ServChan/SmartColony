@@ -23,6 +23,7 @@ import org.lts.smartcolony.core.DigPlan;
 import org.lts.smartcolony.core.MinePlan;
 import org.lts.smartcolony.core.Pos;
 import org.lts.smartcolony.core.Role;
+import org.lts.smartcolony.core.TreeFarmPlan;
 import org.lts.smartcolony.util.ItemIds;
 import org.lts.smartcolony.util.WorldUtil;
 
@@ -615,7 +616,8 @@ public final class MinerJob extends Job {
             boolean building = path.equals("diorite") || path.equals("granite") || path.equals("andesite") || path.equals("tuff");
             String id = ItemIds.id(drop);
             boolean junk = building && (Inv.count(villager, id) >= 64 || colony().stockOf(level, found -> found.equals(id)) >= 128)
-                    || path.equals("dirt") || path.equals("calcite") || path.equals("dripstone_block") || path.equals("netherrack")
+                    || path.equals("dirt") && !TreeFarmPlan.keepDirt(Inv.count(villager, id), colony().stockOf(level, found -> found.equals(id)))
+                    || path.equals("calcite") || path.equals("dripstone_block") || path.equals("netherrack")
                     || path.equals("pointed_dripstone") || path.equals("smooth_basalt");
             if (junk || (stone && Inv.count(villager, ItemIds.id(drop)) >= 96)) {
                 colony().data().bump("rubble_discarded", drop.getCount());

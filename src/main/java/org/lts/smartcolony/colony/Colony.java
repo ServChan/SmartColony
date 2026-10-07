@@ -46,6 +46,7 @@ public final class Colony {
     private final Warehouse warehouse;
     private final ForestIndex forest;
     private final Sites sites;
+    private final TreeFarm treeFarm;
     private final Economy economy;
     private final Defense defense;
     private final Construction construction;
@@ -71,6 +72,7 @@ public final class Colony {
         this.warehouse = new Warehouse(data);
         this.forest = new ForestIndex(this);
         this.sites = new Sites(this);
+        this.treeFarm = new TreeFarm(this);
         this.economy = new Economy(this);
         this.defense = new Defense(this);
         this.survey = new Survey(this);
@@ -111,6 +113,10 @@ public final class Colony {
 
     public Sites sites() {
         return sites;
+    }
+
+    public TreeFarm treeFarm() {
+        return treeFarm;
     }
 
     public Economy economy() {
@@ -723,6 +729,7 @@ public final class Colony {
             data.members.remove(uuid.toString());
             ColonyManager.unindex(uuid);
             forest.release(uuid);
+            treeFarm.release(uuid);
             data.bump("deaths", 1);
             journal(level, colonist.role().key() + " died");
             notify(level, Component.translatable("smartcolony.chat.death", Component.translatable("smartcolony.role." + colonist.role().key())));
