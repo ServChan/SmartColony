@@ -89,9 +89,14 @@ public final class ColonyData {
         public Map<String, Integer> study = new LinkedHashMap<>();
         public String subject = "";
         public String graduate = "";
+        public String affinity = "";
 
         public Role role() {
             return Role.byKey(role);
+        }
+
+        public Role affinityRole() {
+            return affinity == null || affinity.isEmpty() ? null : Role.byKey(affinity);
         }
 
         public Role graduateRole() {

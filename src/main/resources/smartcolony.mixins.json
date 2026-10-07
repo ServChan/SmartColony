@@ -6,6 +6,7 @@
     "AbstractVillagerMixin",
     "MobAccessor",
     "VillagerMixin",
+    "VillagerProfessionMixin",
     "WanderingTraderMixin",
     "ZombieVillagerInvoker"
   ],
@@ -13,3 +14,4 @@
     "defaultRequire": 1
   }
 }
+

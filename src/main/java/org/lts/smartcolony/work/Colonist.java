@@ -143,6 +143,7 @@ public final class Colonist {
         }
         long now = level.getGameTime();
         lastTick = now;
+        ProfessionSync.tick(level, this, villager);
         if (villager.isUnderWater() && villager.getAirSupply() < villager.getMaxAirSupply() / 3) {
             surface(level, villager);
         }

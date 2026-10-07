@@ -924,6 +924,7 @@ public final class Colony {
             ColonyData.Member member = data.members.get(key);
             current.put(key, entry.getValue().role());
             affinity.put(key, member != null && member.graduateRole() != null ? member.graduateRole()
+                    : member != null && member.affinityRole() != null ? member.affinityRole()
                     : Role.affinity(villager.getVillagerData().profession().unwrapKey()
                     .map(k -> k.identifier().getPath()).orElse("none")));
             if (member != null && (member.locked || (member.role() != Role.IDLE && level.getGameTime() - member.since < 2400))) {
