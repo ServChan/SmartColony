@@ -250,6 +250,10 @@ public final class HerderJob extends Job {
                 wanted = species;
             }
         }
+        boolean woolShort = colony().stockOf(level, id -> Ids.path(id).endsWith("_wool") || Ids.path(id).endsWith("_bed")) < 6;
+        if (woolShort && herd.get(Species.SHEEP).size() < cap) {
+            wanted = Species.SHEEP;
+        }
         if (wanted == null) {
             return;
         }
