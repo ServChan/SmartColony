@@ -55,6 +55,7 @@ public final class Colony {
     private final Construction construction;
     private final Migration migration;
     private final Tavern tavern;
+    private final Hall hall;
     private final Improvements improvements;
     private final Survey survey;
     private final StorageRecovery recovery;
@@ -88,6 +89,7 @@ public final class Colony {
         this.construction = new Construction(this);
         this.migration = new Migration(this);
         this.tavern = new Tavern(this);
+        this.hall = new Hall(this);
         this.improvements = new Improvements(this);
         this.theft = new TheftWatcher(this);
         this.trader = new Trader(this);
@@ -156,6 +158,10 @@ public final class Colony {
 
     public Migration migration() {
         return migration;
+    }
+
+    public Hall hall() {
+        return hall;
     }
 
     public Tavern tavern() {
@@ -725,6 +731,9 @@ public final class Colony {
         }
         if (ticks % 100 == 57) {
             ironAge.tick(level);
+        }
+        if (ticks % 100 == 31) {
+            hall.tick(level);
         }
         economy.tick(level, ticks);
         trader.tick(level, ticks);

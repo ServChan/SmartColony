@@ -100,6 +100,7 @@ public final class TheftWatcher {
                 list.remove(p);
             }
         }
+        colony.data().treasury.remove(p);
         colony.warehouse().invalidate();
         colony.markDirty();
         colony.journal(level, player.getName().getString() + " broke a warehouse container at " + pos.toShortString());

@@ -56,7 +56,8 @@ public record ColonyView(
         TavernInfo tavern,
         Education education,
         String hospital,
-        int hospitalNeeds) {
+        int hospitalNeeds,
+        Hall.Summary hall) {
 
     public record TavernInfo(boolean built, boolean open, int meals, int travellers, int settlers, int guests) {
     }
@@ -200,6 +201,7 @@ public record ColonyView(
                         colony.tavern().settlers(), colony.tavern().guestCount()), education,
 
                 colony.ward().summary(), Hospital.stage(data) >= Hospital.STAGES ? 0
-                : Hospital.requiredAdults(Hospital.stage(data) + 1, SmartColonyConfig.get().infirmaryAdults));
+                : Hospital.requiredAdults(Hospital.stage(data) + 1, SmartColonyConfig.get().infirmaryAdults),
+                colony.hall().summary(level));
     }
 }

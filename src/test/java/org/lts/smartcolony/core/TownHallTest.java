@@ -23,33 +23,40 @@ class TownHallTest {
     }
 
     @Test
-    void firstStageWaitsForEssentialsAndPopulation() {
-        assertEquals(0, TownHall.next(0, false, 3, 5, true, false, DEFAULT));
-        assertEquals(0, TownHall.next(0, false, 8, 1, true, false, DEFAULT));
-        assertEquals(0, TownHall.next(0, false, 8, 5, false, false, DEFAULT));
-        assertEquals(1, TownHall.next(0, false, 4, 2, true, false, DEFAULT));
+    void firstStageNeedsStorageAndPopulationButNotBeds() {
+        assertEquals(0, TownHall.next(0, false, 3, true, false, DEFAULT));
+        assertEquals(0, TownHall.next(0, false, 8, false, false, DEFAULT));
+        assertEquals(1, TownHall.next(0, false, 4, true, false, DEFAULT));
+        assertEquals(1, TownHall.next(0, false, 12, true, false, DEFAULT));
+    }
+
+    @Test
+    void firstStageJumpsTheQueueOnly() {
+        assertTrue(TownHall.prioritised(0, false));
+        assertFalse(TownHall.prioritised(0, true));
+        assertFalse(TownHall.prioritised(1, false));
     }
 
     @Test
     void stagesFollowOneAnotherByPopulation() {
-        assertEquals(0, TownHall.next(1, false, 9, 9, true, false, DEFAULT));
-        assertEquals(2, TownHall.next(1, false, 10, 9, true, false, DEFAULT));
-        assertEquals(0, TownHall.next(2, false, 17, 9, true, false, DEFAULT));
-        assertEquals(3, TownHall.next(2, false, 18, 9, true, false, DEFAULT));
-        assertEquals(0, TownHall.next(5, false, 100, 9, true, true, DEFAULT));
+        assertEquals(0, TownHall.next(1, false, 9, true, false, DEFAULT));
+        assertEquals(2, TownHall.next(1, false, 10, true, false, DEFAULT));
+        assertEquals(0, TownHall.next(2, false, 17, true, false, DEFAULT));
+        assertEquals(3, TownHall.next(2, false, 18, true, false, DEFAULT));
+        assertEquals(0, TownHall.next(5, false, 100, true, true, DEFAULT));
     }
 
     @Test
     void nothingStartsWhileAStageIsInProgress() {
-        assertEquals(0, TownHall.next(1, true, 50, 9, true, true, DEFAULT));
+        assertEquals(0, TownHall.next(1, true, 50, true, true, DEFAULT));
     }
 
     @Test
     void fourthStageNeedsTheIronAge() {
-        assertEquals(0, TownHall.next(3, false, 28, 9, true, false, DEFAULT));
-        assertEquals(4, TownHall.next(3, false, 28, 9, true, true, DEFAULT));
-        assertEquals(0, TownHall.next(4, false, 39, 9, true, true, DEFAULT));
-        assertEquals(5, TownHall.next(4, false, 40, 9, true, true, DEFAULT));
+        assertEquals(0, TownHall.next(3, false, 28, true, false, DEFAULT));
+        assertEquals(4, TownHall.next(3, false, 28, true, true, DEFAULT));
+        assertEquals(0, TownHall.next(4, false, 39, true, true, DEFAULT));
+        assertEquals(5, TownHall.next(4, false, 40, true, true, DEFAULT));
     }
 
     @Test
