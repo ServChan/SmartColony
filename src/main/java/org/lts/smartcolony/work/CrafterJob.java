@@ -35,6 +35,8 @@ public final class CrafterJob extends Job {
     private int total;
     private long scannedAt = Long.MIN_VALUE / 2;
     private boolean smeltScan;
+    private BlockPos stand;
+    private int walkTicks;
 
     public CrafterJob(Colonist colonist, Role role) {
         super(colonist);
@@ -134,6 +136,8 @@ public final class CrafterJob extends Job {
             scannedAt = level.getGameTime();
             smeltScan = smelt;
         }
+        stand = null;
+        walkTicks = 0;
         status = "taking materials";
         int steps = Math.max(1, (amount + outputPerCraft() - 1) / outputPerCraft());
         total = Math.max(30, (110 - skill() * 14)) * Math.min(steps, 4);
@@ -158,12 +162,23 @@ public final class CrafterJob extends Job {
             return;
         }
         status = "going to the workstation";
-        Mover.Result result = move(level, villager, station, 2.4);
+        if (stand == null) {
+            stand = standNear(level, villager, station);
+        }
+        if (stand == null || ++walkTicks > 600) {
+            rejected.add(station);
+            station = null;
+            phase = "work";
+            return;
+        }
+        Mover.Result result = move(level, villager, stand, 1.5);
         if (result == Mover.Result.FAILED) {
             rejected.add(station);
             station = findStation(level);
+            stand = null;
+            walkTicks = 0;
             if (station == null) {
-                phase = "fetch";
+                phase = "work";
             }
             return;
         }
@@ -202,6 +217,25 @@ public final class CrafterJob extends Job {
         order = null;
         phase = "start";
         wait = 20;
+    }
+
+    private static BlockPos standNear(ServerLevel level, Villager villager, BlockPos station) {
+        BlockPos best = null;
+        double bestDistance = Double.MAX_VALUE;
+        for (net.minecraft.core.Direction side : net.minecraft.core.Direction.Plane.HORIZONTAL) {
+            for (int dy = -1; dy <= 1; dy++) {
+                BlockPos candidate = station.relative(side).above(dy);
+                if (!org.lts.smartcolony.util.WorldUtil.standable(level, candidate)) {
+                    continue;
+                }
+                double distance = candidate.distSqr(villager.blockPosition());
+                if (distance < bestDistance) {
+                    bestDistance = distance;
+                    best = candidate;
+                }
+            }
+        }
+        return best;
     }
 
     private SoundEvent workSound() {
