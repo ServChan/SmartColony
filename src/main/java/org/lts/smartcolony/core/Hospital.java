@@ -98,6 +98,10 @@ public final class Hospital {
         return 0;
     }
 
+    public static boolean urgent(int finished, boolean busy, int adults, int colonyBuildings, boolean incident, int[] configured) {
+        return incident && finished == 0 && next(finished, busy, adults, colonyBuildings, true, configured) == 1;
+    }
+
     public static int cots(int stage) {
         return switch (stage) {
             case 1 -> 2;

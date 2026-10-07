@@ -51,6 +51,7 @@ import org.lts.smartcolony.core.Tech;
 import org.lts.smartcolony.core.TerrainMap;
 import org.lts.smartcolony.core.TreeFarmPlan;
 import org.lts.smartcolony.core.Hospital;
+import org.lts.smartcolony.core.MaterialSwaps;
 import org.lts.smartcolony.core.Staged;
 import org.lts.smartcolony.core.TownHall;
 import org.lts.smartcolony.util.WorldUtil;
@@ -212,6 +213,9 @@ public final class Construction {
             } else if (data().projects.size() < maxProjects()) {
                 lastPlan = now;
                 plan(level, true);
+            } else if (data().projects.size() < maxProjects() + 1 && now - lastPlan >= 1200 && wardUrgent(level)) {
+                lastPlan = now;
+                plan(level, true, Hospital.blueprint(1));
             } else if (data().projects.size() < maxProjects() + 2 && now - lastPlan >= 1200
                     && data().projects.stream().allMatch(p -> p.phase.equals("reserve"))) {
                 lastPlan = now;
@@ -319,10 +323,15 @@ public final class Construction {
         if (hallStage > 0) {
             order.add(TownHall.blueprint(hallStage));
         }
+        boolean incident = incident(level);
         int wardStage = Hospital.next(Hospital.stage(data()), Hospital.inProgress(data()), adults, data().buildings.size(),
-                data().stat("deaths") + data().stat("medic_wounded") + data().stat("first_injury") > 0, SmartColonyConfig.get().infirmaryAdults);
+                incident, SmartColonyConfig.get().infirmaryAdults);
         if (wardStage > 0 && satisfiable(level, Hospital.blueprint(wardStage), chooseWood(level))) {
-            order.add(Hospital.blueprint(wardStage));
+            if (wardUrgent(level)) {
+                order.addFirst(Hospital.blueprint(wardStage));
+            } else {
+                order.add(Hospital.blueprint(wardStage));
+            }
         }
         List<String> ready = new ArrayList<>();
         for (String id : order) {
@@ -331,6 +340,26 @@ public final class Construction {
             }
         }
         return ready;
+    }
+
+    private boolean incident(ServerLevel level) {
+        return data().stat("deaths") + data().stat("medic_wounded") + data().stat("first_injury") > 0 || woundedCount(level) > 0;
+    }
+
+    private boolean wardUrgent(ServerLevel level) {
+        return Hospital.urgent(Hospital.stage(data()), Hospital.inProgress(data()), colony.adultCount(level), data().buildings.size(),
+                incident(level), SmartColonyConfig.get().infirmaryAdults);
+    }
+
+    private int woundedCount(ServerLevel level) {
+        int wounded = 0;
+        for (UUID uuid : colony.colonists().keySet()) {
+            if (level.getEntity(uuid) instanceof net.minecraft.world.entity.LivingEntity living && living.isAlive()
+                    && living.getHealth() < living.getMaxHealth() * Hospital.ADMIT_AFTER_SHIFT) {
+                wounded++;
+            }
+        }
+        return wounded;
     }
 
     private long built(String blueprint) {
@@ -361,11 +390,27 @@ public final class Construction {
                 }
             }
         }
+        Map<String, String> swaps = MaterialSwaps.propose(materials, Map.of(), Tech.ironAge(data().age),
+                (item, count) -> CraftPlanner.plan(stock, item, count).isPresent());
+        for (Map.Entry<String, String> swap : swaps.entrySet()) {
+            int count = materials.remove(swap.getKey());
+            Blueprint.Material replacement = Blueprint.material(MaterialSwaps.resolve(swap.getValue(), wood));
+            if (replacement != null) {
+                materials.merge(replacement.item(), replacement.count() * count, Integer::sum);
+            }
+        }
         return CraftPlanner.plan(stock, materials).isPresent();
     }
 
     private void plan(ServerLevel level, boolean extra) {
+        plan(level, extra, null);
+    }
+
+    private void plan(ServerLevel level, boolean extra, String only) {
         List<String> needs = decideNeeds(level);
+        if (only != null) {
+            needs.removeIf(id -> !id.equals(only));
+        }
         if (extra) {
             needs.removeIf(id -> !id.startsWith("house") && data().projects.stream().anyMatch(p -> p.building.blueprint.equals(id)));
         }
@@ -643,41 +688,10 @@ public final class Construction {
     }
 
     private boolean applySwaps(ServerLevel level, ColonyData.Project project, Stock stock) {
-        boolean changed = false;
-        if (!project.swaps.containsKey(Ids.mc("glass_pane")) && project.required.containsKey(Ids.mc("glass_pane"))
-                && CraftPlanner.plan(stock, Ids.mc("glass_pane"), project.required.get(Ids.mc("glass_pane"))).isEmpty()) {
-            project.swaps.put(Ids.mc("glass_pane"), "minecraft:$wood_fence");
-            changed = true;
-        }
-        if (!project.swaps.containsKey(Ids.mc("lantern")) && project.required.containsKey(Ids.mc("lantern"))
-                && !Tech.ironAge(data().age)
-                && CraftPlanner.plan(stock, Ids.mc("lantern"), project.required.get(Ids.mc("lantern"))).isEmpty()) {
-            project.swaps.put(Ids.mc("lantern"), "minecraft:torch");
-            changed = true;
-        }
-        if (!project.swaps.containsKey(Ids.mc("hay_block")) && project.required.containsKey(Ids.mc("hay_block"))
-                && CraftPlanner.plan(stock, Ids.mc("hay_block"), project.required.get(Ids.mc("hay_block"))).isEmpty()) {
-            project.swaps.put(Ids.mc("hay_block"), "minecraft:$wood_planks");
-            changed = true;
-        }
-        for (String required : new ArrayList<>(project.required.keySet())) {
-            if (!Ids.path(required).endsWith("_bed") || project.swaps.containsKey(required)) {
-                continue;
-            }
-            int need = project.required.get(required);
-            if (CraftPlanner.plan(stock, required, need).isPresent()) {
-                continue;
-            }
-            for (String color : Ids.COLORS) {
-                String bed = Ids.mc(color + "_bed");
-                if (!bed.equals(required) && CraftPlanner.plan(stock, bed, need).isPresent()) {
-                    project.swaps.put(required, bed);
-                    changed = true;
-                    break;
-                }
-            }
-        }
-        return changed;
+        Map<String, String> proposed = MaterialSwaps.propose(project.required, project.swaps, Tech.ironAge(data().age),
+                (item, count) -> CraftPlanner.plan(stock, item, count).isPresent());
+        project.swaps.putAll(proposed);
+        return !proposed.isEmpty();
     }
 
     ColonyData.Project findSite(ServerLevel level, Blueprint blueprint, String wood) {
@@ -1431,7 +1445,10 @@ public final class Construction {
     }
 
     public boolean forceProject(ServerLevel level, String blueprintId, BlockPos hint) {
-        if (Staged.isStaged(blueprintId) || PorterPlan.OUTPOST_ID.equals(blueprintId)) {
+        if (Staged.isStaged(blueprintId) || Staged.isFamily(blueprintId)) {
+            return orderStaged(level, blueprintId) == Staged.Failure.NONE;
+        }
+        if (PorterPlan.OUTPOST_ID.equals(blueprintId)) {
             return false;
         }
         if (!blueprintId.startsWith("house") && data().projects.stream().anyMatch(p -> p.building.blueprint.equals(blueprintId))) {
@@ -1455,6 +1472,33 @@ public final class Construction {
             return true;
         }
         return false;
+    }
+
+    public Staged.Failure orderStaged(ServerLevel level, String id) {
+        String family = Staged.familyOf(id);
+        if (family == null) {
+            return Staged.Failure.NOT_STAGED;
+        }
+        boolean hall = TownHall.KIND.equals(family);
+        Staged.Order order = Staged.order(id, hall ? TownHall.stage(data()) : Hospital.stage(data()),
+                hall ? TownHall.inProgress(data()) : Hospital.inProgress(data()), Tech.ironAge(data().age));
+        if (!order.ok()) {
+            return order.failure();
+        }
+        ColonyData.Project project = townHallProject(level, order.blueprint(), chooseWood(level));
+        if (project == null) {
+            return Staged.Failure.NO_SITE;
+        }
+        project.started = level.getGameTime();
+        project.waitingSince = level.getGameTime();
+        data().projects.add(project);
+        recomputeRequired(level, project);
+        markFootprint(level, project);
+        cooldown.remove(order.blueprint());
+        colony.journal(level, "ordered " + order.blueprint() + " at " + project.building.origin);
+        colony.markDirty();
+        reserve(level, project);
+        return Staged.Failure.NONE;
     }
 
     ColonyData colonyData() {

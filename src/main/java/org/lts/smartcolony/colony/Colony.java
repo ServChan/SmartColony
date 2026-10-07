@@ -49,6 +49,7 @@ public final class Colony {
     private final Warehouse warehouse;
     private final ForestIndex forest;
     private final Sites sites;
+    private final Fields fields;
     private final TreeFarm treeFarm;
     private final Economy economy;
     private final Defense defense;
@@ -79,6 +80,7 @@ public final class Colony {
         this.warehouse = new Warehouse(data);
         this.forest = new ForestIndex(this);
         this.sites = new Sites(this);
+        this.fields = new Fields(this);
         this.treeFarm = new TreeFarm(this);
         this.economy = new Economy(this);
         this.defense = new Defense(this);
@@ -120,6 +122,10 @@ public final class Colony {
 
     public ForestIndex forest() {
         return forest;
+    }
+
+    public Fields fields() {
+        return fields;
     }
 
     public Sites sites() {
@@ -509,7 +515,7 @@ public final class Colony {
     }
 
     public boolean expandFarms(ServerLevel level) {
-        return sites.expandFarms(level);
+        return fields.expand(level);
     }
 
     public void addFarm(BlockPos pos) {
@@ -522,7 +528,7 @@ public final class Colony {
     }
 
     public BlockPos findPondSite(ServerLevel level) {
-        return sites.pondSite(level);
+        return fields.pondSite(level);
     }
 
     public BlockPos findWater(ServerLevel level, BlockPos near, int radius) {

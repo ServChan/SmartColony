@@ -5,7 +5,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.FluidTags;
@@ -262,53 +261,6 @@ public final class Sites {
         }
     }
 
-    public boolean expandFarms(ServerLevel level) {
-        RandomSource random = level.getRandom();
-        int radius = Math.max(16, colony.data().radius + 8);
-        for (int attempt = 0; attempt < 160; attempt++) {
-            int x = center().getX() + random.nextInt(radius * 2 + 1) - radius;
-            int z = center().getZ() + random.nextInt(radius * 2 + 1) - radius;
-            if (!WorldUtil.loaded(level, new BlockPos(x, 0, z))) {
-                continue;
-            }
-            BlockPos water = new BlockPos(x, level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z) - 1, z);
-            if (!level.getFluidState(water).isSourceOfType(Fluids.WATER) || colony.isProtected(water.above(), false)) {
-                continue;
-            }
-            int land = 0;
-            for (BlockPos check : BlockPos.betweenClosed(water.offset(-4, 0, -4), water.offset(4, 0, 4))) {
-                BlockState state = level.getBlockState(check);
-                if ((state.is(Blocks.GRASS_BLOCK) || state.is(Blocks.DIRT)) && WorldUtil.isAirLike(level.getBlockState(check.above()))) {
-                    land++;
-                }
-            }
-            if (land < 8) {
-                continue;
-            }
-            int before = colony.data().farms.size();
-            addAnchor(water);
-            if (colony.data().farms.size() > before) {
-                BlockPos seed = null;
-                for (Direction direction : Direction.Plane.HORIZONTAL) {
-                    BlockPos side = water.relative(direction);
-                    BlockState state = level.getBlockState(side);
-                    if ((state.is(Blocks.GRASS_BLOCK) || state.is(Blocks.DIRT)) && WorldUtil.isAirLike(level.getBlockState(side.above()))) {
-                        seed = side;
-                        break;
-                    }
-                }
-                if (seed != null) {
-                    if (!level.getBlockState(seed.above()).isAir()) {
-                        level.destroyBlock(seed.above(), true);
-                    }
-                    level.setBlock(seed, Blocks.FARMLAND.defaultBlockState(), 3);
-                }
-                return true;
-            }
-        }
-        return false;
-    }
-
     public BlockPos grass(ServerLevel level, BlockPos near) {
         for (int r = 1; r <= 14; r++) {
             for (int dx = -r; dx <= r; dx++) {
@@ -327,35 +279,6 @@ public final class Sites {
                         return feet.below();
                     }
                 }
-            }
-        }
-        return null;
-    }
-
-    public BlockPos pondSite(ServerLevel level) {
-        RandomSource random = level.getRandom();
-        for (int attempt = 0; attempt < 60; attempt++) {
-            double angle = random.nextDouble() * Math.PI * 2.0;
-            double distance = 10 + random.nextDouble() * 22;
-            int x = center().getX() + (int) Math.round(Math.cos(angle) * distance);
-            int z = center().getZ() + (int) Math.round(Math.sin(angle) * distance);
-            if (!WorldUtil.loaded(level, new BlockPos(x - 5, 0, z - 5)) || !WorldUtil.loaded(level, new BlockPos(x + 5, 0, z + 5))) {
-                continue;
-            }
-            BlockPos ground = WorldUtil.surface(level, x, z).below();
-            boolean flat = true;
-            for (int dx = -2; dx <= 2 && flat; dx++) {
-                for (int dz = -2; dz <= 2 && flat; dz++) {
-                    BlockPos column = WorldUtil.surface(level, x + dx, z + dz).below();
-                    BlockState state = level.getBlockState(column);
-                    if (column.getY() != ground.getY() || !(state.is(Blocks.GRASS_BLOCK) || state.is(Blocks.DIRT))
-                            || colony.isProtected(column.above()) || !canopyFree(level, column.above())) {
-                        flat = false;
-                    }
-                }
-            }
-            if (flat) {
-                return ground.immutable();
             }
         }
         return null;

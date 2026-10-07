@@ -44,8 +44,7 @@ public final class ColonyCommand {
         return SharedSuggestionProvider.suggest(keys, builder);
     };
     private static final SuggestionProvider<CommandSourceStack> BLUEPRINTS =
-            (context, builder) -> SharedSuggestionProvider.suggest(Blueprints.IDS.stream()
-                    .filter(id -> !org.lts.smartcolony.core.Staged.isStaged(id)).toList(), builder);
+            (context, builder) -> SharedSuggestionProvider.suggest(org.lts.smartcolony.core.Staged.suggestions(Blueprints.IDS), builder);
 
     private ColonyCommand() {
     }
@@ -367,13 +366,25 @@ public final class ColonyCommand {
             return 0;
         }
         String blueprint = StringArgumentType.getString(context, "blueprint");
-        if (!Blueprints.IDS.contains(blueprint)) {
+        boolean staged = org.lts.smartcolony.core.Staged.isFamily(blueprint);
+        if (!staged && !Blueprints.IDS.contains(blueprint)) {
             source.sendFailure(Component.translatable("smartcolony.command.unknown_blueprint", blueprint));
             return 0;
         }
         if (colony.data().projects.size() >= 3) {
             source.sendFailure(Component.translatable("smartcolony.command.busy"));
             return 0;
+        }
+        if (staged || org.lts.smartcolony.core.Staged.isStaged(blueprint)) {
+            org.lts.smartcolony.core.Staged.Failure failure = colony.construction().orderStaged(source.getLevel(), blueprint);
+            if (failure != org.lts.smartcolony.core.Staged.Failure.NONE) {
+                source.sendFailure(Component.translatable(stagedKey(failure)));
+                return 0;
+            }
+            String ordered = colony.data().projects.getLast().building.blueprint;
+            source.sendSuccess(() -> Component.translatable("smartcolony.command.planned",
+                    Component.translatable("smartcolony.building." + ordered)), false);
+            return 1;
         }
         if (!colony.construction().forceProject(source.getLevel(), blueprint)) {
             source.sendFailure(Component.translatable("smartcolony.command.no_site"));
@@ -382,6 +393,16 @@ public final class ColonyCommand {
         source.sendSuccess(() -> Component.translatable("smartcolony.command.planned",
                 Component.translatable("smartcolony.building." + blueprint)), false);
         return 1;
+    }
+
+    private static String stagedKey(org.lts.smartcolony.core.Staged.Failure failure) {
+        return switch (failure) {
+            case BUSY -> "smartcolony.command.staged_busy";
+            case COMPLETE -> "smartcolony.command.staged_complete";
+            case WRONG_STAGE -> "smartcolony.command.staged_wrong_stage";
+            case IRON_AGE -> "smartcolony.command.staged_iron_age";
+            case NO_SITE, NONE, NOT_STAGED -> "smartcolony.command.staged_no_site";
+        };
     }
 
     private static int role(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {

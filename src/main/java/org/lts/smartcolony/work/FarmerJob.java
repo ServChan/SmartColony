@@ -1,5 +1,6 @@
 package org.lts.smartcolony.work;
 
+import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -33,7 +34,7 @@ public final class FarmerJob extends Job {
         GATHER_SEEDS
     }
 
-    private record Task(Kind kind, BlockPos pos) {
+    private record Task(Kind kind, BlockPos pos, boolean fallow) {
     }
 
     private Task task;
@@ -41,6 +42,7 @@ public final class FarmerJob extends Job {
     private BlockPos pondSite;
     private BlockPos waterSource;
     private int idleScans;
+    private boolean freeCells;
 
     public FarmerJob(Colonist colonist) {
         super(colonist);
@@ -133,20 +135,20 @@ public final class FarmerJob extends Job {
             return;
         }
         idleScans++;
-        if (colony().wantsMoreFood(level) && idleScans >= 2) {
+        if (colony().wantsMoreFood(level) && idleScans >= 2 && !freeCells && colony().fields().mayAddField(level)) {
             if (colony().expandFarms(level)) {
                 status = "found new land near water";
                 return;
             }
-            if (Tools.HOE.test(villager.getMainHandItem()) && colony().craftOrTake(level, villager, Ids.mc("bucket"))) {
+            if (Tools.HOE.test(villager.getMainHandItem())) {
                 pondSite = colony().findPondSite(level);
                 waterSource = pondSite == null ? null : colony().findWater(level, pondSite, 48);
-                if (pondSite != null && waterSource != null) {
+                if (pondSite != null && waterSource != null && colony().craftOrTake(level, villager, Ids.mc("bucket"))) {
                     phase = "pond";
                     return;
                 }
-                Inv.remove(villager, stack -> stack.is(Items.BUCKET), 1);
-                colony().warehouse().give(level, Ids.mc("bucket"), 1);
+                pondSite = null;
+                waterSource = null;
             }
         }
         if (hasCargo(villager) && idleScans > 2) {
@@ -163,23 +165,54 @@ public final class FarmerJob extends Job {
         boolean hasSeeds = seedCount(villager) > 0;
         boolean hasHoe = Tools.HOE.test(villager.getMainHandItem());
         boolean expand = colony().wantsMoreFood(level);
-        for (Pos anchor : colony().data().farms) {
-            BlockPos center = WorldUtil.bp(anchor);
+        List<Pos> anchors = colony().data().farms;
+        boolean[] fallow = colony().fields().fallow(level);
+        freeCells = false;
+        for (int i = 0; i < anchors.size(); i++) {
+            boolean idle = fallow[i];
+            BlockPos center = WorldUtil.bp(anchors.get(i));
             if (!WorldUtil.loaded(level, center)) {
                 continue;
             }
+            boolean farmland = false;
+            List<BlockPos> seeds = new ArrayList<>();
             for (int dx = -5; dx <= 5; dx++) {
                 for (int dz = -5; dz <= 5; dz++) {
                     for (int dy = -1; dy <= 1; dy++) {
                         BlockPos pos = center.offset(dx, dy, dz);
-                        Kind kind = classify(level, pos, hasSeeds, hasHoe && expand);
+                        BlockState state = level.getBlockState(pos);
+                        if (state.getBlock() instanceof FarmlandBlock) {
+                            farmland = true;
+                        }
+                        Kind kind = classify(level, pos, state, hasSeeds && !idle, expand && !idle);
+                        if (kind == null && expand && !idle && seedCell(level, pos, state)) {
+                            seeds.add(pos.immutable());
+                        }
+                        if (kind == Kind.TILL) {
+                            freeCells = true;
+                            if (!hasHoe) {
+                                continue;
+                            }
+                        }
                         if (kind == null) {
                             continue;
                         }
                         double distance = pos.distSqr(villager.blockPosition()) + (kind == Kind.HARVEST ? 0 : 20);
                         if (distance < bestDistance) {
                             bestDistance = distance;
-                            best = new Task(kind, pos.immutable());
+                            best = new Task(kind, pos.immutable(), idle);
+                        }
+                    }
+                }
+            }
+            if (!farmland && !seeds.isEmpty()) {
+                freeCells = true;
+                if (hasHoe) {
+                    for (BlockPos pos : seeds) {
+                        double distance = pos.distSqr(villager.blockPosition()) + 20;
+                        if (distance < bestDistance) {
+                            bestDistance = distance;
+                            best = new Task(Kind.TILL, pos, false);
                         }
                     }
                 }
@@ -188,14 +221,13 @@ public final class FarmerJob extends Job {
         if (best == null && !hasSeeds && colony().stockOf(level, id -> SEEDS.contains(id)) == 0) {
             BlockPos grass = colony().findGrass(level, villager.blockPosition());
             if (grass != null) {
-                best = new Task(Kind.GATHER_SEEDS, grass);
+                best = new Task(Kind.GATHER_SEEDS, grass, false);
             }
         }
         return best;
     }
 
-    private Kind classify(ServerLevel level, BlockPos pos, boolean hasSeeds, boolean canTill) {
-        BlockState state = level.getBlockState(pos);
+    private Kind classify(ServerLevel level, BlockPos pos, BlockState state, boolean hasSeeds, boolean canTill) {
         if (state.getBlock() instanceof CropBlock crop && crop.isMaxAge(state)) {
             return Kind.HARVEST;
         }
@@ -205,11 +237,29 @@ public final class FarmerJob extends Job {
             }
             return null;
         }
-        if (canTill && (state.is(Blocks.GRASS_BLOCK) || state.is(Blocks.DIRT)) && WorldUtil.isAirLike(level.getBlockState(pos.above()))
-                && nearWater(level, pos) && nextToFarmland(level, pos) && !colony().isProtected(pos.above(), false)) {
+        if (canTill && tillableGround(level, pos, state) && nearWater(level, pos) && nextToFarmland(level, pos)) {
             return Kind.TILL;
         }
         return null;
+    }
+
+    private boolean tillableGround(ServerLevel level, BlockPos pos, BlockState state) {
+        return (state.is(Blocks.GRASS_BLOCK) || state.is(Blocks.DIRT)) && WorldUtil.isAirLike(level.getBlockState(pos.above()))
+                && !colony().isProtected(pos.above(), false) && colony().fields().tillable(level, pos);
+    }
+
+    private boolean seedCell(ServerLevel level, BlockPos pos, BlockState state) {
+        if (!(state.is(Blocks.GRASS_BLOCK) || state.is(Blocks.DIRT)) || !WorldUtil.isAirLike(level.getBlockState(pos.above()))) {
+            return false;
+        }
+        boolean wet = false;
+        for (Direction direction : Direction.Plane.HORIZONTAL) {
+            if (level.getBlockState(pos.relative(direction)).getFluidState().is(net.minecraft.tags.FluidTags.WATER)) {
+                wet = true;
+                break;
+            }
+        }
+        return wet && tillableGround(level, pos, state);
     }
 
     private static boolean nearWater(ServerLevel level, BlockPos pos) {
@@ -223,8 +273,7 @@ public final class FarmerJob extends Job {
 
     private static boolean nextToFarmland(ServerLevel level, BlockPos pos) {
         for (Direction direction : Direction.Plane.HORIZONTAL) {
-            BlockState side = level.getBlockState(pos.relative(direction));
-            if (side.getBlock() instanceof FarmlandBlock || side.getFluidState().is(net.minecraft.tags.FluidTags.WATER)) {
+            if (level.getBlockState(pos.relative(direction)).getBlock() instanceof FarmlandBlock) {
                 return true;
             }
         }
@@ -244,7 +293,7 @@ public final class FarmerJob extends Job {
         }
         BlockPos pos = task.pos();
         switch (task.kind()) {
-            case HARVEST -> harvest(level, villager, pos);
+            case HARVEST -> harvest(level, villager, pos, task.fallow());
             case PLANT -> plant(level, villager, pos);
             case TILL -> till(level, villager, pos);
             case GATHER_SEEDS -> {
@@ -259,7 +308,7 @@ public final class FarmerJob extends Job {
         phase = "find";
     }
 
-    private void harvest(ServerLevel level, Villager villager, BlockPos pos) {
+    private void harvest(ServerLevel level, Villager villager, BlockPos pos, boolean fallow) {
         BlockState state = level.getBlockState(pos);
         if (!(state.getBlock() instanceof CropBlock crop) || !crop.isMaxAge(state)) {
             return;
@@ -268,7 +317,7 @@ public final class FarmerJob extends Job {
         List<ItemStack> drops = colonist.digger().takeDrops();
         Block cropBlock = crop;
         for (ItemStack drop : drops) {
-            if (drop.getItem() instanceof BlockItem blockItem && blockItem.getBlock() == cropBlock && !drop.isEmpty()) {
+            if (!fallow && drop.getItem() instanceof BlockItem blockItem && blockItem.getBlock() == cropBlock && !drop.isEmpty()) {
                 BlockState planted = cropBlock.defaultBlockState();
                 if (planted.canSurvive(level, pos)) {
                     level.setBlock(pos, planted, Block.UPDATE_ALL);

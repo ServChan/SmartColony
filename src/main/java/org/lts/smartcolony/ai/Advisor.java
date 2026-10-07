@@ -214,7 +214,7 @@ public final class Advisor {
         }
         root.add("buildings", built);
         JsonArray blueprints = new JsonArray();
-        Blueprints.IDS.stream().filter(id -> !org.lts.smartcolony.core.Staged.isStaged(id)).forEach(blueprints::add);
+        org.lts.smartcolony.core.Staged.suggestions(Blueprints.IDS).forEach(blueprints::add);
         root.add("availableBlueprints", blueprints);
         int hallStage = org.lts.smartcolony.core.TownHall.stage(data);
         root.addProperty("townHallStage", hallStage);
@@ -353,11 +353,24 @@ public final class Advisor {
 
     private String build(ServerLevel level, JsonObject action) {
         String blueprint = string(action, "blueprint");
-        if (!Blueprints.IDS.contains(blueprint)) {
+        boolean staged = org.lts.smartcolony.core.Staged.isFamily(blueprint);
+        if (!staged && !Blueprints.IDS.contains(blueprint)) {
             return "rejected: unknown blueprint " + blueprint;
         }
         if (colony.construction().projects().size() >= 3) {
             return "rejected: already 3 building sites";
+        }
+        if (staged || org.lts.smartcolony.core.Staged.isStaged(blueprint)) {
+            org.lts.smartcolony.core.Staged.Failure failure = colony.construction().orderStaged(level, blueprint);
+            return switch (failure) {
+                case NONE -> "site planned for " + colony.data().projects.getLast().building.blueprint;
+                case BUSY -> "rejected: this building already has a stage under construction";
+                case COMPLETE -> "rejected: this building is already at its final stage";
+                case WRONG_STAGE -> "rejected: only the next stage can be ordered; use the family name " + org.lts.smartcolony.core.Staged.familyOf(blueprint);
+                case IRON_AGE -> "rejected: the next town hall stage needs the iron age";
+                case NO_SITE -> "rejected: no free flat land";
+                case NOT_STAGED -> "rejected: unknown blueprint " + blueprint;
+            };
         }
         BlockPos hint = null;
         if (action.has("x") && action.has("z")) {
