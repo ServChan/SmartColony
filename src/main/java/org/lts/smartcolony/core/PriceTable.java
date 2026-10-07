@@ -11,6 +11,16 @@ public final class PriceTable {
         put(EMERALD, "emerald");
         put(9000, "emerald_block");
         put(2000, "diamond");
+        put(18000, "diamond_block");
+        put(33, "gold_nugget");
+        put(2700, "gold_block");
+        put(2250, "raw_gold_block");
+        put(300, "amethyst_shard");
+        put(1500, "enchanted_book");
+        put(1200, "golden_apple");
+        put(9000, "enchanted_golden_apple");
+        put(20000, "netherite_ingot");
+        put(5000, "netherite_scrap");
         put(250, "iron_ingot");
         put(200, "raw_iron");
         put(150, "copper_ingot");

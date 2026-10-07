@@ -318,10 +318,15 @@ public final class Construction {
         if (TreeFarmPlan.needed(adults, (int) built(TreeFarmPlan.ID), basics, TreeFarmPlan.forestThin(colony.forest().count()))) {
             order.add(TreeFarmPlan.ID);
         }
-        int hallStage = TownHall.next(TownHall.stage(data()), TownHall.inProgress(data()), adults, data().buildings.size(),
-                !housingShort, Tech.ironAge(data().age), SmartColonyConfig.get().townHallAdults);
+        boolean storageBuilt = data().buildings.stream().anyMatch(b -> "storage".equals(b.kind)) || !data().storage.isEmpty();
+        int hallStage = TownHall.next(TownHall.stage(data()), TownHall.inProgress(data()), adults, storageBuilt,
+                Tech.ironAge(data().age), SmartColonyConfig.get().townHallAdults);
         if (hallStage > 0) {
-            order.add(TownHall.blueprint(hallStage));
+            if (TownHall.prioritised(TownHall.stage(data()), TownHall.inProgress(data()))) {
+                order.addFirst(TownHall.blueprint(hallStage));
+            } else {
+                order.add(TownHall.blueprint(hallStage));
+            }
         }
         boolean incident = incident(level);
         int wardStage = Hospital.next(Hospital.stage(data()), Hospital.inProgress(data()), adults, data().buildings.size(),
@@ -446,6 +451,9 @@ public final class Construction {
         markFootprint(level, project);
         colony.journal(level, "planned " + need + " at " + project.building.origin
                 + (data().projects.size() > 1 ? " alongside " + (data().projects.size() - 1) + " other sites" : ""));
+        if (TownHall.stageOf(need) > 0) {
+            colony.notify(level, Component.translatable("smartcolony.chat.townhall_planned", TownHall.stageOf(need)));
+        }
         colony.markDirty();
         reserve(level, project);
     }

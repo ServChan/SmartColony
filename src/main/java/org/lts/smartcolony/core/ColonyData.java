@@ -58,6 +58,9 @@ public final class ColonyData {
     public long traderLost;
     public List<Death> deaths = new ArrayList<>();
     public List<Pos> graves = new ArrayList<>();
+    public String head = "";
+    public boolean headHoused;
+    public List<Pos> treasury = new ArrayList<>();
 
     public static final class Death {
         public String id = "";

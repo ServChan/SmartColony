@@ -16,6 +16,7 @@ import org.lts.smartcolony.core.CraftPlanner;
 import org.lts.smartcolony.core.ItemClassifier;
 import org.lts.smartcolony.core.Pos;
 import org.lts.smartcolony.core.Stock;
+import org.lts.smartcolony.core.Valuables;
 import org.lts.smartcolony.util.ItemIds;
 import org.lts.smartcolony.util.WorldUtil;
 
@@ -39,12 +40,67 @@ public final class Warehouse {
                 return true;
             }
         }
+        if (data.treasury.contains(p)) {
+            return true;
+        }
         for (ColonyData.Outpost outpost : data.outposts) {
             if (outpost.containers.contains(p)) {
                 return true;
             }
         }
         return false;
+    }
+
+    public List<Container> treasury(ServerLevel level) {
+        List<Container> result = new ArrayList<>();
+        for (Pos pos : data.treasury) {
+            Container container = container(level, WorldUtil.bp(pos));
+            if (container != null) {
+                result.add(container);
+            }
+        }
+        return result;
+    }
+
+    public Map<String, Integer> treasuryContents(ServerLevel level) {
+        Stock stock = new Stock();
+        for (Container container : treasury(level)) {
+            for (int slot = 0; slot < container.getContainerSize(); slot++) {
+                ItemStack stack = container.getItem(slot);
+                if (!stack.isEmpty()) {
+                    stock.add(ItemIds.id(stack), stack.getCount());
+                }
+            }
+        }
+        return new java.util.TreeMap<>(stock.view());
+    }
+
+    public int consolidateValuables(ServerLevel level, int maxStacks) {
+        List<Container> vault = treasury(level);
+        if (vault.isEmpty()) {
+            return 0;
+        }
+        int moved = 0;
+        for (Category category : Category.values()) {
+            for (Container container : containers(level, category)) {
+                for (int slot = 0; slot < container.getContainerSize() && moved < maxStacks; slot++) {
+                    ItemStack stack = container.getItem(slot);
+                    if (stack.isEmpty() || !Valuables.is(ItemIds.id(stack))) {
+                        continue;
+                    }
+                    ItemStack rest = insertInto(vault, stack.copy());
+                    if (rest.getCount() != stack.getCount()) {
+                        container.setItem(slot, rest);
+                        container.setChanged();
+                        moved++;
+                    }
+                }
+            }
+        }
+        if (moved > 0) {
+            invalidate();
+        }
+        return moved;
     }
 
     public List<Container> containers(ServerLevel level, Category category) {
@@ -63,6 +119,7 @@ public final class Warehouse {
         for (Category category : Category.values()) {
             result.addAll(containers(level, category));
         }
+        result.addAll(treasury(level));
         for (ColonyData.Outpost outpost : data.outposts) {
             result.addAll(outpostContainers(level, outpost));
         }
@@ -229,6 +286,13 @@ public final class Warehouse {
             return ItemStack.EMPTY;
         }
         ItemStack rest = stack.copy();
+        if (!data.treasury.isEmpty() && Valuables.is(ItemIds.id(rest))) {
+            rest = insertInto(treasury(level), rest);
+            if (rest.isEmpty()) {
+                invalidate();
+                return rest;
+            }
+        }
         Category home = ItemClassifier.classify(ItemIds.id(rest));
         rest = insertInto(containers(level, home), rest);
         if (!rest.isEmpty()) {

@@ -11,6 +11,7 @@ import net.minecraft.world.entity.npc.villager.Villager;
 import net.minecraft.world.item.ItemStack;
 import org.lts.smartcolony.SmartColonyConfig;
 import org.lts.smartcolony.colony.Colony;
+import org.lts.smartcolony.core.HallRest;
 import org.lts.smartcolony.core.Role;
 
 public final class Colonist {
@@ -24,6 +25,10 @@ public final class Colonist {
     private String releaseReason = "";
     private long lastDangerCheck;
     private final Hazards hazards = new Hazards(this);
+    private long lastTick;
+    private long restBlockedUntil;
+    private long nextHeal;
+    private boolean resting;
 
     public void hold(ServerLevel level, Villager villager, long until, String reason) {
         releasedUntil = until;
@@ -137,6 +142,7 @@ public final class Colonist {
             job = Jobs.create(role, this);
         }
         long now = level.getGameTime();
+        lastTick = now;
         if (villager.isUnderWater() && villager.getAirSupply() < villager.getMaxAirSupply() / 3) {
             surface(level, villager);
         }
@@ -149,6 +155,16 @@ public final class Colonist {
         }
         if (hazards.tick(level, villager, now)) {
             return;
+        }
+        if (restsAtHall(level, villager, now)) {
+            restAtHall(level, villager, now);
+            return;
+        }
+        if (resting) {
+            resting = false;
+            if (isControlled(villager)) {
+                release(level, villager, "morning");
+            }
         }
         boolean want = role != Role.IDLE
                 && !villager.isBaby()
@@ -205,6 +221,52 @@ public final class Colonist {
         }
     }
 
+
+    public boolean hallRestApplies() {
+        return restBlockedUntil <= lastTick && colony.hall().restOpen();
+    }
+
+    private boolean restsAtHall(ServerLevel level, Villager villager, long now) {
+        return HallRest.restsHere(hallRestApplies(), bedless(villager), role == Role.GUARD, villager.isBaby(), colony.workTime(level))
+                && villager.isAlive()
+                && !villager.isTrading()
+                && !villager.isSleeping()
+                && releasedUntil <= now
+                && !colony.festival(level)
+                && !colony.tavern().dinnerOpen(level, uuid);
+    }
+
+    private void restAtHall(ServerLevel level, Villager villager, long now) {
+        if (!resting) {
+            if (isControlled(villager)) {
+                release(level, villager, "night rest");
+            }
+            take(level, villager);
+            resting = true;
+        } else if (!isControlled(villager)) {
+            take(level, villager);
+        }
+        net.minecraft.core.BlockPos spot = colony.hall().restSpot(uuid);
+        if (spot == null) {
+            restBlockedUntil = now + 600;
+            return;
+        }
+        Mover.keepAfloat(villager);
+        Mover.Result result = mover.tick(level, villager, spot, 1.2, 0.5, false);
+        if (result == Mover.Result.FAILED) {
+            restBlockedUntil = now + 1200;
+            return;
+        }
+        if (result == Mover.Result.ARRIVED) {
+            villager.getNavigation().stop();
+            if (now >= nextHeal) {
+                nextHeal = now + HallRest.HEAL_PERIOD;
+                if (villager.getHealth() < villager.getMaxHealth()) {
+                    villager.heal(HallRest.HEAL_AMOUNT);
+                }
+            }
+        }
+    }
 
     public static boolean bedless(Villager villager) {
         return villager.getBrain().getMemory(MemoryModuleType.HOME).isEmpty();

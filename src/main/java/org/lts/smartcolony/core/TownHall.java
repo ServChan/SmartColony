@@ -6,7 +6,6 @@ public final class TownHall {
     public static final int STAGES = 5;
     public static final int[] DEFAULT_ADULTS = {4, 10, 18, 28, 40};
     public static final int IRON_STAGE = 4;
-    public static final int MIN_BUILDINGS = 2;
 
     private TownHall() {
     }
@@ -61,8 +60,7 @@ public final class TownHall {
         return thresholds(configured)[stage - 1];
     }
 
-    public static int next(int finished, boolean busy, int adults, int colonyBuildings, boolean housingOk, boolean ironAge,
-                           int[] configured) {
+    public static int next(int finished, boolean busy, int adults, boolean storageBuilt, boolean ironAge, int[] configured) {
         if (busy || finished >= STAGES || finished < 0) {
             return 0;
         }
@@ -70,13 +68,17 @@ public final class TownHall {
         if (adults < requiredAdults(stage, configured)) {
             return 0;
         }
-        if (stage == 1 && (colonyBuildings < MIN_BUILDINGS || !housingOk)) {
+        if (stage == 1 && !storageBuilt) {
             return 0;
         }
         if (stage >= IRON_STAGE && !ironAge) {
             return 0;
         }
         return stage;
+    }
+
+    public static boolean prioritised(int finished, boolean busy) {
+        return finished == 0 && !busy;
     }
 
     public static int projectBonus(int stage) {

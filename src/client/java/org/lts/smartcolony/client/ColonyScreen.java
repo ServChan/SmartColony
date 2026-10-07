@@ -181,6 +181,21 @@ public final class ColonyScreen extends Screen {
                 : Component.translatable("smartcolony.ui.townhall", view.townHall(), 5, view.townHallNeeds());
         graphics.text(font, hall, x, y, view.townHall() == 0 ? TEXT_DIM : TEXT_NORMAL, false);
         y += 14;
+        org.lts.smartcolony.colony.Hall.Summary council = view.hall();
+        if (council.head().isEmpty()) {
+            graphics.text(font, Component.translatable("smartcolony.ui.head_none"), x, y, TEXT_DIM, false);
+        } else {
+            graphics.text(font, Component.translatable(council.headHoused() ? "smartcolony.ui.head_housed" : "smartcolony.ui.head",
+                    council.head()), x, y, TEXT_NORMAL, false);
+        }
+        y += 14;
+        if (council.containers() == 0) {
+            graphics.text(font, Component.translatable("smartcolony.ui.treasury_none"), x, y, TEXT_DIM, false);
+        } else {
+            graphics.text(font, Component.translatable("smartcolony.ui.treasury", council.emeralds(), council.stacks(),
+                    council.containers()), x, y, TEXT_NORMAL, false);
+        }
+        y += 14;
         String[] ward = view.hospital() == null ? new String[0] : view.hospital().split("\\|");
         int wardStage = ward.length >= 6 ? Integer.parseInt(ward[0]) : 0;
         if (wardStage == 0) {
