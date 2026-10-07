@@ -141,6 +141,21 @@ public final class Construction {
         return active;
     }
 
+    private long lastPen = Long.MIN_VALUE / 2;
+
+    private void unblockBeds(ServerLevel level) {
+        boolean hasPen = data().pen != null || data().buildings.stream().anyMatch(b -> "pen".equals(b.kind))
+                || data().projects.stream().anyMatch(p -> "pen".equals(p.building.kind));
+        if (hasPen || colony.adultCount(level) < 3) {
+            return;
+        }
+        boolean bedBlocked = data().projects.stream().anyMatch(p -> p.phase.equals("reserve")
+                && missing.keySet().stream().anyMatch(id -> Ids.path(id).endsWith("_bed")));
+        if (bedBlocked && forceProject(level, "pen")) {
+            colony.journal(level, "houses wait for beds and there is no wool: planned a pen first");
+        }
+    }
+
     public int maxProjects() {
         int builders = colony.desired().getOrDefault(Role.BUILDER, 0);
         return (builders >= 5 ? 3 : builders >= 3 ? 2 : 1) + TownHall.projectBonus(TownHall.stage(data()));
@@ -170,6 +185,10 @@ public final class Construction {
             if (project.phase.equals("reserve")) {
                 reserve(level, project);
             }
+        }
+        if (now - lastPen >= 2400) {
+            lastPen = now;
+            unblockBeds(level);
         }
         if (now - lastPlan >= 400) {
             if (data().projects.isEmpty()) {
@@ -530,6 +549,17 @@ public final class Construction {
         if (!project.swaps.containsKey(Ids.mc("glass_pane")) && project.required.containsKey(Ids.mc("glass_pane"))
                 && CraftPlanner.plan(stock, Ids.mc("glass_pane"), project.required.get(Ids.mc("glass_pane"))).isEmpty()) {
             project.swaps.put(Ids.mc("glass_pane"), "minecraft:$wood_fence");
+            changed = true;
+        }
+        if (!project.swaps.containsKey(Ids.mc("lantern")) && project.required.containsKey(Ids.mc("lantern"))
+                && !Tech.ironAge(data().age)
+                && CraftPlanner.plan(stock, Ids.mc("lantern"), project.required.get(Ids.mc("lantern"))).isEmpty()) {
+            project.swaps.put(Ids.mc("lantern"), "minecraft:torch");
+            changed = true;
+        }
+        if (!project.swaps.containsKey(Ids.mc("hay_block")) && project.required.containsKey(Ids.mc("hay_block"))
+                && CraftPlanner.plan(stock, Ids.mc("hay_block"), project.required.get(Ids.mc("hay_block"))).isEmpty()) {
+            project.swaps.put(Ids.mc("hay_block"), "minecraft:$wood_planks");
             changed = true;
         }
         for (String required : new ArrayList<>(project.required.keySet())) {
