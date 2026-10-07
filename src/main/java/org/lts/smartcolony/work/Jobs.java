@@ -18,6 +18,7 @@ public final class Jobs {
             case BUILDER -> new BuilderJob(colonist);
             case GUARD -> new GuardJob(colonist);
             case FLETCHER, SMITH, COOK -> new CrafterJob(colonist, role);
+            case TEACHER -> new TeacherJob(colonist);
             case IDLE -> new IdleJob(colonist);
         };
     }

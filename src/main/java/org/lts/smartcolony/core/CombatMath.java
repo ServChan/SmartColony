@@ -65,6 +65,18 @@ public final class CombatMath {
         return new double[]{gx + px * distance * sign, gz + pz * distance * sign};
     }
 
+    public static int shotCooldown(int skill) {
+        return Math.max(14, 25 - 2 * skill);
+    }
+
+    public static int meleeCooldown(int skill) {
+        return Math.max(12, 20 - skill);
+    }
+
+    public static float shotSpread(int skill) {
+        return Math.max(1.0F, 4.0F - 0.6F * skill);
+    }
+
     public enum Stance {
         RETREAT,
         KITE,

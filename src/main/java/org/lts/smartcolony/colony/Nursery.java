@@ -8,6 +8,7 @@ import net.minecraft.world.entity.ai.memory.WalkTarget;
 import net.minecraft.world.entity.npc.villager.Villager;
 import org.lts.smartcolony.core.ColonyData;
 import org.lts.smartcolony.core.Kindergarten;
+import org.lts.smartcolony.core.Schooling;
 
 public final class Nursery {
     private static final int PERIOD = 40;
@@ -40,9 +41,14 @@ public final class Nursery {
         if (colony.ticks() % PERIOD != 17) {
             return;
         }
-        ColonyData.Building school = find(colony);
-        boolean day = school != null && colony.workTime(level);
-        BlockPos spot = school == null ? null : colony.construction().playground(school);
+        ColonyData.Building kindergarten = find(colony);
+        ColonyData.Building school = Schoolhouse.find(colony);
+        boolean workTime = colony.workTime(level);
+        boolean day = workTime && (kindergarten != null || school != null);
+        BlockPos playground = kindergarten == null ? null : colony.construction().playground(kindergarten);
+        BlockPos classroom = school == null ? null : Schoolhouse.classSpot(colony, school);
+        int teacher = school != null && workTime ? Schoolhouse.teacherSkill(level, colony, school) : -1;
+        Schoolhouse.Context context = null;
         double limit = colony.data().radius + 24;
         for (UUID uuid : colony.colonists().keySet()) {
             if (!(level.getEntity(uuid) instanceof Villager villager) || !villager.isAlive() || !villager.isBaby()
@@ -53,8 +59,21 @@ public final class Nursery {
             if (at.distSqr(colony.center()) > limit * limit) {
                 continue;
             }
-            if (day && !Kindergarten.inside(at.getX(), at.getZ(), school.min.x(), school.min.z(), school.max.x(), school.max.z())) {
-                steer(villager, spot);
+            boolean pupil = school != null && (kindergarten == null || Schooling.schoolAge(villager.getAge()));
+            if (day && pupil) {
+                if (Schoolhouse.inClass(at, classroom)) {
+                    if (context == null) {
+                        context = Schoolhouse.context(level, colony);
+                    }
+                    Schoolhouse.study(colony, uuid, context, teacher);
+                } else {
+                    steer(villager, classroom);
+                }
+            } else if (day && kindergarten != null) {
+                if (!Kindergarten.inside(at.getX(), at.getZ(), kindergarten.min.x(), kindergarten.min.z(), kindergarten.max.x(),
+                        kindergarten.max.z())) {
+                    steer(villager, playground);
+                }
             } else if (Kindergarten.unsafeNear(at.getX(), at.getZ(), MINE_MARGIN, (x, z) -> colony.inMine(new BlockPos(x, at.getY(), z)))) {
                 steer(villager, colony.depot());
             }

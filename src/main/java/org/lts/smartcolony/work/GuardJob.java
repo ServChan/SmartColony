@@ -49,10 +49,17 @@ public final class GuardJob extends Job {
     private int engageTicks;
     private double bestGap = Double.MAX_VALUE;
     private final java.util.Map<java.util.UUID, Long> ignored = new java.util.HashMap<>();
+    private final GuardTraining training = new GuardTraining(this);
 
     public GuardJob(Colonist colonist) {
         super(colonist);
         depositThreshold = 8;
+    }
+
+    @Override
+    public void onRelease(ServerLevel level, Villager villager) {
+        super.onRelease(level, villager);
+        training.release(level, villager);
     }
 
     @Override
@@ -178,6 +185,9 @@ public final class GuardJob extends Job {
                 }
                 return;
             }
+        }
+        if (training.handle(level, villager)) {
+            return;
         }
         if (colony().workTime(level)) {
             patrol(level, villager);
@@ -489,11 +499,11 @@ public final class GuardJob extends Job {
         double dy = target.getY(0.3333333333333333) - arrow.getY();
         double dz = target.getZ() - villager.getZ();
         double horizontal = Math.sqrt(dx * dx + dz * dz);
-        Projectile.spawnProjectileUsingShoot(arrow, level, projectile, dx, dy + horizontal * 0.2, dz, 1.6F, 4.0F);
+        Projectile.spawnProjectileUsingShoot(arrow, level, projectile, dx, dy + horizontal * 0.2, dz, 1.6F, CombatMath.shotSpread(skill()));
         level.playSound(null, villager.blockPosition(), SoundEvents.SKELETON_SHOOT, SoundSource.NEUTRAL, 1.0F, 1.2F);
         ammo.shrink(1);
         bow.hurtAndBreak(1, villager, EquipmentSlot.MAINHAND);
-        shotCooldown = 25;
+        shotCooldown = CombatMath.shotCooldown(skill());
         colony().data().bump("arrows_shot", 1);
         gainXp(level, villager, 1);
     }
@@ -512,7 +522,7 @@ public final class GuardJob extends Job {
             colony().data().bump("melee_hits", 1);
             gainXp(level, villager, 1);
         }
-        meleeCooldown = 20;
+        meleeCooldown = CombatMath.meleeCooldown(skill());
     }
 
     private void heal(ServerLevel level, Villager villager, float health) {

@@ -35,7 +35,7 @@ public final class ColonyScreen extends Screen {
     private static final Map<String, String> ROLE_ICONS = Map.of(
             "idle", "minecraft:bread", "lumberjack", "minecraft:stone_axe", "miner", "minecraft:stone_pickaxe",
             "farmer", "minecraft:stone_hoe", "fisherman", "minecraft:fishing_rod", "herder", "minecraft:wheat",
-            "builder", "minecraft:bricks", "guard", "minecraft:iron_sword");
+            "builder", "minecraft:bricks", "guard", "minecraft:iron_sword", "teacher", "minecraft:book");
     private static final Map<String, String> STORAGE_ICONS = Map.of(
             "wood", "minecraft:oak_log", "mining", "minecraft:cobblestone", "food", "minecraft:wheat",
             "animal", "minecraft:white_wool", "arsenal", "minecraft:iron_sword");
@@ -184,6 +184,26 @@ public final class ColonyScreen extends Screen {
         if (view.children() > 0) {
             graphics.text(font, Component.translatable(view.kindergarten() ? "smartcolony.ui.kindergarten.yes" : "smartcolony.ui.kindergarten.no"),
                     x, y - 2, view.kindergarten() ? STATUS_ON : TEXT_DIM, false);
+            y += 14;
+        }
+        if (view.education().school()) {
+            graphics.text(font, Component.translatable("smartcolony.ui.school", view.education().pupils(), view.education().lessons(),
+                    view.education().graduates()), x, y - 2, STATUS_ON, false);
+            y += 14;
+            if (!view.education().byRole().isEmpty()) {
+                StringBuilder list = new StringBuilder();
+                for (ColonyView.RoleCount role : view.education().byRole()) {
+                    list.append(list.isEmpty() ? "" : ", ").append(Component.translatable("smartcolony.role." + role.role()).getString())
+                            .append(" ").append(role.count());
+                }
+                graphics.text(font, font.plainSubstrByWidth(Component.translatable("smartcolony.ui.graduates", list.toString()).getString(), w),
+                        x, y - 2, TEXT_DIM, false);
+                y += 14;
+            }
+        }
+        if (view.education().barracks()) {
+            graphics.text(font, Component.translatable("smartcolony.ui.barracks", view.education().drillSessions(),
+                    view.education().drillArrows(), view.education().drillXp()), x, y - 2, STATUS_ON, false);
             y += 14;
         }
         y = heading(graphics, Component.translatable("smartcolony.ui.roles"), x, y);
