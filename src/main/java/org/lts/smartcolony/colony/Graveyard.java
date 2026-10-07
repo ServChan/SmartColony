@@ -81,6 +81,7 @@ public final class Graveyard {
                 item.setUnlimitedLifetime();
                 items += item.getItem().getCount();
             }
+            items += spill(level, villager);
             death.items = items;
             death.remains = items > 0 ? "pending" : "none";
         }
@@ -93,6 +94,35 @@ public final class Graveyard {
         if (DeathCause.itemsLost(death.cause)) {
             colony.notify(level, Component.translatable("smartcolony.chat.remains_lost"));
         }
+    }
+
+    private static int spill(ServerLevel level, Villager villager) {
+        java.util.List<ItemStack> stacks = new java.util.ArrayList<>();
+        var inventory = villager.getInventory();
+        for (int slot = 0; slot < inventory.getContainerSize(); slot++) {
+            ItemStack stack = inventory.getItem(slot);
+            if (!stack.isEmpty()) {
+                stacks.add(stack.copy());
+                inventory.setItem(slot, ItemStack.EMPTY);
+            }
+        }
+        for (net.minecraft.world.entity.EquipmentSlot hand : new net.minecraft.world.entity.EquipmentSlot[] {
+                net.minecraft.world.entity.EquipmentSlot.MAINHAND, net.minecraft.world.entity.EquipmentSlot.OFFHAND}) {
+            ItemStack stack = villager.getItemBySlot(hand);
+            if (!stack.isEmpty()) {
+                stacks.add(stack.copy());
+                villager.setItemSlot(hand, ItemStack.EMPTY);
+            }
+        }
+        int total = 0;
+        for (ItemStack stack : stacks) {
+            ItemEntity entity = new ItemEntity(level, villager.getX(), villager.getY() + 0.3, villager.getZ(), stack);
+            entity.setUnlimitedLifetime();
+            entity.setPickUpDelay(20);
+            level.addFreshEntity(entity);
+            total += stack.getCount();
+        }
+        return total;
     }
 
     private void trim() {
