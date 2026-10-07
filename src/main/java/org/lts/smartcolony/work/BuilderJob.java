@@ -201,7 +201,8 @@ public final class BuilderJob extends Job {
                     wait = 100;
                     return false;
                 }
-                if (!level.getBlockState(pos).isAir()) {
+                BlockState here = level.getBlockState(pos);
+                if (!here.isAir() && !(here.getBlock() instanceof net.minecraft.world.level.block.LiquidBlock)) {
                     colonist.digger().breakNow(level, villager, pos, true);
                     stash(level, villager, colonist.digger().takeDrops());
                 }
