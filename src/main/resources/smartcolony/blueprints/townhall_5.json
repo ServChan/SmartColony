@@ -1,7 +1,7 @@
 {
   "id": "townhall_5",
   "kind": "townhall",
-  "beds": 0,
+  "beds": 1,
   "door": [
     7,
     4
@@ -34,7 +34,15 @@
     "A": "minecraft:stone_brick_stairs[facing=east,half=bottom]",
     "F": "minecraft:stone_brick_stairs[facing=west,half=bottom]",
     "l": "minecraft:stone_brick_stairs[facing=north,half=bottom]",
-    "u": "minecraft:stone_brick_slab[type=bottom]"
+    "u": "minecraft:stone_brick_slab[type=bottom]",
+    "1": "minecraft:barrel[facing=east]",
+    "2": "minecraft:barrel[facing=south]",
+    "3": "minecraft:chest[facing=west,type=single]",
+    "4": "minecraft:crafting_table",
+    "5": "minecraft:white_bed[facing=south,part=foot]",
+    "6": "minecraft:white_bed[facing=south,part=head]",
+    "7": "minecraft:$wood_stairs[facing=east,half=bottom]",
+    "8": "minecraft:$wood_stairs[facing=west,half=bottom]"
   },
   "layers": [
     [
@@ -60,11 +68,11 @@
       "            Z  ",
       "     P   P     ",
       "GCCCGCCDCCGCCCG",
-      "CP..L.....L..PC",
-      "C...L.....L...C",
+      "C122L7...8L.43C",
+      "C1..L7...8L...C",
       "C.............C",
-      "C...LPUUU.L...C",
-      "C...LB...HL...C",
+      "C1..LPUUU.L..5C",
+      "C1..LB...HL..6C",
       "GCCCGCC.CCGCCCG",
       "     L...L     ",
       "     L...L     ",

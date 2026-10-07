@@ -23,7 +23,9 @@
     "W": "minecraft:$wood_log[axis=x]",
     "Y": "minecraft:$wood_log[axis=z]",
     "R": "minecraft:$wood_stairs[facing=south,half=bottom]",
-    "T": "minecraft:$wood_stairs[facing=north,half=bottom]"
+    "T": "minecraft:$wood_stairs[facing=north,half=bottom]",
+    "7": "minecraft:$wood_stairs[facing=east,half=bottom]",
+    "8": "minecraft:$wood_stairs[facing=west,half=bottom]"
   },
   "layers": [
     [
@@ -49,8 +51,8 @@
       "            L  ",
       "               ",
       "    XCCZCCX    ",
-      "    C.....C    ",
-      "    C.....C    ",
+      "    C7...8C    ",
+      "    C7...8C    ",
       "    C.....C    ",
       "    CPGGG.C    ",
       "    CD....C    ",
