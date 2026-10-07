@@ -569,6 +569,7 @@ public final class Colony {
             BlockPos pos = villager.blockPosition();
             if (pos.getY() < mine.entrance.y() - 2 && inMine(pos) && org.lts.smartcolony.work.Mover.rescue(level, villager, depot().above())) {
                 entry.getValue().mover().reset();
+                entry.getValue().restartJob(level, villager);
                 data.bump("mine_strangers_led_out", 1);
             }
         }

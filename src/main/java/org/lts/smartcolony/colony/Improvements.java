@@ -38,7 +38,7 @@ public final class Improvements {
     private static final int POST_SPACING = 8;
     private static final int TOWER_HEIGHT = 5;
     private static final long WALL_AFTER = 24000L * 2;
-    private static final int WALL_VERSION = 7;
+    private static final int WALL_VERSION = 8;
     private static final int MAX_RAISE = 4;
     private static final int SLOPE_CAP = WALL_HEIGHT + MAX_RAISE + 1;
     private static final int MAX_TOP_STEP = 2;
@@ -742,6 +742,15 @@ public final class Improvements {
             points.add(WorldUtil.bp(farm));
         }
         points.add(colony.depot());
+        ColonyData.Mine pit = data().mine;
+        if (pit != null && pit.quarry()) {
+            points.add(new BlockPos(pit.corner.x() - QUARRY_MARGIN - 1, pit.corner.y(), pit.corner.z() - QUARRY_MARGIN - 1));
+            points.add(new BlockPos(pit.corner.x() + pit.width + QUARRY_MARGIN, pit.corner.y(), pit.corner.z() + pit.width + QUARRY_MARGIN));
+            points.add(new BlockPos(pit.corner.x() - QUARRY_MARGIN - 1, pit.corner.y(), pit.corner.z() + pit.width + QUARRY_MARGIN));
+            points.add(new BlockPos(pit.corner.x() + pit.width + QUARRY_MARGIN, pit.corner.y(), pit.corner.z() - QUARRY_MARGIN - 1));
+        } else if (pit != null) {
+            points.add(WorldUtil.bp(pit.entrance));
+        }
         if (data().pen != null) {
             points.add(WorldUtil.bp(data().pen.min));
             points.add(WorldUtil.bp(data().pen.max));
@@ -842,6 +851,9 @@ public final class Improvements {
             if (colony.warehouse().contains(pos.above()) || protectedOffWall(pos.above())) {
                 penalty += WallPlanner.OBSTACLE * 1.5;
             }
+            if (nearQuarry(x, z, QUARRY_MARGIN)) {
+                penalty += WallPlanner.OBSTACLE * 3;
+            }
             for (Pos farm : data().farms) {
                 if (farm.horizontalDistSq(WorldUtil.pos(pos)) <= 9) {
                     penalty += WallPlanner.OBSTACLE;
@@ -850,6 +862,23 @@ public final class Improvements {
             }
             return new double[] {y, penalty};
         }
+    }
+
+    private static final int QUARRY_MARGIN = 3;
+
+    private boolean wallTouchesQuarry(ColonyData.Wall wall) {
+        for (Pos column : wall.columns) {
+            if (nearQuarry(column.x(), column.z(), 1)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean nearQuarry(int x, int z, int margin) {
+        ColonyData.Mine pit = data().mine;
+        return pit != null && pit.quarry() && x >= pit.corner.x() - 1 - margin && x <= pit.corner.x() + pit.width + margin
+                && z >= pit.corner.z() - 1 - margin && z <= pit.corner.z() + pit.width + margin;
     }
 
     private boolean protectedOffWall(BlockPos pos) {
@@ -1147,6 +1176,11 @@ public final class Improvements {
         if (data().wallVersion == 4) {
             data().wallVersion = 5;
             gatesToDoors(level);
+            return;
+        }
+        if (data().wallVersion == 7 && !wallTouchesQuarry(wall)) {
+            data().wallVersion = WALL_VERSION;
+            colony.markDirty();
             return;
         }
         if (level.getGameTime() - lastWallAttempt < 200) {
@@ -1524,7 +1558,33 @@ public final class Improvements {
         BlockPos center = colony.center();
         int sx = Integer.signum(center.getX() - pos.getX());
         int sz = Integer.signum(center.getZ() - pos.getZ());
-        return WorldUtil.surface(level, pos.getX() + sx * 2, pos.getZ() + sz * 2);
+        BlockPos preferred = WorldUtil.surface(level, pos.getX() + sx * 2, pos.getZ() + sz * 2);
+        if (fineStand(preferred, pos)) {
+            return preferred;
+        }
+        BlockPos best = null;
+        double bestScore = Double.MAX_VALUE;
+        for (int dx = -3; dx <= 3; dx++) {
+            for (int dz = -3; dz <= 3; dz++) {
+                if (Math.abs(dx) + Math.abs(dz) < 1 || !WorldUtil.loaded(level, pos.offset(dx, 0, dz))) {
+                    continue;
+                }
+                BlockPos stand = WorldUtil.surface(level, pos.getX() + dx, pos.getZ() + dz);
+                if (!fineStand(stand, pos)) {
+                    continue;
+                }
+                double score = dx * dx + dz * dz - 0.5 * (dx * sx + dz * sz);
+                if (score < bestScore) {
+                    bestScore = score;
+                    best = stand;
+                }
+            }
+        }
+        return best != null ? best : preferred;
+    }
+
+    private boolean fineStand(BlockPos stand, BlockPos target) {
+        return !colony.inMine(stand) && !nearQuarry(stand.getX(), stand.getZ(), 0) && Math.abs(stand.getY() - target.getY()) <= 4;
     }
 
     private boolean diggable(ServerLevel level, BlockPos pos, BlockState state, boolean salvage) {

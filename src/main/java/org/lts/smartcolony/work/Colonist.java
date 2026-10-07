@@ -62,6 +62,13 @@ public final class Colonist {
         return job;
     }
 
+    public void restartJob(ServerLevel level, Villager villager) {
+        if (villager != null && isControlled(villager)) {
+            release(level, villager, "led out of the mine");
+        }
+        job = null;
+    }
+
     public void setRole(ServerLevel level, Villager villager, Role newRole) {
         if (newRole == role && job != null) {
             return;
