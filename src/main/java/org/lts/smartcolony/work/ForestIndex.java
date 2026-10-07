@@ -30,6 +30,7 @@ public final class ForestIndex {
     private int lastFullCount;
     private int foundThisPass;
     private int radius;
+    private int farmTick;
 
     public ForestIndex(Colony colony) {
         this.colony = colony;
@@ -66,7 +67,21 @@ public final class ForestIndex {
         return spiral;
     }
 
+    private void scanFarms(ServerLevel level) {
+        for (org.lts.smartcolony.core.ColonyData.Building farm : colony.treeFarm().farms()) {
+            for (BlockPos plot : colony.treeFarm().plots(farm)) {
+                if (WorldUtil.loaded(level, plot) && TreeScan.isLog(level.getBlockState(plot)) && !trees.contains(plot)
+                        && !TreeScan.naturalTree(level, plot).isEmpty()) {
+                    trees.add(plot.immutable());
+                }
+            }
+        }
+    }
+
     public void scan(ServerLevel level) {
+        if (farmTick++ % 40 == 0) {
+            scanFarms(level);
+        }
         List<int[]> offsets = spiral();
         BlockPos center = colony.center();
         for (int i = 0; i < COLUMNS_PER_TICK; i++) {
@@ -94,7 +109,7 @@ public final class ForestIndex {
                 continue;
             }
             BlockPos base = TreeScan.baseOf(level, topPos);
-            if (!level.getBlockState(base.below()).is(BlockTags.SUBSTRATE_OVERWORLD) || colony.isProtected(base)) {
+            if (!level.getBlockState(base.below()).is(BlockTags.SUBSTRATE_OVERWORLD) || (colony.isProtected(base) && !colony.treeFarm().contains(base))) {
                 continue;
             }
             if (near(base)) {
@@ -122,6 +137,7 @@ public final class ForestIndex {
         rejected.entrySet().removeIf(entry -> entry.getValue() < now);
         BlockPos best = null;
         double bestDistance = Double.MAX_VALUE;
+        boolean farms = colony.treeFarm().exists();
         Iterator<BlockPos> it = trees.iterator();
         while (it.hasNext()) {
             BlockPos tree = it.next();
@@ -136,6 +152,9 @@ public final class ForestIndex {
                 continue;
             }
             double distance = tree.distSqr(from);
+            if (farms && colony.treeFarm().contains(tree)) {
+                distance *= 0.02;
+            }
             if (distance < bestDistance) {
                 bestDistance = distance;
                 best = tree;

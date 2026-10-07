@@ -42,6 +42,7 @@ import org.lts.smartcolony.core.Role;
 import org.lts.smartcolony.core.SiteEvaluator;
 import org.lts.smartcolony.core.Stock;
 import org.lts.smartcolony.core.Tech;
+import org.lts.smartcolony.core.TreeFarmPlan;
 import org.lts.smartcolony.util.WorldUtil;
 
 public final class Construction {
@@ -240,6 +241,12 @@ public final class Construction {
         if (adults >= 14 && built("chapel") == 0) {
             order.add("chapel");
         }
+        boolean basics = data().buildings.stream().anyMatch(b -> "house".equals(b.kind))
+                && data().buildings.stream().anyMatch(b -> "storage".equals(b.kind));
+        if (TreeFarmPlan.needed(adults, (int) built(TreeFarmPlan.ID), basics, TreeFarmPlan.forestThin(colony.forest().count()))
+                && stock.get(Ids.mc("dirt")) >= TreeFarmPlan.MIN_DIRT) {
+            order.add(TreeFarmPlan.ID);
+        }
         List<String> ready = new ArrayList<>();
         for (String id : order) {
             if (cooldown.getOrDefault(id, Long.MIN_VALUE) <= now && !ready.contains(id)) {
@@ -259,6 +266,12 @@ public final class Construction {
         Map<String, Integer> materials = new TreeMap<>(Blueprints.get(blueprintId).materials(wood));
         materials.remove(Ids.mc("glass_pane"));
         Stock stock = colony.warehouse().stock(level);
+        if (TreeFarmPlan.ID.equals(blueprintId)) {
+            materials.remove(Ids.mc("dirt"));
+            if (stock.get(Ids.mc("dirt")) < TreeFarmPlan.MIN_DIRT) {
+                return false;
+            }
+        }
         for (String key : new ArrayList<>(materials.keySet())) {
             if (Ids.path(key).endsWith("_bed")) {
                 int beds = materials.remove(key);
@@ -310,7 +323,7 @@ public final class Construction {
         project.started = level.getGameTime();
         project.waitingSince = level.getGameTime();
         data().projects.add(project);
-        recomputeRequired(project);
+        recomputeRequired(level, project);
         colony.journal(level, "planned " + need + " at " + project.building.origin
                 + (data().projects.size() > 1 ? " alongside " + (data().projects.size() - 1) + " other sites" : ""));
         colony.markDirty();
@@ -339,18 +352,32 @@ public final class Construction {
         return best;
     }
 
-    private void recomputeRequired(ColonyData.Project project) {
+    private void recomputeRequired(ServerLevel level, ColonyData.Project project) {
         Map<String, Integer> required = new TreeMap<>();
+        boolean farm = TreeFarmPlan.KIND.equals(project.building.kind);
         for (Blueprint.Cell cell : cells(project)) {
             Blueprint.Material material = Blueprint.material(cell.state());
-            if (material != null) {
+            if (material != null && !(farm && alreadyPlaced(level, project, cell))) {
                 required.merge(material.item(), material.count(), Integer::sum);
             }
         }
         if (!project.fill.isEmpty()) {
-            required.merge(Ids.mc("cobblestone"), project.fill.size(), Integer::sum);
+            required.merge(fillItem(project), project.fill.size(), Integer::sum);
         }
         project.required = required;
+    }
+
+    private static String fillItem(ColonyData.Project project) {
+        return TreeFarmPlan.KIND.equals(project.building.kind) ? Ids.mc("dirt") : Ids.mc("cobblestone");
+    }
+
+    private static BlockState fillState(ColonyData.Project project) {
+        return TreeFarmPlan.KIND.equals(project.building.kind) ? Blocks.DIRT.defaultBlockState() : Blocks.COBBLESTONE.defaultBlockState();
+    }
+
+    private boolean alreadyPlaced(ServerLevel level, ColonyData.Project project, Blueprint.Cell cell) {
+        BlockPos pos = world(project.building, cell.x(), cell.y(), cell.z());
+        return WorldUtil.loaded(level, pos) && placed(level, project, cell);
     }
 
     private List<Blueprint.Cell> cells(ColonyData.Project project) {
@@ -381,7 +408,7 @@ public final class Construction {
         Stock stock = colony.warehouse().stock(level);
         var plan = CraftPlanner.plan(stock, project.required);
         if (plan.isEmpty() && applySwaps(level, project, stock)) {
-            recomputeRequired(project);
+            recomputeRequired(level, project);
             rt(project).cells = null;
             plan = CraftPlanner.plan(stock, project.required);
         }
@@ -414,7 +441,7 @@ public final class Construction {
         if (!richer.equals(project.building.wood) && woodStock(stock, richer) > woodStock(stock, project.building.wood)) {
             colony.journal(level, project.building.blueprint + " switched from " + project.building.wood + " to " + richer);
             project.building.wood = richer;
-            recomputeRequired(project);
+            recomputeRequired(level, project);
             rt(project).cells = null;
             colony.markDirty();
             return;
@@ -477,6 +504,9 @@ public final class Construction {
     }
 
     private ColonyData.Project findSite(ServerLevel level, Blueprint blueprint, String wood) {
+        if (TreeFarmPlan.KIND.equals(blueprint.kind())) {
+            return findSite(level, blueprint, wood, TreeFarmPlan.MAX_FILL, TreeFarmPlan.MAX_CUT);
+        }
         ColonyData.Project easy = findSite(level, blueprint, wood, SiteEvaluator.MAX_FILL, SiteEvaluator.MAX_CUT);
         if (easy != null || !"house".equals(blueprint.kind())) {
             return easy;
@@ -503,6 +533,9 @@ public final class Construction {
                 int sz = blueprint.rotatedSizeZ(rotation);
                 int ox = px - sx / 2;
                 int oz = pz - sz / 2;
+                if (sx * sz > 100 && !roughlyFlat(level, ox, oz, sx, sz, fillLimit + cutLimit)) {
+                    continue;
+                }
                 int[][] ground = new int[sx][sz];
                 boolean[][] blocked = new boolean[sx][sz];
                 boolean ok = true;
@@ -552,6 +585,27 @@ public final class Construction {
             }
         }
         return best;
+    }
+
+    private boolean roughlyFlat(ServerLevel level, int ox, int oz, int sx, int sz, int spread) {
+        int low = Integer.MAX_VALUE;
+        int high = Integer.MIN_VALUE;
+        for (int x = 0; x < sx + 3; x += 4) {
+            for (int z = 0; z < sz + 3; z += 4) {
+                int wx = ox + Math.min(x, sx - 1);
+                int wz = oz + Math.min(z, sz - 1);
+                if (!WorldUtil.loaded(level, new BlockPos(wx, 0, wz))) {
+                    return false;
+                }
+                int y = groundY(level, wx, wz);
+                low = Math.min(low, y);
+                high = Math.max(high, y);
+                if (high - low > spread) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     private boolean accessible(ServerLevel level, Blueprint blueprint, int rotation, int ox, int oz, int base) {
@@ -665,7 +719,7 @@ public final class Construction {
     private List<BlockPos> clearList(ServerLevel level, ColonyData.Project project) {
         Blueprint blueprint = Blueprints.get(project.building.blueprint);
         List<BlockPos> list = new ArrayList<>();
-        int top = blueprint.sizeY() + 2;
+        int top = blueprint.sizeY() + 2 + (TreeFarmPlan.KIND.equals(blueprint.kind()) ? 1 : 0);
         for (int y = top - 1; y >= 1; y--) {
             for (int x = 0; x < blueprint.sizeX(); x++) {
                 for (int z = 0; z < blueprint.sizeZ(); z++) {
@@ -833,7 +887,7 @@ public final class Construction {
                 if (filled(level, pos) || claimed(pos, now)) {
                     continue;
                 }
-                return new Task(Kind.FILL, pos, Blocks.COBBLESTONE.defaultBlockState(), null, null, groundStand(project, pos), project);
+                return new Task(Kind.FILL, pos, fillState(project), null, null, groundStand(project, pos), project);
             }
             if (project.cursor < project.fill.size()) {
                 return null;
@@ -886,6 +940,9 @@ public final class Construction {
         BlockPos pos = world(project.building, cell.x(), cell.y(), cell.z());
         BlockState target = parse(cell.state(), project.building.rotation);
         BlockState current = level.getBlockState(pos);
+        if (TreeFarmPlan.KIND.equals(project.building.kind) && TreeFarm.soilFor(current, target)) {
+            return true;
+        }
         return current.getBlock() == target.getBlock() && sameShape(current, target);
     }
 
@@ -1073,6 +1130,9 @@ public final class Construction {
         int reach = (int) Math.ceil(Math.sqrt(Math.max(building.min.horizontalDistSq(data().center), building.max.horizontalDistSq(data().center))));
         data().radius = Math.min(SmartColonyConfig.get().maxColonyRadius, Math.max(data().radius, reach + 6));
         colony.journal(level, "finished " + building.blueprint + " at " + building.origin);
+        if (TreeFarmPlan.KIND.equals(building.kind)) {
+            colony.journal(level, "tree nursery ready: " + colony.treeFarm().plots(building).size() + " sapling plots");
+        }
         colony.notify(level, Component.translatable("smartcolony.chat.build_done",
                 Component.translatable("smartcolony.building." + building.blueprint)));
         planRoad(level, WorldUtil.bp(building.door));
@@ -1286,7 +1346,7 @@ public final class Construction {
             project.started = level.getGameTime();
             project.waitingSince = level.getGameTime();
             data().projects.add(project);
-            recomputeRequired(project);
+            recomputeRequired(level, project);
             colony.markDirty();
             return true;
         }

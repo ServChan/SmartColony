@@ -1,0 +1,69 @@
+{
+  "id": "tree_farm",
+  "kind": "treefarm",
+  "beds": 0,
+  "door": [
+    7,
+    0
+  ],
+  "palette": {
+    "W": "minecraft:cobblestone_wall",
+    "T": "minecraft:torch",
+    "d": "minecraft:dirt",
+    "p": "minecraft:dirt",
+    "q": "minecraft:dirt_path"
+  },
+  "layers": [
+    [
+      "       q       ",
+      " qqqqqqqqqqqqq ",
+      " qdddddddddddq ",
+      " qdpdddpdddpdq ",
+      " qdddddddddddq ",
+      " qdddddddddddq ",
+      " qdddddddddddq ",
+      " qdpdddpdddpdq ",
+      " qdddddddddddq ",
+      " qdddddddddddq ",
+      " qdddddddddddq ",
+      " qdpdddpdddpdq ",
+      " qdddddddddddq ",
+      " qqqqqqqqqqqqq ",
+      "               "
+    ],
+    [
+      "WWWWWWW.WWWWWWW",
+      "W.............W",
+      "W.............W",
+      "W.............W",
+      "W.............W",
+      "W....W...W....W",
+      "W.............W",
+      "W.............W",
+      "W.............W",
+      "W....W...W....W",
+      "W.............W",
+      "W.............W",
+      "W.............W",
+      "W.............W",
+      "WWWWWWWWWWWWWWW"
+    ],
+    [
+      "......T.T......",
+      "...............",
+      "...............",
+      "...............",
+      "...............",
+      ".....T...T.....",
+      "...............",
+      "...............",
+      "...............",
+      ".....T...T.....",
+      "...............",
+      "...............",
+      "...............",
+      "...............",
+      "..............."
+    ]
+  ]
+}

@@ -131,6 +131,7 @@
   "smartcolony.role.cook": "Cook",
   "smartcolony.building.fletcher_hut": "Fletcher's hut",
   "smartcolony.building.bakery": "Bakery",
+  "smartcolony.building.tree_farm": "Tree nursery",
   "smartcolony.chat.iron_age": "The iron age has begun: the forge is smelting iron.",
   "smartcolony.ui.age": "Age: %s",
   "smartcolony.age.stone": "Stone Age",
