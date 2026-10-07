@@ -125,5 +125,8 @@
   "smartcolony.command.ai_reload": "Config reloaded, AI advisor %s.",
   "smartcolony.building.kindergarten": "Kindergarten",
   "smartcolony.ui.kindergarten.yes": "Kindergarten: built, children play there during the day",
-  "smartcolony.ui.kindergarten.no": "Kindergarten: none yet, children roam freely"
+  "smartcolony.ui.kindergarten.no": "Kindergarten: none yet, children roam freely",
+  "smartcolony.role.fletcher": "Fletcher",
+  "smartcolony.role.smith": "Smith",
+  "smartcolony.role.cook": "Cook"
 }

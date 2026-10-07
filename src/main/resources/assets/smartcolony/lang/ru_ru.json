@@ -125,5 +125,8 @@
   "smartcolony.command.ai_reload": "Настройки перечитаны, советник ИИ: %s.",
   "smartcolony.building.kindergarten": "Детский сад",
   "smartcolony.ui.kindergarten.yes": "Детский сад: построен, днём дети играют там",
-  "smartcolony.ui.kindergarten.no": "Детского сада пока нет, дети гуляют где хотят"
+  "smartcolony.ui.kindergarten.no": "Детского сада пока нет, дети гуляют где хотят",
+  "smartcolony.role.fletcher": "Мастер луков",
+  "smartcolony.role.smith": "Кузнец",
+  "smartcolony.role.cook": "Повар"
 }

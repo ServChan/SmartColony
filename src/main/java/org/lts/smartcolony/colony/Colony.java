@@ -697,8 +697,18 @@ public final class Colony {
                 animal = 0;
             }
         }
+        EnumMap<Role, Integer> projected = new EnumMap<>(Role.class);
+        projected.putAll(desired);
+        if (projected.getOrDefault(Role.GUARD, 0) == 0) {
+            projected.put(Role.GUARD, Math.max(1, adults / 5));
+        }
+        org.lts.smartcolony.core.CrafterNeeds.Context crafting = new org.lts.smartcolony.core.CrafterNeeds.Context(stock, projected, adults,
+                unarmedGuards(level));
         RoleAllocator.Needs needs = new RoleAllocator.Needs(adults, wood, stone, iron, economy.foodPoints(stock), animal,
-                construction.backlog(level), data.pen != null, equippable, defense.threatLevel());
+                construction.backlog(level), data.pen != null, equippable, defense.threatLevel(),
+                org.lts.smartcolony.core.CrafterNeeds.pending(Role.FLETCHER, crafting),
+                org.lts.smartcolony.core.CrafterNeeds.pending(Role.SMITH, crafting),
+                org.lts.smartcolony.core.CrafterNeeds.pending(Role.COOK, crafting));
         desired = RoleAllocator.withTargets(RoleAllocator.desired(needs), advisor.roleTargets(level.getGameTime()), adults);
         Map<String, Role> current = new LinkedHashMap<>();
         Map<String, Role> affinity = new HashMap<>();
@@ -750,6 +760,33 @@ public final class Colony {
         if (!changes.isEmpty()) {
             markDirty();
         }
+    }
+
+    public int unarmedGuards(ServerLevel level) {
+        int unarmed = 0;
+        for (Map.Entry<UUID, Colonist> entry : colonists.entrySet()) {
+            if (entry.getValue().role() != Role.GUARD || !(level.getEntity(entry.getKey()) instanceof Villager villager)) {
+                continue;
+            }
+            boolean sword = org.lts.smartcolony.work.Tools.SWORD.test(villager.getMainHandItem())
+                    || Inv.count(villager, org.lts.smartcolony.work.Tools.SWORD) > 0;
+            boolean bow = (org.lts.smartcolony.work.Tools.BOW.test(villager.getMainHandItem())
+                    || Inv.count(villager, org.lts.smartcolony.work.Tools.BOW) > 0)
+                    && Inv.count(villager, org.lts.smartcolony.work.Tools.ARROW) > 0;
+            if (!sword && !bow) {
+                unarmed++;
+            }
+        }
+        return unarmed;
+    }
+
+    public org.lts.smartcolony.core.CrafterNeeds.Context crafterContext(ServerLevel level) {
+        EnumMap<Role, Integer> roles = new EnumMap<>(Role.class);
+        roles.putAll(desired);
+        if (roles.getOrDefault(Role.GUARD, 0) == 0) {
+            roles.put(Role.GUARD, Math.max(1, adultCount(level) / 5));
+        }
+        return new org.lts.smartcolony.core.CrafterNeeds.Context(warehouse.stock(level), roles, adultCount(level), unarmedGuards(level));
     }
 
     private boolean canEquip(ServerLevel level, Stock stock, List<String> tools) {

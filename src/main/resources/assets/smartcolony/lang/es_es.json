@@ -125,5 +125,8 @@
   "smartcolony.command.ai_reload": "Configuración recargada, asesor de IA: %s.",
   "smartcolony.building.kindergarten": "Guardería",
   "smartcolony.ui.kindergarten.yes": "Guardería: construida, los niños juegan allí de día",
-  "smartcolony.ui.kindergarten.no": "Guardería: aún no hay, los niños vagan libremente"
+  "smartcolony.ui.kindergarten.no": "Guardería: aún no hay, los niños vagan libremente",
+  "smartcolony.role.fletcher": "Arquero artesano",
+  "smartcolony.role.smith": "Herrero",
+  "smartcolony.role.cook": "Cocinero"
 }
