@@ -134,6 +134,7 @@ public final class Colonist {
             job = Jobs.create(role, this);
         }
         long now = level.getGameTime();
+        ProfessionSync.tick(level, this, villager);
         if (villager.isUnderWater() && villager.getAirSupply() < villager.getMaxAirSupply() / 3) {
             surface(level, villager);
         }
