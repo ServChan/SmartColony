@@ -13,6 +13,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.animal.golem.IronGolem;
 import net.minecraft.world.entity.npc.villager.Villager;
+import net.minecraft.world.entity.npc.wanderingtrader.WanderingTrader;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -82,6 +83,13 @@ public final class ColonyEvents {
         if (!(entity.level() instanceof ServerLevel level)) {
             return;
         }
+        if (entity instanceof WanderingTrader wanderer) {
+            Colony owner = ColonyManager.colonyOfTrader(wanderer.getUUID());
+            if (owner != null) {
+                owner.trader().died(level);
+            }
+            return;
+        }
         if (entity instanceof Villager villager) {
             Colony colony = ColonyManager.colonyOf(villager);
             if (colony == null) {
@@ -121,5 +129,17 @@ public final class ColonyEvents {
             }
         }
         return InteractionResult.PASS;
+    }
+
+    public static InteractionResult useEntity(Player player, Level world, InteractionHand hand, Entity entity, EntityHitResult hit) {
+        if (!(world instanceof ServerLevel level) || !(player instanceof ServerPlayer serverPlayer) || serverPlayer.isSpectator()
+                || !(entity instanceof WanderingTrader trader)) {
+            return InteractionResult.PASS;
+        }
+        Colony colony = ColonyManager.colonyOfTrader(trader.getUUID());
+        if (colony == null) {
+            return InteractionResult.PASS;
+        }
+        return colony.trader().beforeTrade(level, serverPlayer, trader);
     }
 }

@@ -364,6 +364,7 @@ public final class ColonyScreen extends Screen {
     }
 
     private int market(GuiGraphicsExtractor graphics, int x, int y, int w) {
+        y = trader(graphics, x, y, w);
         if (!view.requests().isEmpty()) {
             y = heading(graphics, Component.translatable("smartcolony.ui.requests"), x, y);
             List<ColonyView.ItemCount> wanted = new ArrayList<>();
@@ -385,6 +386,42 @@ public final class ColonyScreen extends Screen {
             y += 20;
         }
         return y;
+    }
+
+    private int trader(GuiGraphicsExtractor graphics, int x, int y, int w) {
+        ColonyView.TraderInfo info = view.trader();
+        y = heading(graphics, Component.translatable("smartcolony.ui.trader"), x, y);
+        if (!info.hired()) {
+            Component state = Component.translatable(info.marketBuilt() ? "smartcolony.ui.trader_arriving" : "smartcolony.ui.trader_none");
+            graphics.text(font, state, x, y, TEXT_DIM, false);
+            return y + 18;
+        }
+        graphics.text(font, Component.translatable("smartcolony.ui.trader_hired"), x, y, STATUS_ON, false);
+        y += 14;
+        if (info.buys().isEmpty() && info.sells().isEmpty()) {
+            graphics.text(font, Component.translatable("smartcolony.ui.trader_empty"), x, y, TEXT_DIM, false);
+            return y + 18;
+        }
+        y = traderOffers(graphics, Component.translatable("smartcolony.ui.trader_buys"), info.buys(), x, y, w);
+        y = traderOffers(graphics, Component.translatable("smartcolony.ui.trader_sells"), info.sells(), x, y, w);
+        return y + 4;
+    }
+
+    private int traderOffers(GuiGraphicsExtractor graphics, Component title, List<ColonyView.TraderOffer> offers, int x, int y, int w) {
+        if (offers.isEmpty()) {
+            return y;
+        }
+        graphics.text(font, title, x, y, TEXT_NORMAL, false);
+        y += 12;
+        for (ColonyView.TraderOffer offer : offers) {
+            item(graphics, offer.give(), offer.giveCount(), x, y);
+            graphics.text(font, "->", x + 24, y + 4, TEXT_DIM, false);
+            item(graphics, offer.result(), offer.resultCount(), x + 40, y);
+            Component uses = Component.translatable("smartcolony.ui.trader_uses", offer.uses());
+            graphics.text(font, uses, x + 64, y + 4, TEXT_DIM, false);
+            y += 20;
+        }
+        return y + 2;
     }
 
     private int heading(GuiGraphicsExtractor graphics, Component text, int x, int y) {

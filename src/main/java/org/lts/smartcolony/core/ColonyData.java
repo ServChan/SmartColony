@@ -44,6 +44,8 @@ public final class ColonyData {
     public long lastMarket;
     public long lastGolem;
     public long lastFeeding;
+    public String traderId = "";
+    public long traderLost;
 
     public static final class Member {
         public String role = Role.IDLE.key();

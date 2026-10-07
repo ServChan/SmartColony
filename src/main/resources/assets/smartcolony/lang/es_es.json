@@ -134,5 +134,19 @@
   "smartcolony.chat.iron_age": "Ha comenzado la edad del hierro: la fragua funde hierro.",
   "smartcolony.ui.age": "Edad: %s",
   "smartcolony.age.stone": "Edad de Piedra",
-  "smartcolony.age.iron": "Edad del Hierro"
+  "smartcolony.age.iron": "Edad del Hierro",
+  "smartcolony.trader.name": "Comerciante de %s",
+  "smartcolony.chat.trader_hired": "Un comerciante se ha instalado en la plaza del mercado.",
+  "smartcolony.chat.trader_died": "El comerciante de la colonia ha muerto. En un día se contratará a otro.",
+  "smartcolony.chat.trader_enemy": "El comerciante se niega a tratar con un enemigo de la colonia.",
+  "smartcolony.chat.trader_nothing": "El comerciante no tiene nada que intercambiar ahora. Vuelve más tarde.",
+  "smartcolony.chat.trader_trade": "Trato justo con el comerciante de la colonia. Reputación %s (ahora %s, %s).",
+  "smartcolony.ui.trader": "Comerciante de la colonia",
+  "smartcolony.ui.trader_none": "Aún no hay comerciante. Construye una plaza del mercado para contratar uno.",
+  "smartcolony.ui.trader_arriving": "El mercado está listo. El comerciante llegará pronto.",
+  "smartcolony.ui.trader_hired": "El comerciante está en el mercado",
+  "smartcolony.ui.trader_empty": "Nada que intercambiar ahora",
+  "smartcolony.ui.trader_buys": "Te compra",
+  "smartcolony.ui.trader_sells": "Te vende",
+  "smartcolony.ui.trader_uses": "hasta %s veces"
 }

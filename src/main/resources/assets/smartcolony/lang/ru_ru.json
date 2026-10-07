@@ -134,5 +134,19 @@
   "smartcolony.chat.iron_age": "Начался железный век: кузня плавит железо.",
   "smartcolony.ui.age": "Эпоха: %s",
   "smartcolony.age.stone": "Каменный век",
-  "smartcolony.age.iron": "Железный век"
+  "smartcolony.age.iron": "Железный век",
+  "smartcolony.trader.name": "Торговец: %s",
+  "smartcolony.chat.trader_hired": "На рыночной площади поселился торговец.",
+  "smartcolony.chat.trader_died": "Торговец колонии погиб. Через сутки будет нанят новый.",
+  "smartcolony.chat.trader_enemy": "Торговец отказывается иметь дело с врагом колонии.",
+  "smartcolony.chat.trader_nothing": "Сейчас торговцу нечем меняться. Зайдите позже.",
+  "smartcolony.chat.trader_trade": "Честная торговля с торговцем колонии. Репутация %s (теперь %s, %s).",
+  "smartcolony.ui.trader": "Торговец колонии",
+  "smartcolony.ui.trader_none": "Торговца пока нет. Постройте рыночную площадь, чтобы нанять его.",
+  "smartcolony.ui.trader_arriving": "Рынок готов. Торговец скоро прибудет.",
+  "smartcolony.ui.trader_hired": "Торговец на рынке",
+  "smartcolony.ui.trader_empty": "Сейчас нечем торговать",
+  "smartcolony.ui.trader_buys": "Покупает у вас",
+  "smartcolony.ui.trader_sells": "Продаёт вам",
+  "smartcolony.ui.trader_uses": "до %s раз"
 }

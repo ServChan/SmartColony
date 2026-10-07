@@ -14,6 +14,7 @@ import org.lts.smartcolony.core.ColonyData;
 import org.lts.smartcolony.core.ItemClassifier;
 import org.lts.smartcolony.core.Reputation;
 import org.lts.smartcolony.core.Role;
+import org.lts.smartcolony.core.TradePlanner;
 import org.lts.smartcolony.work.Colonist;
 
 public record ColonyView(
@@ -44,7 +45,14 @@ public record ColonyView(
         List<String> sites,
         String advisorState,
         String advisorText,
-        String age) {
+        String age,
+        TraderInfo trader) {
+
+    public record TraderOffer(String give, int giveCount, String result, int resultCount, int uses) {
+    }
+
+    public record TraderInfo(boolean marketBuilt, boolean hired, List<TraderOffer> buys, List<TraderOffer> sells) {
+    }
 
     public record RoleCount(String role, int count) {
     }
@@ -135,12 +143,24 @@ public record ColonyView(
         List<Market.Deal> ledger = colony.economy().market().ledger();
         List<Market.Deal> deals = new ArrayList<>(ledger.subList(Math.max(0, ledger.size() - 40), ledger.size()));
         java.util.Collections.reverse(deals);
+        List<TraderOffer> traderBuys = new ArrayList<>();
+        List<TraderOffer> traderSells = new ArrayList<>();
+        if (colony.trader().hired()) {
+            TradePlanner.Plan plan = TraderTrades.plan(level, colony, Reputation.status(reputation));
+            for (TradePlanner.Offer offer : plan.buys()) {
+                traderBuys.add(new TraderOffer(offer.give(), offer.giveCount(), offer.result(), offer.resultCount(), offer.maxUses()));
+            }
+            for (TradePlanner.Offer offer : plan.sells()) {
+                traderSells.add(new TraderOffer(offer.give(), offer.giveCount(), offer.result(), offer.resultCount(), offer.maxUses()));
+            }
+        }
+        TraderInfo traderInfo = new TraderInfo(colony.trader().marketBuilt(), colony.trader().hired(), traderBuys, traderSells);
         return new ColonyView(data.name, colony.colonists().size(), children, Nursery.find(colony) != null, data.beds(), data.buildings.size(), roles, storages,
                 colony.foodPoints(level), project, phase, missing, mine, mineProgress, mineTotal, reputation,
                 Reputation.status(reputation).key(), villagers, journal, deals, new ArrayList<>(colony.requests()),
                 data.wall == null ? null : data.wall.material, data.wall == null ? 0 : data.wall.built,
                 data.wall == null ? 0 : data.wall.total, sites, colony.advisor().active() || !colony.advisor().state().equals("off")
                         ? colony.advisor().state() : "off",
-                colony.advisor().state().equals("error") ? colony.advisor().error() : colony.advisor().thoughts(), data.age);
+                colony.advisor().state().equals("error") ? colony.advisor().error() : colony.advisor().thoughts(), data.age, traderInfo);
     }
 }

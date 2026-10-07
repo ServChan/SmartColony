@@ -7,6 +7,7 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.event.player.AttackEntityCallback;
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
+import net.fabricmc.fabric.api.event.player.UseEntityCallback;
 import org.lts.smartcolony.colony.ColonyManager;
 import org.lts.smartcolony.colony.ColonyEvents;
 import org.lts.smartcolony.command.ColonyCommand;
@@ -30,6 +31,7 @@ public final class SmartColony implements ModInitializer {
         ServerLivingEntityEvents.ALLOW_DAMAGE.register(ColonyEvents::cushionMineFalls);
         PlayerBlockBreakEvents.BEFORE.register(ColonyEvents::beforeBreak);
         AttackEntityCallback.EVENT.register(ColonyEvents::attackEntity);
+        UseEntityCallback.EVENT.register(ColonyEvents::useEntity);
         LOGGER.info("Smart Colony initialized");
     }
 }

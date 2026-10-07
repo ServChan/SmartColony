@@ -215,6 +215,16 @@ public final class ColonyManager {
         return MEMBERS.get(uuid);
     }
 
+    public static Colony colonyOfTrader(UUID uuid) {
+        String id = uuid.toString();
+        for (Colony colony : COLONIES.values()) {
+            if (id.equals(colony.data().traderId)) {
+                return colony;
+            }
+        }
+        return null;
+    }
+
     public static Colony colonyNear(ServerLevel level, BlockPos pos, int radius) {
         Colony best = null;
         double bestDistance = (double) radius * radius;

@@ -53,6 +53,7 @@ public final class Colony {
     private final Improvements improvements;
     private boolean festivalAnnounced;
     private final TheftWatcher theft;
+    private final Trader trader;
     private final org.lts.smartcolony.ai.Advisor advisor;
     private final Map<UUID, Colonist> colonists = new LinkedHashMap<>();
     private final Set<String> requests = new LinkedHashSet<>();
@@ -74,6 +75,7 @@ public final class Colony {
         this.migration = new Migration(this);
         this.improvements = new Improvements(this);
         this.theft = new TheftWatcher(this);
+        this.trader = new Trader(this);
         this.advisor = new org.lts.smartcolony.ai.Advisor(this);
         this.ironAge = new IronAge(this);
         for (Map.Entry<String, ColonyData.Member> entry : data.members.entrySet()) {
@@ -129,6 +131,10 @@ public final class Colony {
 
     public org.lts.smartcolony.ai.Advisor advisor() {
         return advisor;
+    }
+
+    public Trader trader() {
+        return trader;
     }
 
     public TheftWatcher theft() {
@@ -580,6 +586,7 @@ public final class Colony {
             ironAge.tick(level);
         }
         economy.tick(level, ticks);
+        trader.tick(level, ticks);
         migration.tick(level);
         if (ticks % 20 == 11) {
             advisor.tick(level);
@@ -829,6 +836,7 @@ public final class Colony {
     }
 
     public void disband(ServerLevel level) {
+        trader.dismiss(level);
         migration.releaseAll(level);
         for (Map.Entry<UUID, Colonist> entry : colonists.entrySet()) {
             if (level.getEntity(entry.getKey()) instanceof Villager villager) {
