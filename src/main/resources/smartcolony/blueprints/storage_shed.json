@@ -3,39 +3,39 @@
   "kind": "storage",
   "beds": 0,
   "door": [
-    3,
-    1
+    4,
+    2
   ],
   "containers": [
     [
-      2,
-      1,
-      3
-    ],
-    [
       3,
       1,
-      3
+      5
     ],
     [
       4,
       1,
-      3
+      5
     ],
     [
-      2,
-      2,
-      3
+      5,
+      1,
+      5
     ],
     [
       3,
       2,
-      3
+      5
     ],
     [
       4,
       2,
-      3
+      5
+    ],
+    [
+      5,
+      2,
+      5
     ]
   ],
   "palette": {
@@ -45,70 +45,101 @@
     "Z": "minecraft:$wood_log[axis=z]",
     "P": "minecraft:$wood_planks",
     "G": "minecraft:glass_pane",
+    "D": "minecraft:$wood_door[facing=south,half=lower,hinge=left,open=false]",
+    "U": "minecraft:$wood_door[facing=south,half=upper,hinge=left,open=false]",
     "e": "minecraft:$wood_stairs[facing=east,half=bottom]",
     "w": "minecraft:$wood_stairs[facing=west,half=bottom]",
     "l": "minecraft:$wood_slab[type=bottom]",
-    "r": "minecraft:wall_torch[facing=north]",
+    "u": "minecraft:$wood_slab[type=top]",
+    "F": "minecraft:$wood_fence",
+    "1": "minecraft:$wood_trapdoor[facing=west,half=top,open=true]",
+    "2": "minecraft:$wood_trapdoor[facing=east,half=top,open=true]",
     "q": "minecraft:wall_torch[facing=east]",
     "p": "minecraft:wall_torch[facing=west]",
-    "W": "minecraft:barrel[facing=north]"
+    "M": "minecraft:lantern[hanging=false]",
+    "5": "minecraft:barrel[facing=north]"
   },
   "layers": [
     [
-      "  CCC  ",
-      " CCCCC ",
-      " CPPPC ",
-      " CPPPC ",
-      " CCCCC "
+      "   PPP   ",
+      "   PPP   ",
+      " CCCCCCC ",
+      " CPPPPPC ",
+      " CPPPPPC ",
+      " CPPPPPC ",
+      " CCCCCCC "
     ],
     [
-      ".......",
-      ".L...L.",
-      "ZC...CW",
-      "ZCWWWC.",
-      ".LCCCL."
+      ".......ZZ",
+      "..lF.F.ZZ",
+      ".LCCDCCL.",
+      ".Cu...uC.",
+      "uCl...lCu",
+      ".C.555.C.",
+      ".LCCCCCL."
     ],
     [
-      ".r...r.",
-      ".L...L.",
-      "ZPq.pP.",
-      "ZGWWWG.",
-      ".LPPPL."
+      ".......Z.",
+      "...F.F.Z.",
+      ".LPPUPPL.",
+      "1Pq...pP2",
+      ".G.....G.",
+      "1P.555.P2",
+      ".LPPPPPL."
     ],
     [
-      ".......",
-      ".LXXXL.",
-      ".Z...Z.",
-      ".Z.r.Z.",
-      ".LXXXL."
+      ".........",
+      "...M.M...",
+      ".XXXXXXX.",
+      ".Z.....Z.",
+      ".Z.....Z.",
+      ".Z.....Z.",
+      ".XXXXXXX."
     ],
     [
-      "e.....w",
-      "ePPPPPw",
-      "e.....w",
-      "e.....w",
-      "ePPPPPw"
+      ".........",
+      ".........",
+      "ePPPPPPPw",
+      "e.......w",
+      "eXXXXXXXw",
+      "e.......w",
+      "ePPPPPPPw"
     ],
     [
-      ".e...w.",
-      ".ePPPw.",
-      ".e...w.",
-      ".e...w.",
-      ".ePGPw."
+      "....F....",
+      ".........",
+      ".ePPGPPw.",
+      ".e.....w.",
+      ".e.....w.",
+      ".e.....w.",
+      ".ePPPPPw."
     ],
     [
-      "..ePw..",
-      "..ePw..",
-      "..ePw..",
-      "..ePw..",
-      "..ePw.."
+      "....F....",
+      ".........",
+      "..ePPPw..",
+      "..e...w..",
+      "..e...w..",
+      "..e...w..",
+      "..ePPPw.."
     ],
     [
-      "...l...",
-      "...l...",
-      "...l...",
-      "...l...",
-      "...l..."
+      "....Z....",
+      "....Z....",
+      "...ePw...",
+      "...ePw...",
+      "...ePw...",
+      "...ePw...",
+      "...ePw..."
+    ],
+    [
+      ".........",
+      ".........",
+      "....l....",
+      "....l....",
+      "....l....",
+      "....l....",
+      "....l...."
     ]
   ]
 }

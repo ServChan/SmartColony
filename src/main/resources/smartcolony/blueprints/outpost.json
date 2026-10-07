@@ -34,9 +34,14 @@
     "X": "minecraft:$wood_log[axis=x]",
     "Z": "minecraft:$wood_log[axis=z]",
     "P": "minecraft:$wood_planks",
+    "G": "minecraft:glass_pane",
+    "e": "minecraft:$wood_stairs[facing=east,half=bottom]",
+    "w": "minecraft:$wood_stairs[facing=west,half=bottom]",
     "l": "minecraft:$wood_slab[type=bottom]",
-    "r": "minecraft:wall_torch[facing=north]",
-    "W": "minecraft:barrel[facing=north]"
+    "q": "minecraft:wall_torch[facing=east]",
+    "p": "minecraft:wall_torch[facing=west]",
+    "M": "minecraft:lantern[hanging=false]",
+    "5": "minecraft:barrel[facing=north]"
   },
   "layers": [
     [
@@ -49,30 +54,44 @@
     [
       ".....",
       "L...L",
-      "P...P",
-      "PWWWP",
-      "LPPPL"
+      "C...C",
+      "C555C",
+      "LCCCL"
     ],
     [
-      "r...r",
+      ".....",
       "L...L",
-      "P...P",
-      "PrWrP",
+      "Gq.pG",
+      "P.5.P",
       "LPPPL"
     ],
     [
       ".....",
       "XXXXX",
       "Z...Z",
-      "Z...Z",
+      "Z.M.Z",
       "XXXXX"
     ],
     [
-      "lllll",
-      "lllll",
-      "lllll",
-      "lllll",
-      "lllll"
+      "e...w",
+      "e...w",
+      "e...w",
+      "e...w",
+      "ePPPw"
+    ],
+    [
+      ".ePw.",
+      ".ePw.",
+      ".ePw.",
+      ".ePw.",
+      ".ePw."
+    ],
+    [
+      "..l..",
+      "..l..",
+      "..l..",
+      "..l..",
+      "..l.."
     ]
   ]
 }

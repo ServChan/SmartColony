@@ -24,7 +24,10 @@
     "Y": "minecraft:$wood_log[axis=x]",
     "R": "minecraft:$wood_log[axis=z]",
     "T": "minecraft:$wood_stairs[facing=south,half=bottom]",
-    "M": "minecraft:$wood_stairs[facing=north,half=bottom]"
+    "M": "minecraft:$wood_stairs[facing=north,half=bottom]",
+    "1": "minecraft:barrel[facing=east]",
+    "7": "minecraft:$wood_stairs[facing=east,half=bottom]",
+    "8": "minecraft:$wood_stairs[facing=west,half=bottom]"
   },
   "layers": [
     [
@@ -50,8 +53,8 @@
       "            Z  ",
       "     P   P     ",
       "XCCCXCCGCCXCCCX",
-      "CP..C.....C..PC",
-      "C...C.....C...C",
+      "C1..C7...8C..PC",
+      "C1..C7...8C...C",
       "C.............C",
       "C...CPDDD.C...C",
       "C...CU....C...C",
