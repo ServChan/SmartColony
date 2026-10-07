@@ -575,6 +575,31 @@ public final class Colony {
         }
     }
 
+    private void closePenGate(ServerLevel level) {
+        ColonyData.Pen pen = data.pen;
+        if (pen == null || pen.gate == null) {
+            return;
+        }
+        BlockPos gate = WorldUtil.bp(pen.gate);
+        if (!WorldUtil.loaded(level, gate)) {
+            return;
+        }
+        net.minecraft.world.level.block.state.BlockState state = level.getBlockState(gate);
+        if (!(state.getBlock() instanceof net.minecraft.world.level.block.FenceGateBlock)
+                || !state.getValue(net.minecraft.world.level.block.FenceGateBlock.OPEN)) {
+            return;
+        }
+        for (Map.Entry<UUID, Colonist> entry : colonists.entrySet()) {
+            if (entry.getValue().role() == Role.HERDER && level.getEntity(entry.getKey()) instanceof Villager villager
+                    && org.lts.smartcolony.work.Colonist.isControlled(villager) && villager.blockPosition().distSqr(gate) <= 12 * 12) {
+                return;
+            }
+        }
+        level.setBlock(gate, state.setValue(net.minecraft.world.level.block.FenceGateBlock.OPEN, false),
+                net.minecraft.world.level.block.Block.UPDATE_ALL);
+        data.bump("pen_gate_closed", 1);
+    }
+
     public int adultCount(ServerLevel level) {
         int adults = 0;
         for (UUID uuid : colonists.keySet()) {
@@ -646,6 +671,9 @@ public final class Colony {
         }
         if (ticks % 40 == 23) {
             clearMineOfStrangers(level);
+        }
+        if (ticks % 20 == 11) {
+            closePenGate(level);
         }
         if (ticks % 100 == 13) {
             construction.tick(level);
