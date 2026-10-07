@@ -47,7 +47,7 @@ public abstract class Job {
     }
 
     protected boolean nightShift(Villager villager) {
-        return Colonist.bedless(villager) && Colonist.NIGHT_ROLES.contains(role());
+        return Colonist.bedless(villager) && role() != org.lts.smartcolony.core.Role.GUARD && role() != org.lts.smartcolony.core.Role.IDLE;
     }
 
     public boolean ignoresDanger() {

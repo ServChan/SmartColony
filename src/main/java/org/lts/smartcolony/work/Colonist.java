@@ -165,15 +165,6 @@ public final class Colonist {
             }
         }
         if (!want && role != Role.GUARD && !villager.isBaby() && villager.isAlive() && !villager.isSleeping()
-                && releasedUntil <= now && !colony.workTime(level) && bedless(villager)) {
-            if (!isControlled(villager)) {
-                take(level, villager);
-            }
-            Mover.keepAfloat(villager);
-            mover.tick(level, villager, colony.depot(), 3.0, 0.6, false);
-            return;
-        }
-        if (!want && role != Role.GUARD && !villager.isBaby() && villager.isAlive() && !villager.isSleeping()
                 && !colony.workTime(level) && farFromHome(villager)) {
             if (!isControlled(villager)) {
                 take(level, villager);
@@ -208,7 +199,6 @@ public final class Colonist {
         }
     }
 
-    public static final java.util.Set<Role> NIGHT_ROLES = java.util.EnumSet.of(Role.MINER, Role.SMITH, Role.FLETCHER, Role.COOK);
 
     public static boolean bedless(Villager villager) {
         return villager.getBrain().getMemory(MemoryModuleType.HOME).isEmpty();

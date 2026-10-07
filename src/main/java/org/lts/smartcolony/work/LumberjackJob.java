@@ -59,7 +59,7 @@ public final class LumberjackJob extends Job {
         if (hasCargo(villager)) {
             return true;
         }
-        return colony().workTime(level) && !colony().woodSurplus(level);
+        return onShift(level, villager) && !colony().woodSurplus(level);
     }
 
     @Override
@@ -94,7 +94,7 @@ public final class LumberjackJob extends Job {
     private void start(ServerLevel level, Villager villager) {
         int carried = Inv.count(villager, stack -> stack.is(ItemTags.LOGS));
         boolean storageHungry = colony().stockOf(level, Ids::isLog) < 16 && carried >= 8;
-        if (cargoFull(villager) || carried >= 64 || storageHungry || (!colony().workTime(level) && hasCargo(villager))) {
+        if (cargoFull(villager) || carried >= 64 || storageHungry || (!onShift(level, villager) && hasCargo(villager))) {
             phase = "deposit";
             return;
         }

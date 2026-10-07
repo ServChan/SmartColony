@@ -53,7 +53,7 @@ public final class BuilderJob extends Job {
         if (hasCargo(villager)) {
             return true;
         }
-        return colony().workTime(level) && colony().construction().hasWork(level);
+        return onShift(level, villager) && colony().construction().hasWork(level);
     }
 
     @Override
@@ -71,7 +71,7 @@ public final class BuilderJob extends Job {
     }
 
     private void start(ServerLevel level, Villager villager) {
-        if (hasCargo(villager) && (cargoFull(villager) || !colony().workTime(level) || !colony().construction().hasWork(level))) {
+        if (hasCargo(villager) && (cargoFull(villager) || !onShift(level, villager) || !colony().construction().hasWork(level))) {
             phase = "deposit";
             return;
         }

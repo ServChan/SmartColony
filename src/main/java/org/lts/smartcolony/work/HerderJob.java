@@ -138,11 +138,11 @@ public final class HerderJob extends Job {
     }
 
     private void start(ServerLevel level, Villager villager, ColonyData.Pen pen) {
-        if (hasCargo(villager) && (cargoFull(villager) || !colony().workTime(level))) {
+        if (hasCargo(villager) && (cargoFull(villager) || !onShift(level, villager))) {
             phase = "deposit";
             return;
         }
-        if (!colony().workTime(level)) {
+        if (!onShift(level, villager)) {
             wait = 100;
             return;
         }

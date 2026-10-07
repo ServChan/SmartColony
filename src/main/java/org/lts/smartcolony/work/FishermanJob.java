@@ -56,11 +56,11 @@ public final class FishermanJob extends Job {
     }
 
     private void start(ServerLevel level, Villager villager) {
-        if (hasCargo(villager) && (cargoFull(villager) || !colony().workTime(level))) {
+        if (hasCargo(villager) && (cargoFull(villager) || !onShift(level, villager))) {
             phase = "deposit";
             return;
         }
-        if (!colony().workTime(level)) {
+        if (!onShift(level, villager)) {
             wait = 100;
             return;
         }
@@ -103,7 +103,7 @@ public final class FishermanJob extends Job {
             phase = "start";
             return;
         }
-        if (cargoFull(villager) || !colony().workTime(level)) {
+        if (cargoFull(villager) || !onShift(level, villager)) {
             phase = "deposit";
             return;
         }
