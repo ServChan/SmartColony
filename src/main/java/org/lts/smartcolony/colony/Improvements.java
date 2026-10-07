@@ -35,6 +35,9 @@ public final class Improvements {
     private static final long WALL_AFTER = 24000L * 2;
     private static final int WALL_VERSION = 6;
     private static final int MAX_RAISE = 4;
+    public static final int SHED_LENGTH = 4;
+    public static final int SHED_WIDTH = 3;
+    private static final int QUARRY_DECOR_VERSION = 2;
 
     private final Colony colony;
     private long blockedUntil;
@@ -94,9 +97,7 @@ public final class Improvements {
             colony.markDirty();
         }
         ColonyData.Mine mine = data().mine;
-        if (mine != null && mine.quarry() && !mine.decorated) {
-            mine.decorated = true;
-            fenceQuarry(level, mine);
+        if (mine != null && mine.quarry() && mine.decorVersion < QUARRY_DECOR_VERSION && decorateQuarry(level, mine)) {
             colony.markDirty();
         }
         if (data().wall == null && level.getGameTime() - lastWallAttempt >= 200 && wallWanted(level)) {
@@ -188,40 +189,147 @@ public final class Improvements {
         }
     }
 
-    private void fenceQuarry(ServerLevel level, ColonyData.Mine mine) {
-        String wood = colony.construction().preferredWood(level);
-        String fence = Ids.mc(wood + "_fence");
+    private boolean decorateQuarry(ServerLevel level, ColonyData.Mine mine) {
+        org.lts.smartcolony.core.QuarryPlan plan = (org.lts.smartcolony.core.QuarryPlan) mine.plan();
         int cx = mine.corner.x();
         int cz = mine.corner.z();
         int w = mine.width;
-        Pos gate = new Pos(mine.entrance.x(), 0, mine.entrance.z());
+        int minX = cx - SHED_LENGTH - 3;
+        int maxX = cx + w + 1;
+        int minZ = cz - SHED_WIDTH - 3;
+        int maxZ = cz + w + SHED_WIDTH + 2;
+        for (int x : new int[] {minX, maxX}) {
+            for (int z : new int[] {minZ, maxZ}) {
+                if (!WorldUtil.loaded(level, new BlockPos(x, 0, z))) {
+                    return false;
+                }
+            }
+        }
+        String wood = colony.construction().preferredWood(level);
+        String fence = Ids.mc(wood + "_fence");
+        String log = Ids.mc(wood + "_log");
+        String curb = colony.stockOf(level, id -> id.equals(Ids.mc("stone_bricks"))) > 0 ? Ids.mc("stone_bricks") : Ids.mc("cobblestone");
+        String lamp = lanternAvailable(level) ? Ids.mc("lantern") : Ids.mc("torch");
+        Pos gate = plan.entrance();
+        Pos exit = plan.ladderExit();
         int added = 0;
         for (int x = cx - 1; x <= cx + w; x++) {
             for (int z = cz - 1; z <= cz + w; z++) {
-                boolean ring = x == cx - 1 || x == cx + w || z == cz - 1 || z == cz + w;
-                if (!ring) {
+                if (x != cx - 1 && x != cx + w && z != cz - 1 && z != cz + w) {
                     continue;
                 }
-                int y = groundY(level, x, z) + 1;
-                BlockPos pos = new BlockPos(x, y, z);
-                if (!WorldUtil.loaded(level, pos) || !WorldUtil.isAirLike(level.getBlockState(pos)) || !level.getFluidState(pos.below()).isEmpty()) {
+                BlockPos base = new BlockPos(x, ringGround(level, x, z) + 1, z);
+                BlockState state = level.getBlockState(base);
+                boolean opening = x == gate.x() && z == gate.z() || x == exit.x() && z == exit.z();
+                if (opening) {
+                    if (wallMaterial(state)) {
+                        data().orders.addFirst(new ColonyData.Order(WorldUtil.pos(base), "minecraft:air", SALVAGE));
+                    }
+                    continue;
+                }
+                if (!(WorldUtil.isAirLike(state) || wallMaterial(state)) || !level.getFluidState(base.below()).isEmpty()) {
                     continue;
                 }
                 boolean corner = (x == cx - 1 || x == cx + w) && (z == cz - 1 || z == cz + w);
-                if (x == gate.x() && z == gate.z()) {
-                    continue;
+                queueOnce(base, curb);
+                if (corner) {
+                    queueOnce(base.above(), log);
+                    queueOnce(base.above(2), log);
+                    queueOnce(base.above(3), lamp);
                 } else {
-                    queue(pos, fence);
-                    if (corner) {
-                        queue(pos.above(), fence);
-                        queue(pos.above(2), "minecraft:torch");
-                    }
+                    queueOnce(base.above(), fence);
                 }
                 added++;
             }
         }
-        colony.journal(level, "fencing the quarry: " + added + " posts, a gate and corner lamps");
-        tidyQuarry(level, mine);
+        boolean shed = mine.shed != null || placeShed(level, mine, wood, log);
+        colony.journal(level, "dressing the quarry rim: " + added + " curb posts" + (shed ? " and a mine shed" : ", no flat ground for a shed"));
+        if (!mine.decorated) {
+            tidyQuarry(level, mine);
+        }
+        mine.decorated = true;
+        mine.decorVersion = QUARRY_DECOR_VERSION;
+        return true;
+    }
+
+    private boolean lanternAvailable(ServerLevel level) {
+        return colony.stockOf(level, id -> id.equals(Ids.mc("lantern"))) > 0
+                || colony.stockOf(level, id -> id.equals(Ids.mc("iron_ingot"))) > 0
+                || colony.stockOf(level, id -> id.equals(Ids.mc("iron_nugget"))) >= 8;
+    }
+
+    private static int ringGround(ServerLevel level, int x, int z) {
+        int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z) - 1;
+        int floor = y - 10;
+        while (y > floor) {
+            BlockPos pos = new BlockPos(x, y, z);
+            BlockState state = level.getBlockState(pos);
+            if (!(WorldUtil.removable(level, pos) || wallMaterial(state) || state.is(Blocks.STONE_BRICKS) || state.is(Blocks.LADDER))) {
+                break;
+            }
+            y--;
+        }
+        return y;
+    }
+
+    private boolean placeShed(ServerLevel level, ColonyData.Mine mine, String wood, String log) {
+        int minX = mine.corner.x() - SHED_LENGTH - 2;
+        for (int minZ : new int[] {mine.corner.z() - SHED_WIDTH - 1, mine.corner.z() + 2}) {
+            int[][] ground = new int[SHED_LENGTH][SHED_WIDTH];
+            int low = Integer.MAX_VALUE;
+            int high = Integer.MIN_VALUE;
+            boolean fits = true;
+            for (int i = 0; i < SHED_LENGTH && fits; i++) {
+                for (int j = 0; j < SHED_WIDTH && fits; j++) {
+                    int y = ringGround(level, minX + i, minZ + j);
+                    BlockPos floor = new BlockPos(minX + i, y, minZ + j);
+                    fits = WorldUtil.loaded(level, floor) && level.getFluidState(floor).isEmpty() && level.getFluidState(floor.above()).isEmpty()
+                            && WorldUtil.solidFloor(level, floor);
+                    ground[i][j] = y;
+                    low = Math.min(low, y);
+                    high = Math.max(high, y);
+                }
+            }
+            if (!fits || high - low > 2) {
+                continue;
+            }
+            int roof = high + 4;
+            for (int i : new int[] {0, SHED_LENGTH - 1}) {
+                for (int j : new int[] {0, SHED_WIDTH - 1}) {
+                    for (int y = ground[i][j] + 1; y < roof; y++) {
+                        queueOnce(new BlockPos(minX + i, y, minZ + j), log);
+                    }
+                }
+            }
+            String slab = Ids.mc(wood + "_slab");
+            for (int i = 0; i < SHED_LENGTH; i++) {
+                for (int j = 0; j < SHED_WIDTH; j++) {
+                    queueOnce(new BlockPos(minX + i, roof, minZ + j), slab);
+                }
+            }
+            boolean north = minZ < mine.corner.z();
+            int back = north ? 0 : SHED_WIDTH - 1;
+            int front = north ? SHED_WIDTH - 1 : 0;
+            String facing = north ? "south" : "north";
+            queueOnce(new BlockPos(minX + 1, ground[1][back] + 1, minZ + back), "minecraft:barrel[facing=" + facing + "]");
+            queueOnce(new BlockPos(minX + 2, ground[2][back] + 1, minZ + back), "minecraft:crafting_table");
+            queueOnce(new BlockPos(minX + 1, ground[1][front] + 1, minZ + front), "minecraft:composter");
+            mine.shed = new Pos(minX, high, minZ);
+            return true;
+        }
+        return false;
+    }
+
+    public boolean quarryRim(BlockPos pos) {
+        ColonyData.Mine mine = data().mine;
+        if (mine == null || !mine.quarry()) {
+            return false;
+        }
+        int cx = mine.corner.x();
+        int cz = mine.corner.z();
+        int w = mine.width;
+        return pos.getX() >= cx - 1 && pos.getX() <= cx + w && pos.getZ() >= cz - 1 && pos.getZ() <= cz + w
+                && (pos.getX() == cx - 1 || pos.getX() == cx + w || pos.getZ() == cz - 1 || pos.getZ() == cz + w);
     }
 
     private void tidyQuarry(ServerLevel level, ColonyData.Mine mine) {
@@ -1070,7 +1178,8 @@ public final class Improvements {
                 return claim(level, order, pos, target);
             }
             boolean replace = WALL.equals(order.tag) && wallMaterial(current)
-                    || Renovation.TAG.equals(order.tag) && WorldUtil.naturalGround(current);
+                    || Renovation.TAG.equals(order.tag) && WorldUtil.naturalGround(current)
+                    || DECOR.equals(order.tag) && wallMaterial(current) && quarryRim(pos);
             if (target == null || matches(current, target)
                     || (!replace && !WorldUtil.isAirLike(current) && !WorldUtil.removable(level, pos))) {
                 orders.remove(i);

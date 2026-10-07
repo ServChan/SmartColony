@@ -369,7 +369,9 @@ public final class Colony {
                 && p.x() <= data.mine.corner.x() + data.mine.width && p.z() <= data.mine.corner.z() + data.mine.width) {
             return true;
         }
-        return false;
+        Pos shed = data.mine != null ? data.mine.shed : null;
+        return shed != null && p.x() >= shed.x() - 1 && p.x() <= shed.x() + Improvements.SHED_LENGTH
+                && p.z() >= shed.z() - 1 && p.z() <= shed.z() + Improvements.SHED_WIDTH;
     }
 
     public boolean isProtectedAnimal(Animal animal) {
