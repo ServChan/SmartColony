@@ -57,12 +57,12 @@ public final class MinerJob extends Job {
 
     @Override
     protected boolean keep(ItemStack stack) {
-        return tools().test(stack) || stack.is(Items.TORCH);
+        return tools().test(stack) || stack.is(Items.TORCH) || stack.is(Items.LADDER);
     }
 
     @Override
     protected boolean hasCargo(Villager villager) {
-        return Inv.count(villager, stack -> !Tools.ANY_TOOL.test(stack) && !stack.is(Items.TORCH) && !stack.is(Items.COBBLESTONE) && !ration(stack)) > 0;
+        return Inv.count(villager, stack -> !Tools.ANY_TOOL.test(stack) && !stack.is(Items.TORCH) && !stack.is(Items.LADDER) && !stack.is(Items.COBBLESTONE) && !ration(stack)) > 0;
     }
 
     public boolean underground(Villager villager) {
@@ -144,7 +144,10 @@ public final class MinerJob extends Job {
             phase = "start";
             return;
         }
-        if (Inv.count(villager, Ids.mc("torch")) < 4 || Inv.count(villager, Ids.mc("cobblestone")) < 8) {
+        ColonyData.Mine current = colony().data().mine;
+        int ladderGap = ladderGap(level, villager, current);
+        boolean fetchLadders = ladderGap > 0 && level.getGameTime() >= ladderRetry;
+        if (Inv.count(villager, Ids.mc("torch")) < 4 || Inv.count(villager, Ids.mc("cobblestone")) < 8 || fetchLadders) {
             if (!atDepot(level, villager)) {
                 if (goDepot(level, villager) == Mover.Result.FAILED) {
                     wait = 200;
@@ -154,6 +157,15 @@ public final class MinerJob extends Job {
             }
             supply(level, villager, Ids.mc("torch"), 4, 16);
             supply(level, villager, Ids.mc("cobblestone"), 8, 24);
+            if (fetchLadders) {
+                int have = supply(level, villager, Ids.mc("ladder"), Math.min(ladderGap, 6), Math.min(ladderGap, 12));
+                if (have < ladderGap) {
+                    ladderRetry = level.getGameTime() + 6000;
+                }
+            }
+        }
+        if (current != null && current.quarry()) {
+            furnishQuarry(level, villager, current);
         }
         if (cargoFull(villager)) {
             phase = "deposit";
@@ -369,7 +381,9 @@ public final class MinerJob extends Job {
             }
         }
         if (cell.kind() == MinePlan.Kind.QUARRY) {
-            lightQuarry(level, villager, mine, cell);
+            if (cell.index() % ((org.lts.smartcolony.core.QuarryPlan) mine.plan()).perLayer() == 0) {
+                furnishQuarry(level, villager, mine);
+            }
         } else if (level.getBrightness(LightLayer.BLOCK, feet) < 4 && level.getBrightness(LightLayer.SKY, feet) < 8
                 && Inv.count(villager, Ids.mc("torch")) > 0 && Placer.placeTorch(level, villager, feet)) {
             Inv.remove(villager, stack -> stack.is(Items.TORCH), 1);
@@ -425,35 +439,74 @@ public final class MinerJob extends Job {
         colony().markDirty();
     }
 
-    private void lightQuarry(ServerLevel level, Villager villager, ColonyData.Mine mine, MinePlan.Cell cell) {
+    private long ladderRetry;
+
+    private int completedLayers(ColonyData.Mine mine, org.lts.smartcolony.core.QuarryPlan quarry) {
+        return Math.min(quarry.layers(), mine.progress / quarry.perLayer());
+    }
+
+    private int ladderGap(ServerLevel level, Villager villager, ColonyData.Mine mine) {
+        if (mine == null || !mine.quarry()) {
+            return 0;
+        }
         org.lts.smartcolony.core.QuarryPlan quarry = (org.lts.smartcolony.core.QuarryPlan) mine.plan();
-        int layer = quarry.layerOf(cell.index());
-        if (layer < 2 || layer % 4 != 0 || cell.index() % quarry.perLayer() != 0) {
-            return;
+        int missing = 0;
+        for (org.lts.smartcolony.core.Pos cell : quarry.ladderCells(completedLayers(mine, quarry))) {
+            if (ladderWanted(level, quarry, cell)) {
+                missing++;
+            }
+        }
+        return Math.max(0, missing - Inv.count(villager, Ids.mc("ladder")));
+    }
+
+    private boolean ladderWanted(ServerLevel level, org.lts.smartcolony.core.QuarryPlan quarry, org.lts.smartcolony.core.Pos cell) {
+        BlockPos at = WorldUtil.bp(cell);
+        return WorldUtil.loaded(level, at) && WorldUtil.isAirLike(level.getBlockState(at)) && ladderState().canSurvive(level, at);
+    }
+
+    private static BlockState ladderState() {
+        return net.minecraft.world.level.block.Blocks.LADDER.defaultBlockState()
+                .setValue(net.minecraft.world.level.block.LadderBlock.FACING, Direction.EAST);
+    }
+
+    private void furnishQuarry(ServerLevel level, Villager villager, ColonyData.Mine mine) {
+        org.lts.smartcolony.core.QuarryPlan quarry = (org.lts.smartcolony.core.QuarryPlan) mine.plan();
+        int completed = completedLayers(mine, quarry);
+        for (org.lts.smartcolony.core.Pos cell : quarry.ladderCells(completed)) {
+            if (Inv.count(villager, Ids.mc("ladder")) == 0) {
+                break;
+            }
+            if (ladderWanted(level, quarry, cell)) {
+                Placer.place(level, villager, WorldUtil.bp(cell), ladderState());
+                Inv.remove(villager, stack -> stack.is(Items.LADDER), 1);
+                colony().data().bump("ladders_mine", 1);
+            }
         }
         int w = quarry.width();
         int cx = quarry.corner().x();
         int cz = quarry.corner().z();
-        int y = quarry.layerY(layer) + 1;
         int mid = w / 2;
         int[][] spots = {{cx + mid, cz, 0, -1}, {cx + mid, cz + w - 1, 0, 1}, {cx, cz + mid, -1, 0}, {cx + w - 1, cz + mid, 1, 0}};
-        for (int[] spot : spots) {
-            if (Inv.count(villager, Ids.mc("torch")) == 0) {
-                return;
-            }
-            BlockPos at = new BlockPos(spot[0], y, spot[1]);
-            BlockPos wall = at.offset(spot[2], 0, spot[3]);
-            Direction facing = Direction.getApproximateNearest(-spot[2], 0, -spot[3]);
-            if (facing == null || !WorldUtil.isAirLike(level.getBlockState(at))
-                    || !level.getBlockState(wall).isFaceSturdy(level, wall, facing)) {
-                continue;
-            }
-            BlockState torch = net.minecraft.world.level.block.Blocks.WALL_TORCH.defaultBlockState()
-                    .setValue(net.minecraft.world.level.block.WallTorchBlock.FACING, facing);
-            if (torch.canSurvive(level, at)) {
-                Placer.place(level, villager, at, torch);
-                Inv.remove(villager, stack -> stack.is(Items.TORCH), 1);
-                colony().data().bump("torches_mine", 1);
+        for (int layer = 4; layer <= completed; layer += 4) {
+            int y = quarry.layerY(layer) + 1;
+            for (int[] spot : spots) {
+                if (Inv.count(villager, Ids.mc("torch")) == 0) {
+                    return;
+                }
+                BlockPos at = new BlockPos(spot[0], y, spot[1]);
+                BlockPos wall = at.offset(spot[2], 0, spot[3]);
+                Direction facing = Direction.getApproximateNearest(-spot[2], 0, -spot[3]);
+                if (facing == null || !WorldUtil.loaded(level, at) || !WorldUtil.isAirLike(level.getBlockState(at))
+                        || !level.getBlockState(wall).isFaceSturdy(level, wall, facing)) {
+                    continue;
+                }
+                BlockState torch = net.minecraft.world.level.block.Blocks.WALL_TORCH.defaultBlockState()
+                        .setValue(net.minecraft.world.level.block.WallTorchBlock.FACING, facing);
+                if (torch.canSurvive(level, at)) {
+                    Placer.place(level, villager, at, torch);
+                    Inv.remove(villager, stack -> stack.is(Items.TORCH), 1);
+                    colony().data().bump("torches_mine", 1);
+                }
             }
         }
     }

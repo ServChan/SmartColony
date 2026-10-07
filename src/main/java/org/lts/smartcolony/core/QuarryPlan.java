@@ -138,6 +138,39 @@ public final class QuarryPlan implements DigPlan {
         return route;
     }
 
+    public int[] ladderColumn() {
+        return perimeter.getLast();
+    }
+
+    public int ladderLayers() {
+        return layers < perimeter.size() ? layers : perimeter.size() - 3;
+    }
+
+    public Pos ladderCell(int layer) {
+        int[] column = ladderColumn();
+        return new Pos(corner.x() + column[0], layerY(layer), corner.z() + column[1]);
+    }
+
+    public Pos ladderWall(int layer) {
+        return ladderCell(layer).offset(-1, 0, 0);
+    }
+
+    public Pos ladderExit() {
+        int[] column = ladderColumn();
+        return new Pos(corner.x() - 1, corner.y() + 1, corner.z() + column[1]);
+    }
+
+    public List<Pos> ladderCells(int completedLayers) {
+        int done = Math.min(completedLayers, layers);
+        List<Pos> cells = new ArrayList<>();
+        for (int layer = 0; layer < ladderLayers(); layer++) {
+            if (layer + 2 <= done || done >= layers) {
+                cells.add(ladderCell(layer));
+            }
+        }
+        return cells;
+    }
+
     private void check(int index) {
         if (index < 0 || index >= size()) {
             throw new IndexOutOfBoundsException(index);

@@ -61,4 +61,68 @@ class QuarryPlanTest {
         assertEquals(entrance, route.getFirst());
         assertEquals(plan.standFor(plan.size() - 1), route.getLast());
     }
+
+    @Test
+    void ladderColumnNeverCollidesWithStepsOrWorkingCells() {
+        int[][] shapes = {{7, 6}, {7, 23}, {7, 24}, {7, 40}, {7, 50}, {5, 30}, {4, 20}};
+        for (int[] shape : shapes) {
+            QuarryPlan plan = new QuarryPlan(new Pos(100, 70, 200), shape[0], shape[1]);
+            Set<String> steps = new HashSet<>();
+            for (int layer = 0; layer < plan.layers(); layer++) {
+                steps.add(key(plan.step(layer)));
+            }
+            List<Pos> all = plan.ladderCells(plan.layers());
+            assertEquals(plan.ladderLayers(), all.size());
+            Pos exit = plan.ladderExit();
+            for (int layer = 0; layer < plan.ladderLayers(); layer++) {
+                Pos cell = plan.ladderCell(layer);
+                assertEquals(plan.layerY(layer), cell.y());
+                assertEquals(100, cell.x(), "ladder must hug the west wall");
+                assertTrue(plan.inside(cell));
+                assertFalse(steps.contains(key(cell)), "ladder on a step block at layer " + layer);
+                assertEquals(cell.z(), plan.ladderWall(layer).z());
+                assertEquals(99, plan.ladderWall(layer).x());
+                assertFalse(plan.inside(plan.ladderWall(layer)));
+                assertEquals(exit.z(), cell.z());
+                assertEquals(99, exit.x());
+                assertFalse(exit.equals(plan.entrance()));
+                assertTrue(adjacent(exit, plan.entrance()));
+                assertTrue(layer == 0 || plan.ladderCell(layer - 1).y() == cell.y() + 1);
+            }
+            for (int index = 0; index < plan.size(); index++) {
+                int layer = plan.layerOf(index);
+                Set<String> ladders = new HashSet<>();
+                for (Pos cell : plan.ladderCells(layer)) {
+                    ladders.add(key(cell));
+                }
+                Pos stand = plan.standFor(index);
+                assertFalse(ladders.contains(key(stand)), "stand on ladder " + stand);
+                assertFalse(ladders.contains(key(stand.offset(0, 1, 0))), "head in ladder " + stand);
+                assertFalse(ladders.contains(key(plan.cell(index).feet())), "digging a ladder cell");
+                assertFalse(ladders.contains(key(plan.stepFeet(layer))));
+                assertFalse(ladders.contains(key(plan.stepFeet(layer).offset(0, 1, 0))));
+                if (layer > 0) {
+                    assertFalse(ladders.contains(key(plan.stepFeet(layer - 1))));
+                    assertFalse(ladders.contains(key(plan.stepFeet(layer - 1).offset(0, 1, 0))));
+                }
+            }
+            for (int index = 0; index < plan.size(); index += 7) {
+                for (Pos waypoint : plan.routeTo(index)) {
+                    for (Pos cell : plan.ladderCells(plan.layerOf(index))) {
+                        assertFalse(waypoint.equals(cell) || waypoint.offset(0, 1, 0).equals(cell), "route through ladder " + waypoint);
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    void ladderIsOnlyOfferedBelowFinishedLayers() {
+        QuarryPlan plan = new QuarryPlan(new Pos(0, 64, 0), 7, 40);
+        assertTrue(plan.ladderCells(0).isEmpty());
+        assertTrue(plan.ladderCells(1).isEmpty());
+        assertEquals(1, plan.ladderCells(2).size());
+        assertEquals(plan.ladderCell(0), plan.ladderCells(2).getFirst());
+        assertEquals(plan.ladderLayers(), plan.ladderCells(40).size());
+    }
 }

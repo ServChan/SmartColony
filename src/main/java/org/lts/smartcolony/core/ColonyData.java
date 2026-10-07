@@ -128,6 +128,8 @@ public final class ColonyData {
         public Pos corner;
         public int width;
         public boolean decorated;
+        public int decorVersion;
+        public Pos shed;
 
         public boolean quarry() {
             return "quarry".equals(type) && corner != null;
