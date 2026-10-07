@@ -25,11 +25,9 @@
     "r": "minecraft:wall_torch[facing=north]",
     "q": "minecraft:wall_torch[facing=east]",
     "p": "minecraft:wall_torch[facing=west]",
+    "T": "minecraft:torch",
     "K": "minecraft:crafting_table",
     "R": "minecraft:barrel[facing=up]",
-    "M": "minecraft:lantern[hanging=false]",
-    "A": "minecraft:anvil[facing=east]",
-    "a": "minecraft:smithing_table",
     "&": "minecraft:furnace[facing=north]",
     "W": "minecraft:barrel[facing=north]",
     "+": "minecraft:$wood_slab[type=bottom]"
@@ -42,7 +40,7 @@
       " CPPPPPPPC ",
       " CPPPPPCCC ",
       " CPPPPPCCC ",
-      " CPPPPPCCC ",
+      " CPPPPCCCC ",
       " CCCCCCCCC ",
       "           "
     ],
@@ -51,9 +49,9 @@
       ".F.......F.",
       ".LCCCDCCCL.",
       ".CW......C.",
-      "ZCW....A+C.",
+      "ZCW.....+C.",
       "ZC......RCR",
-      "ZCWaK..&&C.",
+      "ZCW.K.&&&C.",
       ".LCCCCCCCL.",
       "..........."
     ],
@@ -70,7 +68,7 @@
     ],
     [
       "...........",
-      ".M.......M.",
+      ".T.......T.",
       ".LXXXXXXXL.",
       ".Z.t....pZ.",
       ".Z.......Z.",

@@ -23,7 +23,7 @@
   "smartcolony.building.guard_post": "пост стражи",
   "smartcolony.building.pen": "загон",
   "smartcolony.building.house_garden": "дом с двором",
-  "smartcolony.building.blacksmith": "кузница",
+  "smartcolony.building.blacksmith": "Кузня",
   "smartcolony.building.market": "рыночная площадь",
   "smartcolony.building.barn": "амбар",
   "smartcolony.building.watchtower": "сторожевая башня",
@@ -128,5 +128,11 @@
   "smartcolony.ui.kindergarten.no": "Детского сада пока нет, дети гуляют где хотят",
   "smartcolony.role.fletcher": "Мастер луков",
   "smartcolony.role.smith": "Кузнец",
-  "smartcolony.role.cook": "Повар"
+  "smartcolony.role.cook": "Повар",
+  "smartcolony.building.fletcher_hut": "Хижина лучника",
+  "smartcolony.building.bakery": "Пекарня",
+  "smartcolony.chat.iron_age": "Начался железный век: кузня плавит железо.",
+  "smartcolony.ui.age": "Эпоха: %s",
+  "smartcolony.age.stone": "Каменный век",
+  "smartcolony.age.iron": "Железный век"
 }

@@ -25,6 +25,7 @@ import org.lts.smartcolony.core.Role;
 
 public final class CrafterJob extends Job {
     private static final int SCAN_RADIUS = 20;
+    private static final Set<String> WORKPLACES = Set.of("workshop", "fletchery", "bakery");
 
     private final Role role;
     private CrafterNeeds.Want order;
@@ -261,7 +262,7 @@ public final class CrafterJob extends Job {
         boolean smelt = order != null && order.smelt();
         return switch (role) {
             case FLETCHER -> List.of(Blocks.FLETCHING_TABLE, Blocks.CRAFTING_TABLE);
-            case SMITH -> List.of(Blocks.SMITHING_TABLE, Blocks.ANVIL, Blocks.CRAFTING_TABLE);
+            case SMITH -> smelt ? List.of(Blocks.FURNACE, Blocks.BLAST_FURNACE) : List.of(Blocks.SMITHING_TABLE, Blocks.ANVIL, Blocks.CRAFTING_TABLE);
             default -> smelt ? List.of(Blocks.SMOKER, Blocks.FURNACE) : List.of(Blocks.CRAFTING_TABLE);
         };
     }
@@ -279,7 +280,7 @@ public final class CrafterJob extends Job {
         List<BlockPos[]> regions = new java.util.ArrayList<>();
         regions.add(new BlockPos[]{depot.offset(-SCAN_RADIUS, -3, -SCAN_RADIUS), depot.offset(SCAN_RADIUS, 5, SCAN_RADIUS)});
         for (ColonyData.Building building : colony().data().buildings) {
-            if (building.kind.equals("workshop")) {
+            if (WORKPLACES.contains(building.kind)) {
                 regions.add(new BlockPos[]{
                         new BlockPos(building.min.x(), building.min.y(), building.min.z()),
                         new BlockPos(building.max.x(), building.max.y(), building.max.z())});

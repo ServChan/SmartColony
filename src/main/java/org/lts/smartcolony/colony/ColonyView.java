@@ -43,7 +43,8 @@ public record ColonyView(
         int wallTotal,
         List<String> sites,
         String advisorState,
-        String advisorText) {
+        String advisorText,
+        String age) {
 
     public record RoleCount(String role, int count) {
     }
@@ -140,6 +141,6 @@ public record ColonyView(
                 data.wall == null ? null : data.wall.material, data.wall == null ? 0 : data.wall.built,
                 data.wall == null ? 0 : data.wall.total, sites, colony.advisor().active() || !colony.advisor().state().equals("off")
                         ? colony.advisor().state() : "off",
-                colony.advisor().state().equals("error") ? colony.advisor().error() : colony.advisor().thoughts());
+                colony.advisor().state().equals("error") ? colony.advisor().error() : colony.advisor().thoughts(), data.age);
     }
 }

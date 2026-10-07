@@ -23,7 +23,7 @@
   "smartcolony.building.guard_post": "puesto de guardia",
   "smartcolony.building.pen": "corral",
   "smartcolony.building.house_garden": "casa con patio",
-  "smartcolony.building.blacksmith": "herrería",
+  "smartcolony.building.blacksmith": "Fragua",
   "smartcolony.building.market": "plaza del mercado",
   "smartcolony.building.barn": "granero",
   "smartcolony.building.watchtower": "torre de vigía",
@@ -128,5 +128,11 @@
   "smartcolony.ui.kindergarten.no": "Guardería: aún no hay, los niños andan libres",
   "smartcolony.role.fletcher": "Arquero artesano",
   "smartcolony.role.smith": "Herrero",
-  "smartcolony.role.cook": "Cocinero"
+  "smartcolony.role.cook": "Cocinero",
+  "smartcolony.building.fletcher_hut": "Cabaña del flechero",
+  "smartcolony.building.bakery": "Panadería",
+  "smartcolony.chat.iron_age": "Ha comenzado la edad del hierro: la fragua funde hierro.",
+  "smartcolony.ui.age": "Edad: %s",
+  "smartcolony.age.stone": "Edad de Piedra",
+  "smartcolony.age.iron": "Edad del Hierro"
 }

@@ -34,6 +34,8 @@ public final class ColonyData {
     public List<Pos> plantedTrees = new ArrayList<>();
     public List<Order> orders = new ArrayList<>();
     public Map<String, Integer> renovated = new LinkedHashMap<>();
+    public String age = Tech.STONE_AGE;
+    public boolean forgeUpgraded;
     public boolean aiOff;
     public Wall wall;
     public boolean villageSurveyed;

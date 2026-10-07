@@ -14,6 +14,8 @@ public final class CrafterNeeds {
         }
     }
 
+    private static final int IRON_STOCK_TARGET = 64;
+    private static final int ARMOR_INGOTS = 24;
     private static final List<String> TIERS = List.of("iron", "stone", "wooden");
     private static final List<String> ARMOR = List.of("helmet", "chestplate", "leggings", "boots");
     private static final List<String> RAW_FOOD = List.of("cod", "salmon", "beef", "porkchop", "mutton", "chicken", "rabbit");
@@ -96,6 +98,10 @@ public final class CrafterNeeds {
     private static List<Want> smith(Context ctx) {
         List<Want> result = new ArrayList<>();
         Stock stock = ctx.stock();
+        int rawIron = stock.get(Ids.mc("raw_iron"));
+        if (stock.has(Tech.FORGE) && rawIron > 0 && stock.get(Ids.mc("iron_ingot")) < IRON_STOCK_TARGET) {
+            result.add(new Want(Ids.mc("iron_ingot"), Math.min(8, rawIron), true));
+        }
         int swordsMissing = ctx.unarmedGuards() - owned(stock, "sword");
         if (swordsMissing > 0) {
             String sword = bestTool(stock, "sword");
@@ -110,7 +116,7 @@ public final class CrafterNeeds {
             result.add(new Want(Ids.mc("shears"), 1, false));
         }
         int guards = ctx.roleCount(Role.GUARD);
-        if (guards > 0 && stock.get(Ids.mc("iron_ingot")) >= 40) {
+        if (guards > 0 && stock.get(Ids.mc("iron_ingot")) >= ARMOR_INGOTS) {
             for (String piece : ARMOR) {
                 if (stock.get(Ids.mc("iron_" + piece)) < guards) {
                     result.add(new Want(Ids.mc("iron_" + piece), 1, false));

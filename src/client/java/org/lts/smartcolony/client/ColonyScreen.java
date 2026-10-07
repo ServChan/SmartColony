@@ -171,6 +171,9 @@ public final class ColonyScreen extends Screen {
     private int overview(GuiGraphicsExtractor graphics, int x, int y, int w) {
         graphics.text(font, Component.translatable("smartcolony.ui.population", view.members(), view.children(), view.beds(),
                 view.buildings()), x, y, TEXT_NORMAL, false);
+        y += 14;
+        graphics.text(font, Component.translatable("smartcolony.ui.age", Component.translatable("smartcolony.age." + view.age())), x, y,
+                "iron".equals(view.age()) ? STATUS_ON : TEXT_DIM, false);
         y += 16;
         if (view.children() > 0) {
             graphics.text(font, Component.translatable(view.kindergarten() ? "smartcolony.ui.kindergarten.yes" : "smartcolony.ui.kindergarten.no"),

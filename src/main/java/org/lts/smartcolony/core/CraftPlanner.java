@@ -71,6 +71,9 @@ public final class CraftPlanner {
         visiting.add(item);
         try {
             for (Recipe recipe : recipes) {
+                if (!work.has(recipe.requires())) {
+                    continue;
+                }
                 Stock snapshot = work.copy();
                 int stepCount = steps.size();
                 int batches = (missing + recipe.count() - 1) / recipe.count();

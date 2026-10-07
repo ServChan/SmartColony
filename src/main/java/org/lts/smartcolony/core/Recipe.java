@@ -3,7 +3,7 @@ package org.lts.smartcolony.core;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-public record Recipe(String output, int count, Map<String, Integer> inputs, boolean smelting) {
+public record Recipe(String output, int count, Map<String, Integer> inputs, boolean smelting, String requires) {
     public static final String GROUP_PLANKS = "#planks";
     public static final String GROUP_LOGS = "#logs";
     public static final String GROUP_COAL = "#coal";
@@ -12,6 +12,11 @@ public record Recipe(String output, int count, Map<String, Integer> inputs, bool
 
     public Recipe {
         inputs = java.util.Collections.unmodifiableMap(new LinkedHashMap<>(inputs));
+        requires = requires == null ? "" : requires;
+    }
+
+    public Recipe(String output, int count, Map<String, Integer> inputs, boolean smelting) {
+        this(output, count, inputs, smelting, "");
     }
 
     public static boolean isGroup(String token) {

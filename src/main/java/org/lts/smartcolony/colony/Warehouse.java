@@ -87,9 +87,18 @@ public final class Warehouse {
                 }
             }
         }
+        stock.grant(org.lts.smartcolony.core.Tech.capabilities(blueprints()));
         cached = stock;
         cachedAt = now;
         return stock;
+    }
+
+    private List<String> blueprints() {
+        List<String> ids = new ArrayList<>();
+        for (ColonyData.Building building : data.buildings) {
+            ids.add(building.blueprint);
+        }
+        return ids;
     }
 
     public Map<Category, Double> fill(ServerLevel level) {
