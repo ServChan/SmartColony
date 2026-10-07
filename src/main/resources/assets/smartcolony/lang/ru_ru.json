@@ -200,5 +200,13 @@
   "smartcolony.ui.graduates": "Выпускники: %s",
   "smartcolony.ui.barracks": "Казарма: тренировок %s, выпущено стрел %s, получено очков навыка %s",
   "smartcolony.building.dock": "Причал",
-  "smartcolony.building.fisher_hut": "Хижина рыбака"
+  "smartcolony.building.fisher_hut": "Хижина рыбака",
+  "smartcolony.role.medic": "Лекарь",
+  "smartcolony.building.infirmary_1": "лазарет: навес первой помощи",
+  "smartcolony.building.infirmary_2": "лазарет: дом со столом лекаря",
+  "smartcolony.building.infirmary_3": "лазарет: больница с детским уголком",
+  "smartcolony.chat.infirmary_stage": "Лазарет достроен: этап %s из %s.",
+  "smartcolony.ui.hospital": "Лазарет: этап %s из %s · раненых %s · вылечено %s · спасено жизней %s",
+  "smartcolony.ui.hospital_none": "Лазарет: ещё не построен · от %s жителей или после первой потери",
+  "smartcolony.ui.hospital_cured": "Вылечено зомби-жителей: %s"
 }

@@ -69,6 +69,7 @@ public final class Colony {
     private final Set<UUID> ownedNames = new java.util.HashSet<>();
     private EnumMap<Role, Integer> desired = new EnumMap<>(Role.class);
     private final IronAge ironAge;
+    private final Ward ward;
     private boolean dirty;
     private long ticks;
     private long lastStorageWarning;
@@ -93,6 +94,7 @@ public final class Colony {
         this.graveyard = new Graveyard(this);
         this.advisor = new org.lts.smartcolony.ai.Advisor(this);
         this.ironAge = new IronAge(this);
+        this.ward = new Ward(this);
         for (Map.Entry<String, ColonyData.Member> entry : data.members.entrySet()) {
             UUID uuid = UUID.fromString(entry.getKey());
             Colonist colonist = new Colonist(uuid, this);
@@ -170,6 +172,10 @@ public final class Colony {
 
     public Graveyard graveyard() {
         return graveyard;
+    }
+
+    public Ward ward() {
+        return ward;
     }
 
     public Trader trader() {
@@ -698,6 +704,7 @@ public final class Colony {
             }
         }
         Nursery.tick(level, this);
+        ward.tick(level);
         survey.tick(level);
         recovery.tick(level);
         outposts.tick(level, ticks);
@@ -877,9 +884,10 @@ public final class Colony {
                 org.lts.smartcolony.core.CrafterNeeds.pending(Role.FLETCHER, crafting),
                 org.lts.smartcolony.core.CrafterNeeds.pending(Role.SMITH, crafting),
                 org.lts.smartcolony.core.CrafterNeeds.pending(Role.COOK, crafting), Schoolhouse.wantsTeacher(level, this));
-        desired = RoleAllocator.withTargets(
+        EnumMap<Role, Integer> baseline = RoleAllocator.reserveMedics(
                 org.lts.smartcolony.core.TavernRules.withInnkeeper(RoleAllocator.desired(needs), tavern.built(), adults),
-                advisor.roleTargets(level.getGameTime()), adults);
+                org.lts.smartcolony.core.Hospital.medicsFor(adults, ward.stage() > 0, SmartColonyConfig.get().adultsPerMedic));
+        desired = RoleAllocator.withTargets(baseline, advisor.roleTargets(level.getGameTime()), adults);
         desired = RoleAllocator.withUndertaker(desired, graveyard.undertakersWanted(level), adults);
         desired = org.lts.smartcolony.core.PorterPlan.settle(desired, outposts.porterDemand(level));
         Map<String, Role> current = new LinkedHashMap<>();

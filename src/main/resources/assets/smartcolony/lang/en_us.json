@@ -200,5 +200,13 @@
   "smartcolony.ui.graduates": "Graduates: %s",
   "smartcolony.ui.barracks": "Barracks: %s training sessions, %s arrows shot, %s skill points earned",
   "smartcolony.building.dock": "Dock",
-  "smartcolony.building.fisher_hut": "Fisher hut"
+  "smartcolony.building.fisher_hut": "Fisher hut",
+  "smartcolony.role.medic": "Medic",
+  "smartcolony.building.infirmary_1": "infirmary: first-aid shelter",
+  "smartcolony.building.infirmary_2": "infirmary: house with a medic station",
+  "smartcolony.building.infirmary_3": "infirmary: hospital with a children's corner",
+  "smartcolony.chat.infirmary_stage": "The infirmary is complete: stage %s of %s.",
+  "smartcolony.ui.hospital": "Infirmary: stage %s of %s · wounded %s · healed %s · lives saved %s",
+  "smartcolony.ui.hospital_none": "Infirmary: not built yet · from %s villagers or after the first loss",
+  "smartcolony.ui.hospital_cured": "Zombie villagers cured: %s"
 }

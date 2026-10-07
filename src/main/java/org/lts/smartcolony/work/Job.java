@@ -50,6 +50,10 @@ public abstract class Job {
         return Colonist.bedless(villager) && Colonist.NIGHT_ROLES.contains(role());
     }
 
+    public boolean ignoresDanger() {
+        return false;
+    }
+
     public void onRelease(ServerLevel level, Villager villager) {
         phase = "start";
         endDrop();

@@ -200,5 +200,13 @@
   "smartcolony.ui.graduates": "Graduados: %s",
   "smartcolony.ui.barracks": "Cuartel: %s entrenamientos, %s flechas disparadas, %s puntos de habilidad ganados",
   "smartcolony.building.dock": "Embarcadero",
-  "smartcolony.building.fisher_hut": "Cabaña de pescador"
+  "smartcolony.building.fisher_hut": "Cabaña de pescador",
+  "smartcolony.role.medic": "Médico",
+  "smartcolony.building.infirmary_1": "enfermería: refugio de primeros auxilios",
+  "smartcolony.building.infirmary_2": "enfermería: casa con puesto de médico",
+  "smartcolony.building.infirmary_3": "enfermería: hospital con rincón infantil",
+  "smartcolony.chat.infirmary_stage": "Enfermería terminada: etapa %s de %s.",
+  "smartcolony.ui.hospital": "Enfermería: etapa %s de %s · heridos %s · curados %s · vidas salvadas %s",
+  "smartcolony.ui.hospital_none": "Enfermería: aún sin construir · desde %s aldeanos o tras la primera baja",
+  "smartcolony.ui.hospital_cured": "Aldeanos zombi curados: %s"
 }

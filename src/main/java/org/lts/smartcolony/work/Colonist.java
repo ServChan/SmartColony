@@ -24,8 +24,16 @@ public final class Colonist {
     private String releaseReason = "";
     private long lastDangerCheck;
 
+    public void hold(ServerLevel level, Villager villager, long until, String reason) {
+        releasedUntil = until;
+        releaseReason = reason;
+        if (villager != null && isControlled(villager)) {
+            release(level, villager, reason);
+        }
+    }
+
     public void hide(ServerLevel level, long until) {
-        if (role == Role.GUARD) {
+        if (role == Role.GUARD || role == Role.MEDIC) {
             return;
         }
         releasedUntil = Math.max(releasedUntil, until);
@@ -129,7 +137,7 @@ public final class Colonist {
         if (villager.isUnderWater() && villager.getAirSupply() < villager.getMaxAirSupply() / 3) {
             surface(level, villager);
         }
-        if (role != Role.GUARD && now - lastDangerCheck >= 10) {
+        if (role != Role.GUARD && !job.ignoresDanger() && now - lastDangerCheck >= 10) {
             lastDangerCheck = now;
             if (inDanger(level, villager) && !trappedUnderground(level, villager)) {
                 releasedUntil = now + 120;
@@ -143,7 +151,7 @@ public final class Colonist {
                 && releasedUntil <= now
                 && !job.idling(level)
                 && job.wantsControl(level, villager);
-        if (villager.isSleeping() && role != Role.GUARD) {
+        if (villager.isSleeping() && role != Role.GUARD && role != Role.MEDIC) {
             want = false;
         }
         if (!want && role != Role.GUARD && !villager.isBaby() && villager.isAlive() && !villager.isSleeping()

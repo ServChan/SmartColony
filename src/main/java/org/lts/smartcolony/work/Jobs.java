@@ -22,6 +22,7 @@ public final class Jobs {
             case INNKEEPER -> new InnkeeperJob(colonist);
             case TEACHER -> new TeacherJob(colonist);
             case PORTER -> new PorterJob(colonist);
+            case MEDIC -> new MedicJob(colonist);
             case IDLE -> new IdleJob(colonist);
         };
     }

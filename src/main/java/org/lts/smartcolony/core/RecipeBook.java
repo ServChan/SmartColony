@@ -58,6 +58,13 @@ public final class RecipeBook {
         craft(Ids.mc("composter"), 1, Recipe.GROUP_WOODEN_SLAB, 7);
         craft(Ids.mc("iron_ingot"), 9, Ids.mc("iron_block"), 1);
         craft(Ids.mc("bread"), 1, Ids.mc("wheat"), 3);
+        craft(Ids.mc("paper"), 3, Ids.mc("sugar_cane"), 3);
+        craft(Ids.mc("bowl"), 4, Recipe.GROUP_PLANKS, 3);
+        craft(Ids.mc("suspicious_stew"), 1, Ids.mc("bowl"), 1, Recipe.GROUP_SMALL_FLOWER, 1);
+        craft(Ids.mc("white_carpet"), 3, Ids.mc("white_wool"), 2);
+        craft(Ids.mc("cauldron"), 1, Ids.mc("iron_ingot"), 7);
+        craft(Ids.mc("brewing_stand"), 1, Ids.mc("iron_ingot"), 1, Ids.mc("cobblestone"), 3, Ids.mc("stick"), 1);
+        craft(Ids.mc("golden_apple"), 1, Ids.mc("apple"), 1, Ids.mc("gold_ingot"), 8);
         craft(Ids.mc("bow"), 1, Ids.mc("stick"), 3, Ids.mc("string"), 3);
         craft(Ids.mc("arrow"), 4, Ids.mc("flint"), 1, Ids.mc("stick"), 1, Ids.mc("feather"), 1);
         craft(Ids.mc("shield"), 1, Recipe.GROUP_PLANKS, 6, Ids.mc("iron_ingot"), 1);

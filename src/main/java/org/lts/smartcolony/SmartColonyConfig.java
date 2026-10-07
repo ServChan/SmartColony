@@ -41,6 +41,8 @@ public final class SmartColonyConfig {
     public float guardRetreatHealth = 0.35f;
     public int woodSurplus = 320;
     public int[] townHallAdults = {4, 10, 18, 28, 40};
+    public int[] infirmaryAdults = {8, 16, 30};
+    public int adultsPerMedic = 15;
     public boolean guardsAttackEnemyPlayers = true;
     public boolean aiEnabled = false;
     public String aiApi = "ollama";
@@ -121,6 +123,8 @@ public final class SmartColonyConfig {
         guardRetreatHealth = Math.max(0.05f, Math.min(0.9f, guardRetreatHealth));
         woodSurplus = clamp(woodSurplus, 64, 100000);
         townHallAdults = org.lts.smartcolony.core.TownHall.thresholds(townHallAdults);
+        infirmaryAdults = org.lts.smartcolony.core.Hospital.thresholds(infirmaryAdults);
+        adultsPerMedic = clamp(adultsPerMedic, 3, 100);
         aiApi = aiApi == null || !aiApi.trim().equalsIgnoreCase("openai") ? "ollama" : "openai";
         aiEndpoint = aiEndpoint == null || aiEndpoint.isBlank() ? "http://127.0.0.1:11434" : aiEndpoint.trim();
         aiModel = aiModel == null || aiModel.isBlank() ? "gemma4:latest" : aiModel.trim();

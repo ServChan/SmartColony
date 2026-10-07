@@ -277,6 +277,8 @@ public final class Blueprint {
             item = path.replace("_wall_hanging_sign", "_hanging_sign");
         } else if (path.endsWith("_wall_sign")) {
             item = path.replace("_wall_sign", "_sign");
+        } else if (path.equals("water_cauldron")) {
+            item = "cauldron";
         } else if (path.equals("dirt_path") || path.equals("farmland") || path.equals("grass_block")) {
             item = "dirt";
         }

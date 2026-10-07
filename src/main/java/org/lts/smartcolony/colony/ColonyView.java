@@ -12,6 +12,7 @@ import net.minecraft.world.entity.npc.villager.Villager;
 import org.lts.smartcolony.SmartColonyConfig;
 import org.lts.smartcolony.core.Category;
 import org.lts.smartcolony.core.ColonyData;
+import org.lts.smartcolony.core.Hospital;
 import org.lts.smartcolony.core.ItemClassifier;
 import org.lts.smartcolony.core.Reputation;
 import org.lts.smartcolony.core.Role;
@@ -53,7 +54,9 @@ public record ColonyView(
         int townHall,
         int townHallNeeds,
         TavernInfo tavern,
-        Education education) {
+        Education education,
+        String hospital,
+        int hospitalNeeds) {
 
     public record TavernInfo(boolean built, boolean open, int meals, int travellers, int settlers, int guests) {
     }
@@ -194,6 +197,9 @@ public record ColonyView(
                 TownHall.stage(data), TownHall.stage(data) >= TownHall.STAGES ? 0
                 : TownHall.requiredAdults(TownHall.stage(data) + 1, SmartColonyConfig.get().townHallAdults),
                 new TavernInfo(colony.tavern().built(), colony.tavern().open(), colony.tavern().meals(), colony.tavern().travellers(),
-                        colony.tavern().settlers(), colony.tavern().guestCount()), education);
+                        colony.tavern().settlers(), colony.tavern().guestCount()), education,
+
+                colony.ward().summary(), Hospital.stage(data) >= Hospital.STAGES ? 0
+                : Hospital.requiredAdults(Hospital.stage(data) + 1, SmartColonyConfig.get().infirmaryAdults));
     }
 }

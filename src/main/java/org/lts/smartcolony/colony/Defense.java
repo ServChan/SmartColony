@@ -104,7 +104,7 @@ public final class Defense {
         enemies.clear();
         BlockPos center = colony.center();
         for (LivingEntity entity : level.getEntitiesOfClass(LivingEntity.class, area(16),
-                e -> e instanceof Enemy && e.isAlive() && !(e instanceof IronGolem) && hostileNow(e)
+                e -> e instanceof Enemy && e.isAlive() && !(e instanceof IronGolem) && hostileNow(e) && !colony.ward().spares(e)
                         && e.getY() >= WorldUtil.surfaceY(level, e.getBlockX(), e.getBlockZ()) - 6)) {
             enemies.add(entity);
             ThreatMap.add(colony.data().threat, entity.getX() - center.getX(), entity.getZ() - center.getZ(), 0.2);

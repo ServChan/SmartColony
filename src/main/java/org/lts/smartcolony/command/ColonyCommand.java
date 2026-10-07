@@ -45,7 +45,7 @@ public final class ColonyCommand {
     };
     private static final SuggestionProvider<CommandSourceStack> BLUEPRINTS =
             (context, builder) -> SharedSuggestionProvider.suggest(Blueprints.IDS.stream()
-                    .filter(id -> org.lts.smartcolony.core.TownHall.stageOf(id) == 0).toList(), builder);
+                    .filter(id -> !org.lts.smartcolony.core.Staged.isStaged(id)).toList(), builder);
 
     private ColonyCommand() {
     }

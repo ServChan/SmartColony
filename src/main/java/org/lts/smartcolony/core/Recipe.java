@@ -9,6 +9,7 @@ public record Recipe(String output, int count, Map<String, Integer> inputs, bool
     public static final String GROUP_COAL = "#coal";
     public static final String GROUP_STONE = "#stone_tool";
     public static final String GROUP_WOODEN_SLAB = "#wooden_slab";
+    public static final String GROUP_SMALL_FLOWER = "#small_flower";
 
     public Recipe {
         inputs = java.util.Collections.unmodifiableMap(new LinkedHashMap<>(inputs));
@@ -30,6 +31,7 @@ public record Recipe(String output, int count, Map<String, Integer> inputs, bool
             case GROUP_COAL -> Ids.isCoal(id);
             case GROUP_STONE -> Ids.isStoneToolMaterial(id);
             case GROUP_WOODEN_SLAB -> Ids.path(id).endsWith("_slab") && Ids.woodOf(id) != null;
+            case GROUP_SMALL_FLOWER -> Ids.isSmallFlower(id);
             default -> false;
         };
     }

@@ -149,6 +149,38 @@ public final class RoleAllocator {
         return result;
     }
 
+    public static EnumMap<Role, Integer> reserveMedics(EnumMap<Role, Integer> base, int medics) {
+        if (medics <= 0) {
+            return base;
+        }
+        EnumMap<Role, Integer> result = new EnumMap<>(base);
+        int total = 0;
+        for (Map.Entry<Role, Integer> entry : result.entrySet()) {
+            if (entry.getKey() != Role.IDLE && entry.getKey() != Role.MEDIC) {
+                total += entry.getValue();
+            }
+        }
+        int give = Math.min(medics, Math.max(0, total - 1));
+        Role[] order = {Role.LUMBERJACK, Role.FARMER, Role.MINER, Role.FISHERMAN, Role.HERDER, Role.COOK, Role.FLETCHER, Role.SMITH,
+                Role.BUILDER};
+        int taken = 0;
+        while (taken < give) {
+            Role best = null;
+            for (Role role : order) {
+                if (result.get(role) > 0 && (best == null || result.get(role) > result.get(best))) {
+                    best = role;
+                }
+            }
+            if (best == null) {
+                break;
+            }
+            result.merge(best, -1, Integer::sum);
+            taken++;
+        }
+        result.merge(Role.MEDIC, taken, Integer::sum);
+        return result;
+    }
+
     static int targetCap(Role role, int adults) {
         return switch (role) {
             case GUARD, BUILDER -> Math.max(1, adults / 2);
@@ -157,6 +189,7 @@ public final class RoleAllocator {
             case FLETCHER, SMITH, COOK -> Math.max(1, adults / 6);
             case INNKEEPER -> 1;
             case TEACHER -> 1;
+            case MEDIC -> Math.max(1, adults / 8);
             case FISHERMAN -> Math.max(1, adults / 4);
             default -> adults;
         };
