@@ -181,6 +181,11 @@ public final class ColonyScreen extends Screen {
                 : Component.translatable("smartcolony.ui.townhall", view.townHall(), 5, view.townHallNeeds());
         graphics.text(font, hall, x, y, view.townHall() == 0 ? TEXT_DIM : TEXT_NORMAL, false);
         y += 16;
+        if (view.tavern().built()) {
+            graphics.text(font, Component.translatable("smartcolony.ui.tavern", view.tavern().meals(), view.tavern().travellers(),
+                    view.tavern().settlers()), x, y - 2, view.tavern().open() ? TEXT_NORMAL : TEXT_DIM, false);
+            y += 14;
+        }
         if (view.children() > 0) {
             graphics.text(font, Component.translatable(view.kindergarten() ? "smartcolony.ui.kindergarten.yes" : "smartcolony.ui.kindergarten.no"),
                     x, y - 2, view.kindergarten() ? STATUS_ON : TEXT_DIM, false);

@@ -50,7 +50,11 @@ public record ColonyView(
         String age,
         TraderInfo trader,
         int townHall,
-        int townHallNeeds) {
+        int townHallNeeds,
+        TavernInfo tavern) {
+
+    public record TavernInfo(boolean built, boolean open, int meals, int travellers, int settlers, int guests) {
+    }
 
     public record TraderOffer(String give, int giveCount, String result, int resultCount, int uses) {
     }
@@ -167,6 +171,8 @@ public record ColonyView(
                         ? colony.advisor().state() : "off",
                 colony.advisor().state().equals("error") ? colony.advisor().error() : colony.advisor().thoughts(), data.age, traderInfo,
                 TownHall.stage(data), TownHall.stage(data) >= TownHall.STAGES ? 0
-                : TownHall.requiredAdults(TownHall.stage(data) + 1, SmartColonyConfig.get().townHallAdults));
+                : TownHall.requiredAdults(TownHall.stage(data) + 1, SmartColonyConfig.get().townHallAdults),
+                new TavernInfo(colony.tavern().built(), colony.tavern().open(), colony.tavern().meals(), colony.tavern().travellers(),
+                        colony.tavern().settlers(), colony.tavern().guestCount()));
     }
 }

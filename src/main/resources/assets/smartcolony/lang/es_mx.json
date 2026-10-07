@@ -165,5 +165,11 @@
   "smartcolony.chat.townhall_stage": "Ayuntamiento terminado: etapa %s de %s.",
   "smartcolony.ui.townhall": "Ayuntamiento: etapa %s de %s · la siguiente con %s aldeanos",
   "smartcolony.ui.townhall_max": "Ayuntamiento: etapa %s de %s (final)",
-  "smartcolony.ui.townhall_none": "Ayuntamiento: aún sin construir · desde %s aldeanos"
+  "smartcolony.ui.townhall_none": "Ayuntamiento: aún sin construir · desde %s aldeanos",
+  "smartcolony.role.innkeeper": "Tabernero",
+  "smartcolony.building.tavern": "taberna",
+  "smartcolony.chat.festival_tavern": "¡Fiesta! Los aldeanos se reúnen frente a la taberna para bailar.",
+  "smartcolony.chat.traveller_arrived": "%s viajeros van rumbo a la taberna.",
+  "smartcolony.chat.traveller_settled": "A un viajero le gustó la colonia y decidió quedarse.",
+  "smartcolony.ui.tavern": "Taberna: %s comidas servidas · %s viajeros · %s asentados"
 }

@@ -165,5 +165,11 @@
   "smartcolony.chat.townhall_stage": "Ратуша достроена: этап %s из %s.",
   "smartcolony.ui.townhall": "Ратуша: этап %s из %s · следующий при %s жителях",
   "smartcolony.ui.townhall_max": "Ратуша: этап %s из %s (последний)",
-  "smartcolony.ui.townhall_none": "Ратуша: ещё не построена · от %s жителей"
+  "smartcolony.ui.townhall_none": "Ратуша: ещё не построена · от %s жителей",
+  "smartcolony.role.innkeeper": "Трактирщик",
+  "smartcolony.building.tavern": "таверна",
+  "smartcolony.chat.festival_tavern": "Праздник! Жители собираются у таверны и танцуют.",
+  "smartcolony.chat.traveller_arrived": "К таверне идут путники: %s.",
+  "smartcolony.chat.traveller_settled": "Колония приглянулась страннику, и он решил остаться.",
+  "smartcolony.ui.tavern": "Таверна: обедов подано %s · путников %s · осело %s"
 }

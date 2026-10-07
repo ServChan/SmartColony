@@ -46,6 +46,10 @@ public final class Migration {
         return walkers.size();
     }
 
+    public int freeBeds(ServerLevel level) {
+        return (int) homes(level) - colony.colonists().size() - walkers.size();
+    }
+
     public void tick(ServerLevel level) {
         long now = level.getGameTime();
         tickWalkers(level, now);
@@ -61,7 +65,7 @@ public final class Migration {
         if (now < nextWave || !walkers.isEmpty() || !colony.workTime(level)) {
             return;
         }
-        int freeBeds = (int) homes(level) - members;
+        int freeBeds = freeBeds(level);
         if (freeBeds <= 0 || !depleted(members) || !wealthy(level)) {
             return;
         }
@@ -103,6 +107,7 @@ public final class Migration {
                 new AABB(center).inflate(SEARCH_RADIUS, 64, SEARCH_RADIUS),
                 villager -> villager.isAlive() && !villager.isBaby() && !villager.isTrading() && !villager.isSleeping()
                         && ColonyManager.colonyOf(villager) == null && !walkers.containsKey(villager.getUUID())
+                        && !villager.entityTags().contains(Tavern.TAG)
                         && !((ControlledVillager) villager).smartcolony$isControlled()
                         && villager.blockPosition().distSqr(center) > ownSqr
                         && ColonyManager.colonyNear(level, villager.blockPosition(), 96) == null));
