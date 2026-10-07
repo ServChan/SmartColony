@@ -1,62 +1,7 @@
-{
-  "id": "cemetery",
-  "kind": "cemetery",
-  "beds": 0,
-  "door": [
-    6,
-    0
-  ],
-  "palette": {
-    "F": "minecraft:$wood_fence",
-    "T": "minecraft:torch",
-    "q": "minecraft:dirt_path",
-    "n": "minecraft:$wood_stairs[facing=north,half=bottom]"
-  },
-  "layers": [
-    [
-      "      q      ",
-      "      q      ",
-      "      q      ",
-      "      q      ",
-      "      q      ",
-      "      q      ",
-      "      q      ",
-      "      q      ",
-      "      q      ",
-      "      q      ",
-      "      q      ",
-      "             ",
-      "             "
-    ],
-    [
-      "FFFFFF.FFFFFF",
-      "F...........F",
-      "F...........F",
-      "F...........F",
-      "F...........F",
-      "F...........F",
-      "F...........F",
-      "F...........F",
-      "F...........F",
-      "F...........F",
-      "F...........F",
-      "F....nnn....F",
-      "FFFFFFFFFFFFF"
-    ],
-    [
-      "T....T.T....T",
-      ".............",
-      ".............",
-      ".............",
-      ".............",
-      ".............",
-      ".............",
-      ".............",
-      ".............",
-      ".............",
-      ".............",
-      ".............",
-      "T...........T"
-    ]
-  ]
-}
+{"id":"cemetery","kind":"cemetery","beds":0,"door":[6,0],"palette":{"A":"minecraft:dirt_path","B":"minecraft:cobblestone_wall","C":"minecraft:torch","D":"minecraft:$wood_stairs[facing=east,half=bottom,shape=straight]","E":"minecraft:$wood_log","F":"minecraft:$wood_stairs[facing=south,half=bottom,shape=straight]","G":"minecraft:$wood_log[axis=x]","H":"minecraft:cobblestone","I":"minecraft:$wood_planks","J":"minecraft:$wood_stairs[facing=west,half=bottom,shape=straight]","K":"minecraft:$wood_fence"},"layers":[
+["      A      ","      A      ","      A      ","      A      ","      A      ","      A      ","      A      ","      A      ","      A      ","      A      ","      A      ","      A      ","             "],
+["HBBBHE.EHBBBH","B....E.E....B","B...........B","B...........B","B...........B","B...........B","H...........H","B...........B","B...........B","B...........B","B...........B","B...BFHFB...B","HBBBBBHBBBBBH"],
+["HKKKHE.EHKKKH","K....E.E....K","K...........K","K...........K","K...........K","K...........K","H...........H","K...........K","K...........K","K...........K","K...........K","K...C.B.C...K","HKKKKKHKKKKKH"],
+["C   DGGGJ   C"," ...DGGGJ... "," ........... "," ........... "," ........... "," ........... ","C...........C"," ........... "," ........... "," ........... "," ........... "," .....H..... ","C     C     C"],
+["     DIJ     "," ....DIJ.... "," ........... "," ........... "," ........... "," ........... "," ........... "," ........... "," ........... "," ........... "," ........... "," .....C..... ","             "],
+["      I      ","      I      ","             ","             ","             ","             ","             ","             ","             ","             ","             ","             ","             "]]}
