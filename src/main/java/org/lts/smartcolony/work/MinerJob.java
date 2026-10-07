@@ -103,7 +103,7 @@ public final class MinerJob extends Job {
 
     @Override
     public boolean wantsControl(ServerLevel level, Villager villager) {
-        return colony().workTime(level) || hasCargo(villager) || underground(villager);
+        return onShift(level, villager) || hasCargo(villager) || underground(villager);
     }
 
     public void danger() {
@@ -136,11 +136,11 @@ public final class MinerJob extends Job {
             beginReturn();
             return;
         }
-        if (hasCargo(villager) && (cargoFull(villager) || !colony().workTime(level))) {
+        if (hasCargo(villager) && (cargoFull(villager) || !onShift(level, villager))) {
             phase = "deposit";
             return;
         }
-        if (!colony().workTime(level)) {
+        if (!onShift(level, villager)) {
             status = "shift over";
             wait = 100;
             return;
@@ -365,9 +365,9 @@ public final class MinerJob extends Job {
             lastReturn = "no pickaxe in hand";
             return;
         }
-        if (cargoFull(villager) || cellsThisTrip >= CELLS_PER_TRIP || !colony().workTime(level)
+        if (cargoFull(villager) || cellsThisTrip >= CELLS_PER_TRIP || !onShift(level, villager)
                 || villager.getHealth() < villager.getMaxHealth() * 0.5F) {
-            lastReturn = cargoFull(villager) ? "cargo full" : cellsThisTrip >= CELLS_PER_TRIP ? "trip done" : !colony().workTime(level) ? "shift over" : "hurt";
+            lastReturn = cargoFull(villager) ? "cargo full" : cellsThisTrip >= CELLS_PER_TRIP ? "trip done" : !onShift(level, villager) ? "shift over" : "hurt";
             beginReturn();
             return;
         }

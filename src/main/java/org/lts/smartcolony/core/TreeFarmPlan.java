@@ -28,7 +28,7 @@ public final class TreeFarmPlan {
     }
 
     public static boolean needed(int adults, int existing, boolean basicsBuilt, boolean forestThin) {
-        return basicsBuilt && existing < wanted(adults, forestThin);
+        return (basicsBuilt || forestThin) && existing < wanted(adults, forestThin);
     }
 
     public static final int DIRT_STOCK_CAP = 96;

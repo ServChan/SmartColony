@@ -36,7 +36,15 @@ public abstract class Job {
     public abstract void tick(ServerLevel level, Villager villager);
 
     public boolean wantsControl(ServerLevel level, Villager villager) {
-        return colony().workTime(level) || hasCargo(villager);
+        return onShift(level, villager) || hasCargo(villager);
+    }
+
+    protected boolean onShift(ServerLevel level, Villager villager) {
+        return colony().workTime(level) || nightShift(villager);
+    }
+
+    protected boolean nightShift(Villager villager) {
+        return Colonist.bedless(villager) && Colonist.NIGHT_ROLES.contains(role());
     }
 
     public void onRelease(ServerLevel level, Villager villager) {

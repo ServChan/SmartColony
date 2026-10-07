@@ -149,8 +149,9 @@ public final class Construction {
         if (hasPen || colony.adultCount(level) < 3) {
             return;
         }
-        boolean bedBlocked = data().projects.stream().anyMatch(p -> p.phase.equals("reserve")
-                && missing.keySet().stream().anyMatch(id -> Ids.path(id).endsWith("_bed")));
+        boolean woolShort = colony.stockOf(level, id -> Ids.path(id).endsWith("_wool") || Ids.path(id).endsWith("_bed")) < 3;
+        boolean bedBlocked = woolShort && data().projects.stream().anyMatch(p -> p.phase.equals("reserve")
+                && p.required.keySet().stream().anyMatch(id -> Ids.path(id).endsWith("_bed")));
         if (bedBlocked && forceProject(level, "pen")) {
             colony.journal(level, "houses wait for beds and there is no wool: planned a pen first");
         }
@@ -195,6 +196,10 @@ public final class Construction {
                 lastPlan = now;
                 plan(level, false);
             } else if (data().projects.size() < maxProjects()) {
+                lastPlan = now;
+                plan(level, true);
+            } else if (data().projects.size() < maxProjects() + 2 && now - lastPlan >= 1200
+                    && data().projects.stream().allMatch(p -> p.phase.equals("reserve"))) {
                 lastPlan = now;
                 plan(level, true);
             }

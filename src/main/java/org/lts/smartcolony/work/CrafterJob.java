@@ -82,7 +82,7 @@ public final class CrafterJob extends Job {
             phase = "deposit";
             return;
         }
-        if (!colony().workTime(level)) {
+        if (!onShift(level, villager)) {
             wait = 100;
             return;
         }
@@ -189,7 +189,7 @@ public final class CrafterJob extends Job {
     }
 
     private void work(ServerLevel level, Villager villager) {
-        if (order == null || !colony().workTime(level)) {
+        if (order == null || !onShift(level, villager)) {
             phase = "start";
             return;
         }

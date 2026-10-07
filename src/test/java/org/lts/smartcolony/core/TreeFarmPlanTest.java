@@ -103,6 +103,7 @@ class TreeFarmPlanTest {
         assertEquals(1, TreeFarmPlan.wanted(24, false));
         assertEquals(2, TreeFarmPlan.wanted(25, false));
         assertFalse(TreeFarmPlan.needed(10, 0, false, false));
+        assertTrue(TreeFarmPlan.needed(5, 0, false, true));
         assertTrue(TreeFarmPlan.needed(10, 0, true, false));
         assertFalse(TreeFarmPlan.needed(10, 1, true, false));
         assertTrue(TreeFarmPlan.needed(30, 1, true, false));
