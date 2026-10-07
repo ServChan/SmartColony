@@ -26,6 +26,7 @@ public final class RecipeBook {
             craft(Ids.mc(wood + "_fence_gate"), 1, Ids.mc("stick"), 4, planks, 2);
             craft(Ids.mc(wood + "_stairs"), 4, planks, 6);
             craft(Ids.mc(wood + "_slab"), 6, planks, 3);
+            craft(Ids.mc(wood + "_sign"), 3, planks, 6, Ids.mc("stick"), 1);
         }
         craft(Ids.mc("bamboo_planks"), 2, Ids.mc("bamboo_block"), 1);
         for (String color : Ids.COLORS) {

@@ -30,6 +30,7 @@ import org.lts.smartcolony.SmartColonyConfig;
 import org.lts.smartcolony.core.Blueprint;
 import org.lts.smartcolony.core.Blueprints;
 import org.lts.smartcolony.core.Category;
+import org.lts.smartcolony.core.Cemetery;
 import org.lts.smartcolony.core.ColonyData;
 import org.lts.smartcolony.core.CraftPlanner;
 import org.lts.smartcolony.core.Ids;
@@ -270,6 +271,11 @@ public final class Construction {
         }
         if (adults >= 14 && built("chapel") == 0) {
             order.add("chapel");
+        }
+        long cemeteries = data().buildings.stream().filter(b -> Cemetery.ID.equals(b.blueprint)).count();
+        long cemeteryProjects = data().projects.stream().filter(p -> Cemetery.ID.equals(p.building.blueprint)).count();
+        if (colony.graveyard().needsCemetery(adults, (int) cemeteries, (int) cemeteryProjects)) {
+            order.add(Cemetery.ID);
         }
         boolean basics = data().buildings.stream().anyMatch(b -> "house".equals(b.kind))
                 && data().buildings.stream().anyMatch(b -> "storage".equals(b.kind));

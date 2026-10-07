@@ -115,6 +115,29 @@ public final class RoleAllocator {
         return result;
     }
 
+    public static EnumMap<Role, Integer> withUndertaker(Map<Role, Integer> base, int wanted, int adults) {
+        EnumMap<Role, Integer> result = new EnumMap<>(Role.class);
+        for (Role role : Role.values()) {
+            result.put(role, base.getOrDefault(role, 0));
+        }
+        result.put(Role.UNDERTAKER, 0);
+        if (wanted <= 0 || adults < 2) {
+            return result;
+        }
+        Role donor = null;
+        for (Role role : new Role[] {Role.LUMBERJACK, Role.FARMER, Role.FISHERMAN, Role.HERDER, Role.MINER}) {
+            if (result.get(role) > 0 && (donor == null || result.get(role) > result.get(donor))) {
+                donor = role;
+            }
+        }
+        if (donor == null) {
+            return result;
+        }
+        result.merge(donor, -1, Integer::sum);
+        result.put(Role.UNDERTAKER, 1);
+        return result;
+    }
+
     static int targetCap(Role role, int adults) {
         return switch (role) {
             case GUARD, BUILDER -> Math.max(1, adults / 2);

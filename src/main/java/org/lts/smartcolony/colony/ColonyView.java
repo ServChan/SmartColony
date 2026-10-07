@@ -24,6 +24,7 @@ public record ColonyView(
         int members,
         int children,
         boolean kindergarten,
+        Graveyard.Summary graveyard,
         int beds,
         int buildings,
         List<RoleCount> roles,
@@ -159,7 +160,7 @@ public record ColonyView(
             }
         }
         TraderInfo traderInfo = new TraderInfo(colony.trader().marketBuilt(), colony.trader().hired(), traderBuys, traderSells);
-        return new ColonyView(data.name, colony.colonists().size(), children, Nursery.find(colony) != null, data.beds(), data.buildings.size(), roles, storages,
+        return new ColonyView(data.name, colony.colonists().size(), children, Nursery.find(colony) != null, colony.graveyard().summary(), data.beds(), data.buildings.size(), roles, storages,
                 colony.foodPoints(level), project, phase, missing, mine, mineProgress, mineTotal, reputation,
                 Reputation.status(reputation).key(), villagers, journal, deals, new ArrayList<>(colony.requests()),
                 data.wall == null ? null : data.wall.material, data.wall == null ? 0 : data.wall.built,

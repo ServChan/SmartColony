@@ -57,6 +57,7 @@ public final class Colony {
     private boolean festivalAnnounced;
     private final TheftWatcher theft;
     private final Trader trader;
+    private final Graveyard graveyard;
     private final org.lts.smartcolony.ai.Advisor advisor;
     private final Map<UUID, Colonist> colonists = new LinkedHashMap<>();
     private final Set<String> requests = new LinkedHashSet<>();
@@ -82,6 +83,7 @@ public final class Colony {
         this.improvements = new Improvements(this);
         this.theft = new TheftWatcher(this);
         this.trader = new Trader(this);
+        this.graveyard = new Graveyard(this);
         this.advisor = new org.lts.smartcolony.ai.Advisor(this);
         this.ironAge = new IronAge(this);
         for (Map.Entry<String, ColonyData.Member> entry : data.members.entrySet()) {
@@ -149,6 +151,10 @@ public final class Colony {
 
     public org.lts.smartcolony.ai.Advisor advisor() {
         return advisor;
+    }
+
+    public Graveyard graveyard() {
+        return graveyard;
     }
 
     public Trader trader() {
@@ -761,17 +767,32 @@ public final class Colony {
         journal(level, "a villager left the colony");
     }
 
+    public void memberDied(ServerLevel level, Villager villager, net.minecraft.world.damagesource.DamageSource source) {
+        Colonist colonist = colonists.get(villager.getUUID());
+        if (colonist == null) {
+            return;
+        }
+        data.bump("deaths", 1);
+        graveyard.recordDeath(level, villager, source, colonist);
+        removeMember(villager.getUUID());
+    }
+
     public void memberDied(ServerLevel level, UUID uuid) {
-        Colonist colonist = colonists.remove(uuid);
+        Colonist colonist = colonists.get(uuid);
         if (colonist != null) {
-            data.members.remove(uuid.toString());
-            ColonyManager.unindex(uuid);
-            forest.release(uuid);
-            treeFarm.release(uuid);
             data.bump("deaths", 1);
             journal(level, colonist.role().key() + " died");
             notify(level, Component.translatable("smartcolony.chat.death", Component.translatable("smartcolony.role." + colonist.role().key())));
+            removeMember(uuid);
         }
+    }
+
+    private void removeMember(UUID uuid) {
+        colonists.remove(uuid);
+        data.members.remove(uuid.toString());
+        ColonyManager.unindex(uuid);
+        forest.release(uuid);
+        treeFarm.release(uuid);
     }
 
     public void planRoles(ServerLevel level) {
@@ -819,6 +840,7 @@ public final class Colony {
                 org.lts.smartcolony.core.CrafterNeeds.pending(Role.SMITH, crafting),
                 org.lts.smartcolony.core.CrafterNeeds.pending(Role.COOK, crafting));
         desired = RoleAllocator.withTargets(RoleAllocator.desired(needs), advisor.roleTargets(level.getGameTime()), adults);
+        desired = RoleAllocator.withUndertaker(desired, graveyard.undertakersWanted(level), adults);
         Map<String, Role> current = new LinkedHashMap<>();
         Map<String, Role> affinity = new HashMap<>();
         Set<String> locked = new java.util.HashSet<>();

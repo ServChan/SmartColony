@@ -55,6 +55,25 @@ public final class ColonyData {
     public long lastFeeding;
     public String traderId = "";
     public long traderLost;
+    public List<Death> deaths = new ArrayList<>();
+    public List<Pos> graves = new ArrayList<>();
+
+    public static final class Death {
+        public String id = "";
+        public String name = "";
+        public String role = "idle";
+        public boolean child;
+        public String cause = "other";
+        public Pos pos = new Pos(0, 0, 0);
+        public long time;
+        public long day;
+        public String remains = "none";
+        public int items;
+        public int recovered;
+        public int tries;
+        public boolean buried;
+        public Pos grave;
+    }
 
     public static final class Member {
         public String role = Role.IDLE.key();
@@ -206,6 +225,14 @@ public final class ColonyData {
         while (journal.size() > 60) {
             journal.removeFirst();
         }
+    }
+
+    public long pendingRemains() {
+        return deaths.stream().filter(d -> "pending".equals(d.remains)).count();
+    }
+
+    public long unburied() {
+        return deaths.stream().filter(d -> !d.buried).count();
     }
 
     public int beds() {
