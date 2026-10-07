@@ -198,5 +198,7 @@
   "smartcolony.building.barracks": "Казарма",
   "smartcolony.ui.school": "Школа: учеников %s, проведено уроков %s, выпускников %s",
   "smartcolony.ui.graduates": "Выпускники: %s",
-  "smartcolony.ui.barracks": "Казарма: тренировок %s, выпущено стрел %s, получено очков навыка %s"
+  "smartcolony.ui.barracks": "Казарма: тренировок %s, выпущено стрел %s, получено очков навыка %s",
+  "smartcolony.building.dock": "Причал",
+  "smartcolony.building.fisher_hut": "Хижина рыбака"
 }

@@ -161,6 +161,7 @@ public final class ColonyData {
         public List<Pos> containers = new ArrayList<>();
         public Category storageFor;
         public boolean connected;
+        public boolean onWater;
         public Map<String, String> swaps = new LinkedHashMap<>();
 
         public boolean contains(Pos pos, int margin) {
@@ -178,6 +179,7 @@ public final class ColonyData {
         public Map<String, Integer> reserved = new LinkedHashMap<>();
         public List<Pos> fill = new ArrayList<>();
         public List<Pos> crane = new ArrayList<>();
+        public List<Pos> stilts = new ArrayList<>();
         public Map<String, String> swaps = new LinkedHashMap<>();
         public long started;
         public long waitingSince;

@@ -6,6 +6,9 @@ public final class PathStyle {
     public static final String MAIN = "main";
     public static final String STEP = "+step";
     public static final String STONE = "+stone";
+    public static final String PIER = "pier";
+    public static final String POST = "+post";
+    public static final String LAMP = "+lamp";
 
     public static final String DIRT_PATH = "path";
     public static final String COBBLESTONE = "cobblestone";
@@ -22,6 +25,18 @@ public final class PathStyle {
 
     public static boolean step(String style) {
         return style.contains(STEP);
+    }
+
+    public static boolean pier(String style) {
+        return base(style).equals(PIER);
+    }
+
+    public static boolean post(String style) {
+        return style.contains(POST);
+    }
+
+    public static boolean lamp(String style) {
+        return style.contains(LAMP);
     }
 
     public static boolean paved(String style) {

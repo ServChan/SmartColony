@@ -4,10 +4,12 @@ import com.google.gson.JsonObject;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.UUID;
 import net.minecraft.commands.arguments.blocks.BlockStateParser;
@@ -37,6 +39,7 @@ import org.lts.smartcolony.core.Ids;
 import org.lts.smartcolony.core.GuardDrill;
 import org.lts.smartcolony.core.Kindergarten;
 import org.lts.smartcolony.core.Schooling;
+import org.lts.smartcolony.core.Pier;
 import org.lts.smartcolony.core.Pos;
 import org.lts.smartcolony.core.PorterPlan;
 import org.lts.smartcolony.core.PreBuildCheck;
@@ -45,6 +48,7 @@ import org.lts.smartcolony.core.SiteEvaluator;
 import org.lts.smartcolony.core.Stock;
 import org.lts.smartcolony.core.TavernRules;
 import org.lts.smartcolony.core.Tech;
+import org.lts.smartcolony.core.TerrainMap;
 import org.lts.smartcolony.core.TreeFarmPlan;
 import org.lts.smartcolony.core.TownHall;
 import org.lts.smartcolony.util.WorldUtil;
@@ -69,6 +73,8 @@ public final class Construction {
         List<BlockPos> clearList;
         int clearIndex;
         List<Blueprint.Cell> cells;
+        List<Pos> stiltSource;
+        Set<Long> stiltColumns;
     }
 
     private static final int LOOKAHEAD = 10;
@@ -293,6 +299,14 @@ public final class Construction {
         if (colony.graveyard().needsCemetery(adults, (int) cemeteries, (int) cemeteryProjects)) {
             order.add(Cemetery.ID);
         }
+        boolean waterVillage = colony.waterVillage(level);
+        boolean fishers = colony.desired().getOrDefault(Role.FISHERMAN, 0) > 0;
+        if (waterVillage && adults >= 5 && built(Pier.DOCK_ID) == 0 && (fishers || adults >= 10)) {
+            order.add(Pier.DOCK_ID);
+        }
+        if (waterVillage && adults >= 9 && fishers && built(Pier.DOCK_ID) > 0 && built(Pier.FISHER_ID) == 0) {
+            order.add(Pier.FISHER_ID);
+        }
         boolean basics = data().buildings.stream().anyMatch(b -> "house".equals(b.kind))
                 && data().buildings.stream().anyMatch(b -> "storage".equals(b.kind));
         if (TreeFarmPlan.needed(adults, (int) built(TreeFarmPlan.ID), basics, TreeFarmPlan.forestThin(colony.forest().count()))) {
@@ -419,17 +433,38 @@ public final class Construction {
                 required.merge(material.item(), material.count(), Integer::sum);
             }
         }
-        if (!project.fill.isEmpty()) {
-            required.merge(fillItem(project), project.fill.size(), Integer::sum);
+        for (Pos pos : project.fill) {
+            required.merge(fillItem(project, pos), 1, Integer::sum);
         }
         project.required = required;
     }
 
-    private static String fillItem(ColonyData.Project project) {
+    private boolean stilt(ColonyData.Project project, Pos pos) {
+        if (project.stilts.isEmpty()) {
+            return false;
+        }
+        Runtime rt = rt(project);
+        if (rt.stiltSource != project.stilts || rt.stiltColumns == null) {
+            rt.stiltSource = project.stilts;
+            rt.stiltColumns = new HashSet<>();
+            for (Pos column : project.stilts) {
+                rt.stiltColumns.add(BlockPos.asLong(column.x(), 0, column.z()));
+            }
+        }
+        return rt.stiltColumns.contains(BlockPos.asLong(pos.x(), 0, pos.z()));
+    }
+
+    private String fillItem(ColonyData.Project project, Pos pos) {
+        if (stilt(project, pos)) {
+            return Ids.mc(project.building.wood + "_log");
+        }
         return TreeFarmPlan.KIND.equals(project.building.kind) ? Ids.mc("dirt") : Ids.mc("cobblestone");
     }
 
-    private static BlockState fillState(ColonyData.Project project) {
+    private BlockState fillState(ColonyData.Project project, Pos pos) {
+        if (stilt(project, pos)) {
+            return parse(fillItem(project, pos), 0);
+        }
         return TreeFarmPlan.KIND.equals(project.building.kind) ? Blocks.DIRT.defaultBlockState() : Blocks.COBBLESTONE.defaultBlockState();
     }
 
@@ -555,6 +590,8 @@ public final class Construction {
         rt.cells = null;
         rt.clearList = null;
         rt.clearIndex = 0;
+        rt.stiltSource = null;
+        rt.stiltColumns = null;
     }
 
     private void dropDuplicates(ServerLevel level) {
@@ -646,6 +683,7 @@ public final class Construction {
     }
 
     private ColonyData.Project findSite(ServerLevel level, Blueprint blueprint, String wood, int fillLimit, int cutLimit, Search search) {
+        boolean wet = Pier.waterKind(blueprint.kind());
         BlockPos center = search.origin();
         BlockPos facing = search.facing();
         int maxDistance = search.maxDistance();
@@ -671,38 +709,38 @@ public final class Construction {
                 if (sx * sz > 100 && !roughlyFlat(level, ox, oz, sx, sz, fillLimit + cutLimit)) {
                     continue;
                 }
-                SiteCheck.Sample sample = check.fromMap(ox, oz, sx, sz, 3);
+                SiteCheck.Sample sample = check.fromMap(ox, oz, sx, sz, 3, wet);
                 boolean mapped = sample.status() != SiteCheck.Status.UNKNOWN;
                 if (!mapped) {
-                    sample = check.fromWorld(level, ox, oz, sx, sz, 3, null);
+                    sample = check.fromWorld(level, ox, oz, sx, sz, 3, null, wet);
                 }
                 if (sample.status() != SiteCheck.Status.OK) {
                     continue;
                 }
-                SiteEvaluator.Result result = SiteEvaluator.evaluate(sample.ground(), sample.blocked(), fillLimit, cutLimit);
-                if (!result.ok()) {
+                SiteEvaluator.Result result = SiteEvaluator.evaluate(sample.ground(), sample.blocked(), fillLimit, cutLimit, sample.water());
+                if (!result.ok() || !Pier.enoughWater(blueprint.kind(), sample.waterColumns(), sx * sz)) {
                     continue;
                 }
-                double score = result.score() + distance * 0.6 + sample.paths() * 3 + pullScore(search, px, pz);
+                double score = result.score() + distance * 0.6 + sample.paths() * 3 + pullScore(search, px, pz) + Pier.platformPenalty(sample.waterColumns());
                 if (score >= bestScore) {
                     continue;
                 }
                 if (mapped) {
-                    sample = check.fromWorld(level, ox, oz, sx, sz, 3, null);
+                    sample = check.fromWorld(level, ox, oz, sx, sz, 3, null, wet);
                     if (sample.status() != SiteCheck.Status.OK) {
                         continue;
                     }
-                    result = SiteEvaluator.evaluate(sample.ground(), sample.blocked(), fillLimit, cutLimit);
-                    score = result.score() + distance * 0.6 + sample.paths() * 3 + pullScore(search, px, pz);
-                    if (!result.ok() || score >= bestScore) {
+                    result = SiteEvaluator.evaluate(sample.ground(), sample.blocked(), fillLimit, cutLimit, sample.water());
+                    score = result.score() + distance * 0.6 + sample.paths() * 3 + pullScore(search, px, pz) + Pier.platformPenalty(sample.waterColumns());
+                    if (!result.ok() || !Pier.enoughWater(blueprint.kind(), sample.waterColumns(), sx * sz) || score >= bestScore) {
                         continue;
                     }
                 }
-                if (!accessible(level, blueprint, rotation, ox, oz, result.baseY())) {
+                if (!accessible(level, blueprint, rotation, ox, oz, result.baseY(), wet)) {
                     continue;
                 }
                 bestScore = score;
-                best = project(blueprint, wood, ox, oz, rotation, result, sample.ground());
+                best = project(blueprint, wood, ox, oz, rotation, result, sample.ground(), sample.columns());
             }
             if (best != null && distance > search.settle()) {
                 break;
@@ -761,6 +799,10 @@ public final class Construction {
     }
 
     boolean accessible(ServerLevel level, Blueprint blueprint, int rotation, int ox, int oz, int base) {
+        return accessible(level, blueprint, rotation, ox, oz, base, Pier.waterKind(blueprint.kind()));
+    }
+
+    private boolean accessible(ServerLevel level, Blueprint blueprint, int rotation, int ox, int oz, int base, boolean wet) {
         for (int step = 1; step <= 2; step++) {
             int[] front = Blueprint.rotate(blueprint.doorX(), blueprint.doorZ() - step, blueprint.sizeX(), blueprint.sizeZ(), rotation);
             int x = ox + front[0];
@@ -770,11 +812,24 @@ public final class Construction {
             }
             int y = groundY(level, x, z);
             BlockPos top = new BlockPos(x, y, z);
-            if (Math.abs(y - base) > 1 || !level.getFluidState(top).isEmpty() || colony.warehouse().contains(top.above())) {
+            if (Math.abs(y - base) > 1 || colony.warehouse().contains(top.above())) {
+                return false;
+            }
+            if (!level.getFluidState(top).isEmpty() && !(wet && shallowWater(level, top))) {
                 return false;
             }
         }
         return true;
+    }
+
+    private static boolean shallowWater(ServerLevel level, BlockPos top) {
+        int depth = 0;
+        BlockPos cursor = top;
+        while (depth <= Pier.MAX_DEPTH + 1 && !level.getFluidState(cursor).isEmpty()) {
+            cursor = cursor.below();
+            depth++;
+        }
+        return Pier.shallow(depth) && level.getFluidState(top).isSourceOfType(net.minecraft.world.level.material.Fluids.WATER);
     }
 
     private int groundY(ServerLevel level, int x, int z) {
@@ -788,6 +843,11 @@ public final class Construction {
 
     ColonyData.Project project(Blueprint blueprint, String wood, int ox, int oz, int rotation,
                                        SiteEvaluator.Result result, int[][] ground) {
+        return project(blueprint, wood, ox, oz, rotation, result, ground, null);
+    }
+
+    ColonyData.Project project(Blueprint blueprint, String wood, int ox, int oz, int rotation,
+                                       SiteEvaluator.Result result, int[][] ground, TerrainMap.Column[][] columns) {
         ColonyData.Project project = new ColonyData.Project();
         ColonyData.Building building = project.building;
         building.blueprint = blueprint.id();
@@ -803,8 +863,19 @@ public final class Construction {
         building.max = new Pos(ox + sx - 1, base + blueprint.sizeY() - 1, oz + sz - 1);
         int[] door = Blueprint.rotate(blueprint.doorX(), blueprint.doorZ() - 1, blueprint.sizeX(), blueprint.sizeZ(), rotation);
         building.door = new Pos(ox + door[0], base + 1, oz + door[1]);
+        boolean[][] floor = columns == null ? null : floorMask(blueprint, rotation, sx, sz);
         for (int x = 0; x < sx; x++) {
             for (int z = 0; z < sz; z++) {
+                if (columns != null && columns[x][z].surface() == TerrainMap.Surface.WATER) {
+                    int bed = columns[x][z].ground();
+                    project.stilts.add(new Pos(ox + x, bed, oz + z));
+                    if (Pier.isPost(floor, x, z)) {
+                        for (int y = bed + 1; y < base; y++) {
+                            project.fill.add(new Pos(ox + x, y, oz + z));
+                        }
+                    }
+                    continue;
+                }
                 int localTop = base - 1;
                 for (int y = ground[x][z] + 1; y <= localTop; y++) {
                     project.fill.add(new Pos(ox + x, y, oz + z));
@@ -815,6 +886,17 @@ public final class Construction {
             }
         }
         return project;
+    }
+
+    private static boolean[][] floorMask(Blueprint blueprint, int rotation, int sx, int sz) {
+        boolean[][] mask = new boolean[sx][sz];
+        for (int x = 0; x < blueprint.sizeX(); x++) {
+            for (int z = 0; z < blueprint.sizeZ(); z++) {
+                int[] r = Blueprint.rotate(x, z, blueprint.sizeX(), blueprint.sizeZ(), rotation);
+                mask[r[0]][r[1]] = blueprint.solidFloor(x, z);
+            }
+        }
+        return mask;
     }
 
     private static boolean floorIsLoose(Blueprint blueprint, int rotation, int wx, int wz) {
@@ -1026,7 +1108,7 @@ public final class Construction {
                 if (filled(level, pos) || claimed(pos, now)) {
                     continue;
                 }
-                return new Task(Kind.FILL, pos, fillState(project), null, null, groundStand(project, pos), project);
+                return new Task(Kind.FILL, pos, fillState(project, project.fill.get(i)), null, null, groundStand(project, pos), project);
             }
             if (project.cursor < project.fill.size()) {
                 return null;
@@ -1262,6 +1344,13 @@ public final class Construction {
             data().pen = pen;
         }
         data().buildings.add(building);
+        if (!project.stilts.isEmpty()) {
+            building.onWater = true;
+            data().bump("water_platforms", 1);
+        }
+        if (Pier.DOCK_KIND.equals(building.kind)) {
+            data().bump("docks", 1);
+        }
         drop(project);
         data().bump("buildings", 1);
         int reach = (int) Math.ceil(Math.sqrt(Math.max(building.min.horizontalDistSq(data().center), building.max.horizontalDistSq(data().center))));

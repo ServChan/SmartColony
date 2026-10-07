@@ -198,5 +198,7 @@
   "smartcolony.building.barracks": "Barracks",
   "smartcolony.ui.school": "School: %s pupils, %s lessons given, %s graduates",
   "smartcolony.ui.graduates": "Graduates: %s",
-  "smartcolony.ui.barracks": "Barracks: %s training sessions, %s arrows shot, %s skill points earned"
+  "smartcolony.ui.barracks": "Barracks: %s training sessions, %s arrows shot, %s skill points earned",
+  "smartcolony.building.dock": "Dock",
+  "smartcolony.building.fisher_hut": "Fisher hut"
 }

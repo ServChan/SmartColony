@@ -198,5 +198,7 @@
   "smartcolony.building.barracks": "Cuartel",
   "smartcolony.ui.school": "Escuela: %s alumnos, %s clases impartidas, %s egresados",
   "smartcolony.ui.graduates": "Egresados: %s",
-  "smartcolony.ui.barracks": "Cuartel: %s entrenamientos, %s flechas disparadas, %s puntos de habilidad ganados"
+  "smartcolony.ui.barracks": "Cuartel: %s entrenamientos, %s flechas disparadas, %s puntos de habilidad ganados",
+  "smartcolony.building.dock": "Embarcadero",
+  "smartcolony.building.fisher_hut": "Cabaña de pescador"
 }

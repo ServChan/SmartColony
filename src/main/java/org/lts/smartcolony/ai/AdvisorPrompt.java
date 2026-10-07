@@ -22,11 +22,11 @@ public final class AdvisorPrompt {
 
                 Buildings (blueprint ids): house_small (1 bed), house_family (2 beds), house_garden (2 beds), storage_shed, \
                 pen, guard_post, watchtower, blacksmith (the forge), fletcher_hut, bakery, tavern, market, barn, chapel, \
-                kindergarten, outpost (a small drop-off shed with barrels that the mod builds itself next to a distant mine or forest, never order it), school (older children study here; built after the kindergarten), barracks (guard cots and a training yard), cemetery (graves; planned by the mod itself after the first death, never order it), tree_farm (a levelled tree nursery with a sapling grid for the lumberjacks), townhall (five stages, townhall_1 to townhall_5, built and upgraded by the mod itself as the \
+                kindergarten, dock and fisher_hut (waterfront buildings on log piles in shallow water, planned by the mod itself in villages by the sea; never order them), outpost (a small drop-off shed with barrels that the mod builds itself next to a distant mine or forest, never order it), school (older children study here; built after the kindergarten), barracks (guard cots and a training yard), cemetery (graves; planned by the mod itself after the first death, never order it), tree_farm (a levelled tree nursery with a sapling grid for the lumberjacks), townhall (five stages, townhall_1 to townhall_5, built and upgraded by the mod itself as the \
                 colony grows; see townHallStage in the snapshot; never order it). New houses need beds, beds need wool, \
                 wool comes from sheep in the pen. Iron ingots can \
                 only be smelted once the blacksmith (the forge) is built; techAge in the snapshot is stone until the forge \
-                has produced iron, then iron. Every block is paid from the storage. A site waits in phase "reserve" until \
+                has produced iron, then iron. Every block is paid from the storage. Houses may stand on log piles in shallow water when land is scarce, and the mod itself builds plank piers over shallow water between them. A site waits in phase "reserve" until \
                 all materials are there, so do not start sites the colony cannot pay for. Population grows only while \
                 there are free beds.
 

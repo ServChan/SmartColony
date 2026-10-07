@@ -17,6 +17,10 @@ public final class SiteEvaluator {
     }
 
     public static Result evaluate(int[][] ground, boolean[][] blocked, int fillLimit, int cutLimit) {
+        return evaluate(ground, blocked, fillLimit, cutLimit, null);
+    }
+
+    public static Result evaluate(int[][] ground, boolean[][] blocked, int fillLimit, int cutLimit, boolean[][] water) {
         int sizeX = ground.length;
         int sizeZ = ground[0].length;
         int[] all = new int[sizeX * sizeZ];
@@ -30,10 +34,24 @@ public final class SiteEvaluator {
             }
         }
         Arrays.sort(all);
-        return evaluateAt(ground, blocked, all[all.length / 2], fillLimit, cutLimit);
+        int base = all[all.length / 2];
+        if (water != null) {
+            for (int x = 0; x < sizeX; x++) {
+                for (int z = 0; z < sizeZ; z++) {
+                    if (water[x][z]) {
+                        base = Math.max(base, ground[x][z]);
+                    }
+                }
+            }
+        }
+        return evaluateAt(ground, blocked, base, fillLimit, cutLimit, water);
     }
 
     public static Result evaluateAt(int[][] ground, boolean[][] blocked, int base, int fillLimit, int cutLimit) {
+        return evaluateAt(ground, blocked, base, fillLimit, cutLimit, null);
+    }
+
+    public static Result evaluateAt(int[][] ground, boolean[][] blocked, int base, int fillLimit, int cutLimit, boolean[][] water) {
         int sizeX = ground.length;
         int sizeZ = ground[0].length;
         for (int x = 0; x < sizeX; x++) {
@@ -50,6 +68,9 @@ public final class SiteEvaluator {
         for (int x = 0; x < sizeX; x++) {
             for (int z = 0; z < sizeZ; z++) {
                 int diff = ground[x][z] - base;
+                if (diff > 0 && water != null && water[x][z]) {
+                    return new Result(false, 0, 0, 0, 0, 0, Double.MAX_VALUE);
+                }
                 if (diff < 0) {
                     fill += -diff;
                     maxFill = Math.max(maxFill, -diff);

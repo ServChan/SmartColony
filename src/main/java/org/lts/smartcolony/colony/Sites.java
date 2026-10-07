@@ -16,6 +16,8 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.material.Fluids;
 import org.lts.smartcolony.SmartColonyConfig;
+import org.lts.smartcolony.core.Blueprint;
+import org.lts.smartcolony.core.Blueprints;
 import org.lts.smartcolony.core.ColonyData;
 import org.lts.smartcolony.core.MinePlan;
 import org.lts.smartcolony.core.Pos;
@@ -386,7 +388,33 @@ public final class Sites {
         fishingSpots.removeIf(spot -> spot[0].equals(shore));
     }
 
+    private BlockPos[] dockSpot(ServerLevel level, BlockPos from) {
+        BlockPos[] best = null;
+        double bestDistance = Double.MAX_VALUE;
+        for (ColonyData.Building building : colony.data().buildings) {
+            Blueprint blueprint = Blueprints.get(building.blueprint);
+            for (int[] f : blueprint.fishing()) {
+                BlockPos stand = colony.construction().world(building, f[0], f[1], f[2]);
+                BlockPos water = colony.construction().world(building, f[3], f[4], f[5]);
+                if (rejectedFishing.containsKey(stand) || !WorldUtil.loaded(level, stand) || !WorldUtil.loaded(level, water)
+                        || !level.getFluidState(water).isSourceOfType(Fluids.WATER) || !WorldUtil.standable(level, stand)) {
+                    continue;
+                }
+                double distance = stand.distSqr(from);
+                if (distance < bestDistance) {
+                    bestDistance = distance;
+                    best = new BlockPos[] {stand, water};
+                }
+            }
+        }
+        return best;
+    }
+
     public BlockPos[] fishingSpot(ServerLevel level, BlockPos from) {
+        BlockPos[] dock = dockSpot(level, from);
+        if (dock != null) {
+            return dock;
+        }
         long now = level.getGameTime();
         if (fishingSpots.isEmpty() && now - fishingSearchedAt > 1200) {
             fishingSearchedAt = now;

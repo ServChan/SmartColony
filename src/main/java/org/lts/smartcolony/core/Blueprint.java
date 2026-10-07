@@ -31,9 +31,11 @@ public final class Blueprint {
     private final char[][][] grid;
     private final Map<Character, String> palette;
     private final List<int[]> containers;
+    private final List<int[]> fishing;
 
     private Blueprint(String id, String kind, int beds, int sizeX, int sizeY, int sizeZ, int doorX, int doorZ,
-                      char[][][] grid, Map<Character, String> palette, List<int[]> containers) {
+                      char[][][] grid, Map<Character, String> palette, List<int[]> containers,
+                      List<int[]> fishing) {
         this.id = id;
         this.kind = kind;
         this.beds = beds;
@@ -45,6 +47,7 @@ public final class Blueprint {
         this.grid = grid;
         this.palette = palette;
         this.containers = containers;
+        this.fishing = fishing;
     }
 
     public static Blueprint parse(String json) {
@@ -91,8 +94,16 @@ public final class Blueprint {
                 containers.add(new int[]{arr.get(0).getAsInt(), arr.get(1).getAsInt(), arr.get(2).getAsInt()});
             }
         }
+        List<int[]> fishing = new ArrayList<>();
+        if (root.has("fishing")) {
+            for (JsonElement element : root.getAsJsonArray("fishing")) {
+                JsonArray arr = element.getAsJsonArray();
+                fishing.add(new int[]{arr.get(0).getAsInt(), arr.get(1).getAsInt(), arr.get(2).getAsInt(),
+                        arr.get(3).getAsInt(), arr.get(4).getAsInt(), arr.get(5).getAsInt()});
+            }
+        }
         return new Blueprint(id, kind, beds, sizeX, sizeY, sizeZ, door.get(0).getAsInt(), door.get(1).getAsInt(), grid,
-                palette, containers);
+                palette, containers, fishing);
     }
 
     public String id() {
@@ -129,6 +140,15 @@ public final class Blueprint {
 
     public List<int[]> containers() {
         return containers;
+    }
+
+    public List<int[]> fishing() {
+        return fishing;
+    }
+
+    public boolean solidFloor(int x, int z) {
+        char c = grid[0][z][x];
+        return c != AIR && c != ANY;
     }
 
     public char at(int x, int y, int z) {
