@@ -334,7 +334,7 @@ public final class Advisor {
         Map<Role, Integer> targets = new EnumMap<>(Role.class);
         for (Map.Entry<String, JsonElement> entry : action.getAsJsonObject("targets").entrySet()) {
             Role role = Role.byKey(entry.getKey().toLowerCase(Locale.ROOT));
-            if (role == Role.IDLE || !entry.getValue().isJsonPrimitive()) {
+            if (role == Role.IDLE || role == Role.UNDERTAKER || !entry.getValue().isJsonPrimitive()) {
                 continue;
             }
             targets.put(role, Math.max(0, entry.getValue().getAsInt()));

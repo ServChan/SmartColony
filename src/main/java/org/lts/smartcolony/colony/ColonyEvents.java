@@ -95,7 +95,7 @@ public final class ColonyEvents {
             if (colony == null) {
                 return;
             }
-            colony.memberDied(level, villager.getUUID());
+            colony.memberDied(level, villager, source);
             if (source.getEntity() instanceof ServerPlayer player && !player.isCreative()) {
                 colony.adjustReputation(level, player, -60, "smartcolony.chat.murder");
             }

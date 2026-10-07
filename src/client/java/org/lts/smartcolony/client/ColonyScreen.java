@@ -186,6 +186,11 @@ public final class ColonyScreen extends Screen {
                     x, y - 2, view.kindergarten() ? STATUS_ON : TEXT_DIM, false);
             y += 14;
         }
+        if (view.graveyard().deaths() > 0) {
+            graphics.text(font, Component.translatable("smartcolony.ui.graveyard", view.graveyard().deaths(), view.graveyard().buried(),
+                    view.graveyard().recovered()), x, y - 2, TEXT_DIM, false);
+            y += 14;
+        }
         y = heading(graphics, Component.translatable("smartcolony.ui.roles"), x, y);
         if (view.roles().isEmpty()) {
             graphics.text(font, Component.translatable("smartcolony.ui.empty"), x, y, TEXT_DIM, false);
