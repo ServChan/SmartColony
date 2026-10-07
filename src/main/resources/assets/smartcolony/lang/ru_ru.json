@@ -122,5 +122,8 @@
   "smartcolony.command.ai_off": "Советник ИИ выключен для этой колонии.",
   "smartcolony.command.ai_now": "Советник сейчас посмотрит колонию.",
   "smartcolony.command.ai_global_off": "Советник ИИ выключен: поставьте aiEnabled = true в config/smartcolony.json и выполните /colony ai reload.",
-  "smartcolony.command.ai_reload": "Настройки перечитаны, советник ИИ: %s."
+  "smartcolony.command.ai_reload": "Настройки перечитаны, советник ИИ: %s.",
+  "smartcolony.building.kindergarten": "Детский сад",
+  "smartcolony.ui.kindergarten.yes": "Детский сад: построен, днём дети играют там",
+  "smartcolony.ui.kindergarten.no": "Детского сада пока нет, дети гуляют где хотят"
 }

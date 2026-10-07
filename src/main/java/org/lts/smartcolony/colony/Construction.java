@@ -36,6 +36,7 @@ import org.lts.smartcolony.core.ColonyData;
 import org.lts.smartcolony.core.CraftPlanner;
 import org.lts.smartcolony.core.GridPath;
 import org.lts.smartcolony.core.Ids;
+import org.lts.smartcolony.core.Kindergarten;
 import org.lts.smartcolony.core.Pos;
 import org.lts.smartcolony.core.Role;
 import org.lts.smartcolony.core.SiteEvaluator;
@@ -223,6 +224,9 @@ public final class Construction {
         }
         if (data().wall != null && built("watchtower") < 2 && (colony.defense().threatLevel() >= 0.4 || adults >= 12)) {
             order.add("watchtower");
+        }
+        if (Kindergarten.needed(Nursery.childCount(level, colony), adults, built(Kindergarten.ID) > 0)) {
+            order.add(Kindergarten.ID);
         }
         if (adults >= 14 && built("chapel") == 0) {
             order.add("chapel");
@@ -627,6 +631,11 @@ public final class Construction {
             }
         }
         return true;
+    }
+
+    public BlockPos playground(ColonyData.Building building) {
+        Blueprint blueprint = Blueprints.get(building.blueprint);
+        return world(building, blueprint.doorX(), 1, Math.min(3, blueprint.sizeZ() - 1));
     }
 
     public BlockPos world(ColonyData.Building building, int x, int y, int z) {

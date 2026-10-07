@@ -122,5 +122,8 @@
   "smartcolony.command.ai_off": "El asesor de IA está desactivado para esta colonia.",
   "smartcolony.command.ai_now": "El asesor revisará la colonia ahora.",
   "smartcolony.command.ai_global_off": "El asesor de IA está apagado: pon aiEnabled en true en config/smartcolony.json y usa /colony ai reload.",
-  "smartcolony.command.ai_reload": "Configuración recargada, asesor de IA: %s."
+  "smartcolony.command.ai_reload": "Configuración recargada, asesor de IA: %s.",
+  "smartcolony.building.kindergarten": "Guardería",
+  "smartcolony.ui.kindergarten.yes": "Guardería: construida, los niños juegan allí de día",
+  "smartcolony.ui.kindergarten.no": "Guardería: aún no hay, los niños vagan libremente"
 }

@@ -20,6 +20,7 @@ public record ColonyView(
         String name,
         int members,
         int children,
+        boolean kindergarten,
         int beds,
         int buildings,
         List<RoleCount> roles,
@@ -133,7 +134,7 @@ public record ColonyView(
         List<Market.Deal> ledger = colony.economy().market().ledger();
         List<Market.Deal> deals = new ArrayList<>(ledger.subList(Math.max(0, ledger.size() - 40), ledger.size()));
         java.util.Collections.reverse(deals);
-        return new ColonyView(data.name, colony.colonists().size(), children, data.beds(), data.buildings.size(), roles, storages,
+        return new ColonyView(data.name, colony.colonists().size(), children, Nursery.find(colony) != null, data.beds(), data.buildings.size(), roles, storages,
                 colony.foodPoints(level), project, phase, missing, mine, mineProgress, mineTotal, reputation,
                 Reputation.status(reputation).key(), villagers, journal, deals, new ArrayList<>(colony.requests()),
                 data.wall == null ? null : data.wall.material, data.wall == null ? 0 : data.wall.built,
