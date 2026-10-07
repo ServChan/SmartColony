@@ -52,9 +52,14 @@ public record ColonyView(
         TraderInfo trader,
         int townHall,
         int townHallNeeds,
-        TavernInfo tavern) {
+        TavernInfo tavern,
+        Education education) {
 
     public record TavernInfo(boolean built, boolean open, int meals, int travellers, int settlers, int guests) {
+    }
+
+    public record Education(boolean school, boolean barracks, int pupils, int lessons, int graduates, List<RoleCount> byRole,
+                            int drillSessions, int drillArrows, int drillXp) {
     }
 
     public record TraderOffer(String give, int giveCount, String result, int resultCount, int uses) {
@@ -80,6 +85,7 @@ public record ColonyView(
         EnumMap<Role, Integer> roleCounts = new EnumMap<>(Role.class);
         List<Member> villagers = new ArrayList<>();
         int children = 0;
+        int pupils = 0;
         BlockPos center = colony.center();
         for (Map.Entry<UUID, Colonist> entry : colony.colonists().entrySet()) {
             Colonist colonist = entry.getValue();
@@ -89,6 +95,10 @@ public record ColonyView(
             boolean baby = villager.isBaby();
             if (baby) {
                 children++;
+                ColonyData.Member pupil = data.members.get(entry.getKey().toString());
+                if (pupil != null && !pupil.study.isEmpty()) {
+                    pupils++;
+                }
             } else {
                 roleCounts.merge(colonist.role(), 1, Integer::sum);
             }
@@ -163,6 +173,16 @@ public record ColonyView(
                 traderSells.add(new TraderOffer(offer.give(), offer.giveCount(), offer.result(), offer.resultCount(), offer.maxUses()));
             }
         }
+        List<RoleCount> graduates = new ArrayList<>();
+        for (Role role : Role.values()) {
+            int count = data.stat("graduates_" + role.key());
+            if (count > 0) {
+                graduates.add(new RoleCount(role.key(), count));
+            }
+        }
+        Education education = new Education(Schoolhouse.find(colony) != null, Garrison.find(colony) != null, pupils,
+                data.stat("lessons_given"), data.stat("graduates"), graduates, data.stat("drill_sessions"),
+                data.stat("drill_arrows"), data.stat("drill_xp"));
         TraderInfo traderInfo = new TraderInfo(colony.trader().marketBuilt(), colony.trader().hired(), traderBuys, traderSells);
         return new ColonyView(data.name, colony.colonists().size(), children, Nursery.find(colony) != null, colony.graveyard().summary(), data.beds(), data.buildings.size(), roles, storages,
                 colony.foodPoints(level), project, phase, missing, mine, mineProgress, mineTotal, reputation,
@@ -174,6 +194,6 @@ public record ColonyView(
                 TownHall.stage(data), TownHall.stage(data) >= TownHall.STAGES ? 0
                 : TownHall.requiredAdults(TownHall.stage(data) + 1, SmartColonyConfig.get().townHallAdults),
                 new TavernInfo(colony.tavern().built(), colony.tavern().open(), colony.tavern().meals(), colony.tavern().travellers(),
-                        colony.tavern().settlers(), colony.tavern().guestCount()));
+                        colony.tavern().settlers(), colony.tavern().guestCount()), education);
     }
 }

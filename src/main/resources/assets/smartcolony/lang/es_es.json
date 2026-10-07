@@ -190,5 +190,11 @@
   "smartcolony.chat.festival_tavern": "¡Fiesta! Los aldeanos se reúnen frente a la taberna para bailar.",
   "smartcolony.chat.traveller_arrived": "%s viajeros se dirigen a la taberna.",
   "smartcolony.chat.traveller_settled": "A un viajero le gustó la colonia y decidió quedarse.",
-  "smartcolony.ui.tavern": "Taberna: %s comidas servidas · %s viajeros · %s asentados"
+  "smartcolony.ui.tavern": "Taberna: %s comidas servidas · %s viajeros · %s asentados",
+  "smartcolony.role.teacher": "Maestro",
+  "smartcolony.building.school": "Escuela",
+  "smartcolony.building.barracks": "Cuartel",
+  "smartcolony.ui.school": "Escuela: %s alumnos, %s clases impartidas, %s graduados",
+  "smartcolony.ui.graduates": "Graduados: %s",
+  "smartcolony.ui.barracks": "Cuartel: %s entrenamientos, %s flechas disparadas, %s puntos de habilidad ganados"
 }

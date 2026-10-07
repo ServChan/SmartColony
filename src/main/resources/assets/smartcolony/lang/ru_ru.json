@@ -190,5 +190,11 @@
   "smartcolony.chat.festival_tavern": "Праздник! Жители собираются у таверны и танцуют.",
   "smartcolony.chat.traveller_arrived": "К таверне идут путники: %s.",
   "smartcolony.chat.traveller_settled": "Колония приглянулась страннику, и он решил остаться.",
-  "smartcolony.ui.tavern": "Таверна: обедов подано %s · путников %s · осело %s"
+  "smartcolony.ui.tavern": "Таверна: обедов подано %s · путников %s · осело %s",
+  "smartcolony.role.teacher": "Учитель",
+  "smartcolony.building.school": "Школа",
+  "smartcolony.building.barracks": "Казарма",
+  "smartcolony.ui.school": "Школа: учеников %s, проведено уроков %s, выпускников %s",
+  "smartcolony.ui.graduates": "Выпускники: %s",
+  "smartcolony.ui.barracks": "Казарма: тренировок %s, выпущено стрел %s, получено очков навыка %s"
 }

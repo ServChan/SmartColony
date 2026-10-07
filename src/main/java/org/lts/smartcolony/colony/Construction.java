@@ -34,7 +34,9 @@ import org.lts.smartcolony.core.Cemetery;
 import org.lts.smartcolony.core.ColonyData;
 import org.lts.smartcolony.core.CraftPlanner;
 import org.lts.smartcolony.core.Ids;
+import org.lts.smartcolony.core.GuardDrill;
 import org.lts.smartcolony.core.Kindergarten;
+import org.lts.smartcolony.core.Schooling;
 import org.lts.smartcolony.core.Pos;
 import org.lts.smartcolony.core.PreBuildCheck;
 import org.lts.smartcolony.core.Role;
@@ -271,8 +273,16 @@ public final class Construction {
         if (data().wall != null && built("watchtower") < 2 && (colony.defense().threatLevel() >= 0.4 || adults >= 12)) {
             order.add("watchtower");
         }
-        if (Kindergarten.needed(Nursery.childCount(level, colony), adults, built(Kindergarten.ID) > 0)) {
+        int children = Nursery.childCount(level, colony);
+        if (Kindergarten.needed(children, adults, built(Kindergarten.ID) > 0)) {
             order.add(Kindergarten.ID);
+        }
+        if (Schooling.needed(children, adults, data().buildings.stream().anyMatch(b -> Kindergarten.ID.equals(b.kind)),
+                built(Schooling.ID) > 0)) {
+            order.add(Schooling.ID);
+        }
+        if (GuardDrill.needed(guards, colony.defense().threatLevel(), adults, built(GuardDrill.ID) > 0)) {
+            order.add(GuardDrill.ID);
         }
         if (adults >= 14 && built("chapel") == 0) {
             order.add("chapel");

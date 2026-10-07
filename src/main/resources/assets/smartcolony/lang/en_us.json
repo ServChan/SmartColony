@@ -190,5 +190,11 @@
   "smartcolony.chat.festival_tavern": "Festival! The villagers gather in front of the tavern to dance.",
   "smartcolony.chat.traveller_arrived": "%s travellers are heading for the tavern.",
   "smartcolony.chat.traveller_settled": "A traveller liked the colony and decided to stay.",
-  "smartcolony.ui.tavern": "Tavern: %s meals served · %s travellers · %s settled"
+  "smartcolony.ui.tavern": "Tavern: %s meals served · %s travellers · %s settled",
+  "smartcolony.role.teacher": "Teacher",
+  "smartcolony.building.school": "School",
+  "smartcolony.building.barracks": "Barracks",
+  "smartcolony.ui.school": "School: %s pupils, %s lessons given, %s graduates",
+  "smartcolony.ui.graduates": "Graduates: %s",
+  "smartcolony.ui.barracks": "Barracks: %s training sessions, %s arrows shot, %s skill points earned"
 }

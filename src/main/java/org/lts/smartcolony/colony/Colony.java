@@ -745,6 +745,9 @@ public final class Colony {
                     it.remove();
                 }
                 ColonyData.Member member = data.members.get(entry.getKey().toString());
+                if (member != null) {
+                    Schoolhouse.graduate(level, this, villager, member);
+                }
                 if (member != null && villager.isBaby() && member.role() != Role.IDLE) {
                     member.role = Role.IDLE.key();
                     entry.getValue().setRole(level, villager, Role.IDLE);
@@ -847,7 +850,7 @@ public final class Colony {
                 construction.backlog(level), data.pen != null, equippable, defense.threatLevel(),
                 org.lts.smartcolony.core.CrafterNeeds.pending(Role.FLETCHER, crafting),
                 org.lts.smartcolony.core.CrafterNeeds.pending(Role.SMITH, crafting),
-                org.lts.smartcolony.core.CrafterNeeds.pending(Role.COOK, crafting));
+                org.lts.smartcolony.core.CrafterNeeds.pending(Role.COOK, crafting), Schoolhouse.wantsTeacher(level, this));
         desired = RoleAllocator.withTargets(
                 org.lts.smartcolony.core.TavernRules.withInnkeeper(RoleAllocator.desired(needs), tavern.built(), adults),
                 advisor.roleTargets(level.getGameTime()), adults);
@@ -870,7 +873,8 @@ public final class Colony {
             String key = entry.getKey().toString();
             ColonyData.Member member = data.members.get(key);
             current.put(key, entry.getValue().role());
-            affinity.put(key, Role.affinity(villager.getVillagerData().profession().unwrapKey()
+            affinity.put(key, member != null && member.graduateRole() != null ? member.graduateRole()
+                    : Role.affinity(villager.getVillagerData().profession().unwrapKey()
                     .map(k -> k.identifier().getPath()).orElse("none")));
             if (member != null && (member.locked || (member.role() != Role.IDLE && level.getGameTime() - member.since < 2400))) {
                 locked.add(key);

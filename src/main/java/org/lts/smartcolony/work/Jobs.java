@@ -20,6 +20,7 @@ public final class Jobs {
             case FLETCHER, SMITH, COOK -> new CrafterJob(colonist, role);
             case UNDERTAKER -> new UndertakerJob(colonist);
             case INNKEEPER -> new InnkeeperJob(colonist);
+            case TEACHER -> new TeacherJob(colonist);
             case IDLE -> new IdleJob(colonist);
         };
     }
