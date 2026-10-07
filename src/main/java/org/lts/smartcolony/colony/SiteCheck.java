@@ -195,6 +195,9 @@ final class SiteCheck {
     }
 
     Outcome enforce(ServerLevel level, ColonyData.Project project, boolean lockBase) {
+        if (project.upgrade) {
+            return Outcome.PROCEED;
+        }
         long now = level.getGameTime();
         Long hold = next.get(project);
         if (hold != null && now < hold) {
@@ -214,6 +217,9 @@ final class SiteCheck {
     }
 
     void periodic(ServerLevel level, ColonyData.Project project) {
+        if (project.upgrade) {
+            return;
+        }
         long now = level.getGameTime();
         Long at = periodic.get(project);
         if (at == null) {
