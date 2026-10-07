@@ -172,6 +172,11 @@ public final class ColonyScreen extends Screen {
         graphics.text(font, Component.translatable("smartcolony.ui.population", view.members(), view.children(), view.beds(),
                 view.buildings()), x, y, TEXT_NORMAL, false);
         y += 16;
+        if (view.children() > 0) {
+            graphics.text(font, Component.translatable(view.kindergarten() ? "smartcolony.ui.kindergarten.yes" : "smartcolony.ui.kindergarten.no"),
+                    x, y - 2, view.kindergarten() ? STATUS_ON : TEXT_DIM, false);
+            y += 14;
+        }
         y = heading(graphics, Component.translatable("smartcolony.ui.roles"), x, y);
         if (view.roles().isEmpty()) {
             graphics.text(font, Component.translatable("smartcolony.ui.empty"), x, y, TEXT_DIM, false);

@@ -561,6 +561,7 @@ public final class Colony {
                 entry.getValue().tick(level, villager);
             }
         }
+        Nursery.tick(level, this);
         forest.scan(level);
         theft.tick(level);
         defense.tick(level, ticks);
