@@ -9,9 +9,7 @@ import net.minecraft.tags.BlockTags;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.npc.villager.Villager;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
@@ -47,7 +45,7 @@ public final class BuilderJob extends Job {
 
     @Override
     protected boolean keep(ItemStack stack) {
-        return tools().test(stack) || stack.is(Items.TORCH) || stack.is(net.minecraft.tags.ItemTags.WOODEN_FENCES);
+        return tools().test(stack);
     }
 
     @Override
@@ -82,27 +80,6 @@ public final class BuilderJob extends Job {
             status = colony().construction().status();
             idle(level, 400);
             return;
-        }
-        if (task.kind() == Construction.Kind.TORCH && Inv.count(villager, Tools.TORCH) == 0) {
-            if (!atDepot(level, villager)) {
-                if (goDepot(level, villager) == Mover.Result.FAILED) {
-                    wait = 100;
-                }
-                return;
-            }
-            supply(level, villager, Ids.mc("torch"), 1, 8);
-            String fence = Ids.mc("oak_fence");
-            supply(level, villager, stack -> stack.is(net.minecraft.tags.ItemTags.WOODEN_FENCES), 1, 8);
-            if (Inv.count(villager, stack -> stack.is(net.minecraft.tags.ItemTags.WOODEN_FENCES)) == 0 && colony().craft(level, fence, 3)) {
-                supply(level, villager, fence, 1, 3);
-            }
-            if (Inv.count(villager, Tools.TORCH) == 0) {
-                colony().request(Ids.mc("torch"));
-                colony().construction().skip(task);
-                status = "no torches for street lights";
-                wait = 200;
-                return;
-            }
         }
         failures = 0;
         phase = "work";
@@ -178,10 +155,6 @@ public final class BuilderJob extends Job {
             }
             case ROAD -> {
                 road(level, villager, pos);
-                return true;
-            }
-            case TORCH -> {
-                torch(level, villager, pos);
                 return true;
             }
             case ORDER -> {
@@ -308,45 +281,7 @@ public final class BuilderJob extends Job {
     }
 
     private void road(ServerLevel level, Villager villager, BlockPos ground) {
-        BlockState state = level.getBlockState(ground);
-        BlockState above = level.getBlockState(ground.above());
-        if (!above.isAir()) {
-            if (WorldUtil.isAirLike(above) && above.getFluidState().isEmpty()) {
-                level.destroyBlock(ground.above(), false, villager);
-            } else {
-                return;
-            }
-        }
-        if (state.is(BlockTags.SUBSTRATE_OVERWORLD) && !state.is(Blocks.DIRT_PATH) && !state.is(Blocks.FARMLAND) && !state.is(Blocks.MUD)) {
-            level.setBlock(ground, Blocks.DIRT_PATH.defaultBlockState(), Block.UPDATE_ALL);
-            level.playSound(null, ground, SoundEvents.SHOVEL_FLATTEN.value(), SoundSource.BLOCKS, 1.0F, 1.0F);
-            villager.getLookControl().setLookAt(ground.getX() + 0.5, ground.getY() + 1.0, ground.getZ() + 0.5);
-        } else if ((state.is(BlockTags.SAND) || state.is(Blocks.GRAVEL)) && colony().warehouse().take(level, Ids.mc("cobblestone"), 1) == 1) {
-            Placer.place(level, villager, ground, Blocks.COBBLESTONE.defaultBlockState());
-        }
-    }
-
-    private void torch(ServerLevel level, Villager villager, BlockPos feet) {
-        if (!WorldUtil.isAirLike(level.getBlockState(feet)) || !WorldUtil.isAirLike(level.getBlockState(feet.above()))
-                || !WorldUtil.solidFloor(level, feet.below())) {
-            return;
-        }
-        ItemStack fence = Inv.find(villager, stack -> stack.is(net.minecraft.tags.ItemTags.WOODEN_FENCES));
-        ItemStack torch = Inv.find(villager, Tools.TORCH);
-        if (torch.isEmpty()) {
-            return;
-        }
-        BlockPos torchAt = feet;
-        if (!fence.isEmpty() && fence.getItem() instanceof BlockItem blockItem) {
-            Placer.place(level, villager, feet, blockItem.getBlock().defaultBlockState());
-            fence.shrink(1);
-            torchAt = feet.above();
-        }
-        BlockState torchState = Blocks.TORCH.defaultBlockState();
-        if (torchState.canSurvive(level, torchAt)) {
-            Placer.place(level, villager, torchAt, torchState);
-            torch.shrink(1);
-        }
+        colony().construction().paths().build(level, villager, ground);
     }
 
     private void deposit(ServerLevel level, Villager villager) {

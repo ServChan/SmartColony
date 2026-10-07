@@ -137,6 +137,8 @@
   "smartcolony.building.bakery": "Panadería",
   "smartcolony.building.tree_farm": "Vivero de árboles",
   "smartcolony.chat.iron_age": "Ha comenzado la edad del hierro: la fragua funde hierro.",
+  "smartcolony.chat.lamp_posts": "Se ha levantado la primera farola: los caminos de la aldea se alinean con postes y antorchas.",
+  "smartcolony.chat.lantern_posts": "Se ha levantado el primer poste con linterna: los caminos de la aldea brillan con linternas.",
   "smartcolony.ui.age": "Edad: %s",
   "smartcolony.age.stone": "Edad de Piedra",
   "smartcolony.age.iron": "Edad del Hierro",

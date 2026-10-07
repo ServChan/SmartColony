@@ -12,14 +12,12 @@ import java.util.TreeMap;
 import java.util.UUID;
 import net.minecraft.commands.arguments.blocks.BlockStateParser;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.entity.ai.village.poi.PoiManager;
 import net.minecraft.world.entity.ai.village.poi.PoiTypes;
-import net.minecraft.world.level.LightLayer;
 import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.DoorBlock;
@@ -34,7 +32,6 @@ import org.lts.smartcolony.core.Blueprints;
 import org.lts.smartcolony.core.Category;
 import org.lts.smartcolony.core.ColonyData;
 import org.lts.smartcolony.core.CraftPlanner;
-import org.lts.smartcolony.core.GridPath;
 import org.lts.smartcolony.core.Ids;
 import org.lts.smartcolony.core.Kindergarten;
 import org.lts.smartcolony.core.Pos;
@@ -52,7 +49,6 @@ public final class Construction {
         FILL,
         PLACE,
         ROAD,
-        TORCH,
         ORDER
     }
 
@@ -77,11 +73,12 @@ public final class Construction {
 
     private final Colony colony;
     private final SiteCheck check;
+    private final Paths paths;
+    private final Lamps lamps;
     private Map<String, Integer> missing = new TreeMap<>();
     private String status = "";
     private final Map<String, Long> cooldown = new HashMap<>();
     private long lastPlan = -100000;
-    private long lastLighting = -100000;
     private final Map<ColonyData.Project, Runtime> runtime = new IdentityHashMap<>();
     private final Map<Long, Long> claims = new HashMap<>();
     private BlockPos siteHint;
@@ -91,6 +88,16 @@ public final class Construction {
     public Construction(Colony colony) {
         this.colony = colony;
         this.check = new SiteCheck(colony, this);
+        this.paths = new Paths(colony);
+        this.lamps = new Lamps(colony);
+    }
+
+    public Paths paths() {
+        return paths;
+    }
+
+    public Lamps lamps() {
+        return lamps;
     }
 
     public Map<String, Integer> missing() {
@@ -138,13 +145,7 @@ public final class Construction {
     }
 
     public boolean hasWork(ServerLevel level) {
-        return !active().isEmpty() || !data().pendingRoad.isEmpty() || !data().pendingTorches.isEmpty() && torchesAvailable(level)
-                || colony.improvements().hasWork(level);
-    }
-
-    private boolean torchesAvailable(ServerLevel level) {
-        Stock stock = colony.warehouse().stock(level);
-        return stock.get(Ids.mc("torch")) > 0 || CraftPlanner.plan(stock, Ids.mc("torch"), 1).isPresent();
+        return !active().isEmpty() || !data().pendingRoad.isEmpty() || colony.improvements().hasWork(level);
     }
 
     public int backlog(ServerLevel level) {
@@ -152,7 +153,7 @@ public final class Construction {
             return 0;
         }
         int work = active().size() * 250;
-        work += data().pendingRoad.size() + (torchesAvailable(level) ? data().pendingTorches.size() : 0);
+        work += data().pendingRoad.size();
         if (colony.improvements().hasWork(level)) {
             work += data().orders.size();
         }
@@ -176,10 +177,8 @@ public final class Construction {
                 plan(level, true);
             }
         }
-        if (now - lastLighting >= 1200) {
-            lastLighting = now;
-            planLighting(level);
-        }
+        paths.tick(level);
+        lamps.tick(level);
     }
 
     private List<String> decideNeeds(ServerLevel level) {
@@ -789,8 +788,30 @@ public final class Construction {
         return load;
     }
 
+    private Task roadTask(ServerLevel level, long now) {
+        List<Pos> roads = data().pendingRoad;
+        for (int i = 0; i < roads.size(); i++) {
+            Pos pos = roads.get(i);
+            if (!WorldUtil.loaded(level, new BlockPos(pos.x(), pos.y(), pos.z()))) {
+                continue;
+            }
+            BlockPos ground = new BlockPos(pos.x(), paths.ground(level, pos.x(), pos.z()), pos.z());
+            if (claimed(ground, now)) {
+                continue;
+            }
+            return claim(new Task(Kind.ROAD, ground, null, null, null, ground.above()), now);
+        }
+        return null;
+    }
+
     public Task next(ServerLevel level, UUID builder) {
         long now = level.getGameTime();
+        if (!data().pendingRoad.isEmpty() && Math.floorMod(builder.hashCode(), 4) == 1) {
+            Task road = roadTask(level, now);
+            if (road != null) {
+                return road;
+            }
+        }
         if (data().orders.size() > 40 && Math.floorMod(builder.hashCode(), 3) == 0) {
             Task order = colony.improvements().next(level);
             if (order != null) {
@@ -828,34 +849,9 @@ public final class Construction {
                 }
             }
         }
-        List<Pos> roads = data().pendingRoad;
-        for (int i = 0; i < roads.size(); ) {
-            Pos pos = roads.get(i);
-            BlockPos column = new BlockPos(pos.x(), pos.y(), pos.z());
-            if (!WorldUtil.loaded(level, column)) {
-                roads.remove(i);
-                continue;
-            }
-            BlockPos ground = WorldUtil.surface(level, pos.x(), pos.z()).below();
-            if (claimed(ground, now)) {
-                i++;
-                continue;
-            }
-            return claim(new Task(Kind.ROAD, ground, null, null, null, ground.above()), now);
-        }
-        List<Pos> torches = data().pendingTorches;
-        for (int i = 0; i < torches.size(); ) {
-            BlockPos feet = WorldUtil.bp(torches.get(i));
-            if (!WorldUtil.loaded(level, feet) || !WorldUtil.isAirLike(level.getBlockState(feet))
-                    || !WorldUtil.solidFloor(level, feet.below())) {
-                torches.remove(i);
-                continue;
-            }
-            if (claimed(feet, now)) {
-                i++;
-                continue;
-            }
-            return claim(new Task(Kind.TORCH, feet, null, null, null, feet), now);
+        Task road = roadTask(level, now);
+        if (road != null) {
+            return road;
         }
         return colony.improvements().next(level);
     }
@@ -1006,12 +1002,6 @@ public final class Construction {
                 data().bump("road_blocks", 1);
             }
             case ORDER -> colony.improvements().completed(task);
-            case TORCH -> {
-                Pos pos = WorldUtil.pos(task.pos());
-                data().pendingTorches.remove(pos);
-                data().torches.add(pos);
-                data().bump("street_torches", 1);
-            }
         }
         colony.markDirty();
     }
@@ -1147,171 +1137,13 @@ public final class Construction {
         }
         colony.notify(level, Component.translatable("smartcolony.chat.build_done",
                 Component.translatable("smartcolony.building." + building.blueprint)));
-        planRoad(level, WorldUtil.bp(building.door));
+        paths.onBuilt(level, building);
         colony.improvements().furnish(level, building);
         colony.markDirty();
     }
 
     public void planRoad(ServerLevel level, BlockPos from) {
-        BlockPos start = new BlockPos(from.getX(), 0, from.getZ());
-        BlockPos goal = nearestRoadOrDepot(start);
-        List<int[]> path = GridPath.find(new GridPath.Terrain() {
-            @Override
-            public int height(int x, int z) {
-                if (!WorldUtil.loaded(level, new BlockPos(x, 0, z))) {
-                    return Integer.MIN_VALUE / 2;
-                }
-                return level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z) - 1;
-            }
-
-            @Override
-            public boolean blocked(int x, int z) {
-                if (!WorldUtil.loaded(level, new BlockPos(x, 0, z))) {
-                    return true;
-                }
-                int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z) - 1;
-                BlockPos top = new BlockPos(x, y, z);
-                if (!level.getFluidState(top).isEmpty()) {
-                    return true;
-                }
-                Pos p = new Pos(x, y + 1, z);
-                for (ColonyData.Building building : data().buildings) {
-                    if (building.contains(p, 0)) {
-                        return true;
-                    }
-                }
-                BlockState state = level.getBlockState(top);
-                return state.is(Blocks.FARMLAND) || colony.warehouse().contains(top.above());
-            }
-
-            @Override
-            public boolean preferred(int x, int z) {
-                return data().roads.stream().anyMatch(p -> p.x() == x && p.z() == z);
-            }
-        }, from.getX(), from.getZ(), goal.getX(), goal.getZ(), 6000);
-        int added = 0;
-        for (int[] cell : path) {
-            boolean known = false;
-            for (Pos road : data().roads) {
-                if (road.x() == cell[0] && road.z() == cell[1]) {
-                    known = true;
-                    break;
-                }
-            }
-            if (!known) {
-                data().pendingRoad.add(new Pos(cell[0], from.getY(), cell[1]));
-                added++;
-            }
-        }
-        if (added > 0) {
-            colony.journal(level, "road planned: " + added + " blocks");
-        }
-    }
-
-    private BlockPos nearestRoadOrDepot(BlockPos from) {
-        BlockPos best = colony.depot();
-        double bestDistance = horizontal(from, best);
-        for (Pos road : data().roads) {
-            BlockPos pos = WorldUtil.bp(road);
-            double distance = horizontal(from, pos);
-            if (distance < bestDistance && distance > 4) {
-                bestDistance = distance;
-                best = pos;
-            }
-        }
-        return best;
-    }
-
-    private static double horizontal(BlockPos a, BlockPos b) {
-        double dx = a.getX() - b.getX();
-        double dz = a.getZ() - b.getZ();
-        return dx * dx + dz * dz;
-    }
-
-    private void planLighting(ServerLevel level) {
-        List<BlockPos> candidates = new ArrayList<>();
-        for (int i = 0; i < data().roads.size(); i += 3) {
-            candidates.add(WorldUtil.bp(data().roads.get(i)));
-        }
-        for (ColonyData.Building building : data().buildings) {
-            candidates.add(WorldUtil.bp(building.door).below());
-        }
-        candidates.add(colony.depot().below());
-        BlockPos center = colony.center();
-        int reach = (int) (data().radius * 0.85);
-        for (int dx = -reach; dx <= reach; dx += 7) {
-            for (int dz = -reach; dz <= reach; dz += 7) {
-                if (dx * dx + dz * dz <= reach * reach) {
-                    candidates.add(new BlockPos(center.getX() + dx, center.getY(), center.getZ() + dz));
-                }
-            }
-        }
-        int planned = 0;
-        for (BlockPos ground : candidates) {
-            if (planned >= 12 || data().pendingTorches.size() > 40) {
-                break;
-            }
-            if (!WorldUtil.loaded(level, ground)) {
-                continue;
-            }
-            BlockPos surface = WorldUtil.surface(level, ground.getX(), ground.getZ());
-            if (!WorldUtil.naturalGround(level.getBlockState(surface.below())) || !level.getFluidState(surface).isEmpty()) {
-                continue;
-            }
-            if (level.getBrightness(LightLayer.BLOCK, surface) >= 8) {
-                continue;
-            }
-            if (nearTorch(surface, 7)) {
-                continue;
-            }
-            BlockPos spot = torchSpot(level, surface);
-            if (spot != null) {
-                data().pendingTorches.add(WorldUtil.pos(spot));
-                planned++;
-            }
-        }
-        if (planned > 0) {
-            colony.markDirty();
-        }
-    }
-
-    private boolean nearTorch(BlockPos pos, int distance) {
-        Pos p = WorldUtil.pos(pos);
-        for (Pos torch : data().torches) {
-            if (torch.horizontalDistSq(p) < distance * distance) {
-                return true;
-            }
-        }
-        for (Pos torch : data().pendingTorches) {
-            if (torch.horizontalDistSq(p) < distance * distance) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private BlockPos torchSpot(ServerLevel level, BlockPos feet) {
-        for (Direction direction : Direction.Plane.HORIZONTAL) {
-            BlockPos side = WorldUtil.surface(level, feet.getX() + direction.getStepX(), feet.getZ() + direction.getStepZ());
-            if (Math.abs(side.getY() - feet.getY()) > 1) {
-                continue;
-            }
-            if (colony.sites().onRoad(side.below()) || colony.warehouse().contains(side) || !WorldUtil.standable(level, side)) {
-                continue;
-            }
-            boolean insideBuilding = false;
-            for (ColonyData.Building building : data().buildings) {
-                if (building.contains(WorldUtil.pos(side), 0)) {
-                    insideBuilding = true;
-                    break;
-                }
-            }
-            if (insideBuilding || side.equals(colony.depot())) {
-                continue;
-            }
-            return side.immutable();
-        }
-        return null;
+        paths.addDoorTarget(level, from);
     }
 
     public JsonObject debug(ServerLevel level) {
@@ -1336,8 +1168,8 @@ public final class Construction {
         }
         json.add("projects", sites);
         json.addProperty("maxProjects", maxProjects());
-        json.addProperty("pendingRoad", data().pendingRoad.size());
-        json.addProperty("pendingTorches", data().pendingTorches.size());
+        json.add("paths", paths.debug());
+        json.add("lamps", lamps.debug());
         return json;
     }
 

@@ -235,6 +235,10 @@ public final class BridgeTools {
                     roles.has(colonist.role().key()) ? roles.get(colonist.role().key()).getAsInt() + 1 : 1));
             c.add("roles", roles);
             c.add("stats", com.google.gson.JsonParser.parseString(new com.google.gson.Gson().toJson(colony.data().stats)));
+            c.addProperty("roads", colony.data().roads.size());
+            c.addProperty("lamps", colony.data().torches.size() + colony.data().lamps.size());
+            c.add("paths", colony.construction().paths().debug());
+            c.add("lampPosts", colony.construction().lamps().debug());
             colonies.add(c);
         }
         root.add("colonies", colonies);
@@ -299,6 +303,8 @@ public final class BridgeTools {
             JsonObject data = dump.getAsJsonObject("data");
             out.append("mine: ").append(data.has("mine") ? data.get("mine") : "none").append('\n');
             out.append("stats: ").append(data.get("stats")).append('\n');
+            JsonObject construction = dump.getAsJsonObject("construction");
+            out.append("paths: ").append(construction.get("paths")).append(" lamps: ").append(construction.get("lamps")).append('\n');
             JsonArray journal = data.getAsJsonArray("journal");
             for (int i = Math.max(0, journal.size() - 6); i < journal.size(); i++) {
                 out.append("  > ").append(journal.get(i).getAsString()).append('\n');

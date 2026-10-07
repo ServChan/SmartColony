@@ -72,6 +72,12 @@ public final class Improvements {
         return !data().orders.isEmpty() && level.getGameTime() >= blockedUntil;
     }
 
+    public void queueFirst(BlockPos pos, String state, String tag) {
+        data().orders.addFirst(new ColonyData.Order(WorldUtil.pos(pos), state, tag));
+        blockedUntil = 0;
+        colony.markDirty();
+    }
+
     public boolean isWall(Pos pos) {
         if (data().wall == null) {
             return false;
