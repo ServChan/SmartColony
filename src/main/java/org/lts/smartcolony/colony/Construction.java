@@ -70,7 +70,7 @@ public final class Construction {
     private static final long CLAIM_TICKS = 1200;
 
     static final List<String> OVERWORLD_WOODS = List.of(
-            "oak", "spruce", "birch", "jungle", "acacia", "dark_oak", "mangrove", "cherry", "pale_oak");
+            "oak", "spruce", "birch", "jungle", "acacia", "dark_oak", "mangrove", "cherry", "pale_oak", "poplar");
 
     private final Colony colony;
     private final SiteCheck check;
@@ -460,7 +460,7 @@ public final class Construction {
         missing = lack;
         status = "waiting for materials: " + lack;
         String richer = chooseWood(level);
-        if (!project.upgrade && !richer.equals(project.building.wood) && woodStock(stock, richer) > woodStock(stock, project.building.wood)) {
+        if (!project.upgrade && !richer.equals(project.building.wood) && woodStock(stock, richer) > woodStock(stock, project.building.wood) * 3 / 2 + 16) {
             colony.journal(level, project.building.blueprint + " switched from " + project.building.wood + " to " + richer);
             project.building.wood = richer;
             recomputeRequired(level, project);

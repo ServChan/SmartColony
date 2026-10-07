@@ -227,7 +227,9 @@ public final class TerrainMap {
                 }
                 compared++;
                 Column before = column(x, z);
-                if (before.ground() != now.ground() || before.surface() != now.surface()) {
+                boolean surfaceChanged = before.surface() != now.surface()
+                        && before.surface() != Surface.BUILDING && now.surface() != Surface.BUILDING;
+                if (before.ground() != now.ground() || surfaceChanged) {
                     changes.add(new Change(x, z, before, now));
                 }
             }

@@ -47,7 +47,7 @@ public final class PriceTable {
         put(70, "string");
         put(55, "white_wool");
         put(20, "oak_sapling", "spruce_sapling", "birch_sapling", "jungle_sapling", "acacia_sapling", "dark_oak_sapling",
-                "cherry_sapling", "pale_oak_sapling", "mangrove_propagule");
+                "cherry_sapling", "pale_oak_sapling", "poplar_sapling", "mangrove_propagule");
         put(62, "arrow");
         put(500, "bow", "shears");
         put(600, "shield");

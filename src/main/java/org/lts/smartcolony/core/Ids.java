@@ -4,7 +4,7 @@ import java.util.List;
 
 public final class Ids {
     public static final List<String> WOOD_TYPES = List.of(
-            "oak", "spruce", "birch", "jungle", "acacia", "dark_oak", "mangrove", "cherry", "pale_oak", "crimson", "warped");
+            "oak", "spruce", "birch", "jungle", "acacia", "dark_oak", "mangrove", "cherry", "pale_oak", "poplar", "crimson", "warped");
     public static final List<String> COLORS = List.of(
             "white", "orange", "magenta", "light_blue", "yellow", "lime", "pink", "gray",
             "light_gray", "cyan", "purple", "blue", "brown", "green", "red", "black");
