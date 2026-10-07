@@ -139,6 +139,7 @@
   "smartcolony.chat.iron_age": "Ha comenzado la edad del hierro: la fragua funde hierro.",
   "smartcolony.chat.lamp_posts": "Se levantó la primera farola: los caminos de la aldea se alinean con postes y antorchas.",
   "smartcolony.chat.lantern_posts": "Se levantó el primer poste con linterna: los caminos de la aldea brillan con linternas.",
+  "smartcolony.chat.mine_head_done": "La entrada de la cantera está terminada: portal, torre de izado y cobertizo de herramientas.",
   "smartcolony.ui.age": "Edad: %s",
   "smartcolony.age.stone": "Edad de Piedra",
   "smartcolony.age.iron": "Edad del Hierro",
