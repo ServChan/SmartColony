@@ -134,6 +134,7 @@ public final class LumberjackJob extends Job {
             idle(level, 600);
             return;
         }
+        colony().outposts().sampleTree(tree);
         status = "tree at " + tree.toShortString();
         phase = "walk";
     }
@@ -367,15 +368,25 @@ public final class LumberjackJob extends Job {
         }
     }
 
+    @Override
+    protected boolean usesOutposts() {
+        return true;
+    }
+
+    @Override
+    protected String walkKind() {
+        return "forest";
+    }
+
     private void deposit(ServerLevel level, Villager villager) {
-        if (!atDepot(level, villager)) {
-            if (goDepot(level, villager) == Mover.Result.FAILED) {
+        if (!atDrop(level, villager)) {
+            if (goDrop(level, villager) == Mover.Result.FAILED) {
                 status = "cannot reach storage";
                 wait = 100;
             }
             return;
         }
-        depositAll(level, villager);
+        dropAll(level, villager);
         phase = "start";
     }
 }

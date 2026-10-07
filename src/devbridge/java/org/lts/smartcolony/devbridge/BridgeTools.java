@@ -303,6 +303,7 @@ public final class BridgeTools {
             JsonObject data = dump.getAsJsonObject("data");
             out.append("mine: ").append(data.has("mine") ? data.get("mine") : "none").append('\n');
             out.append("stats: ").append(data.get("stats")).append('\n');
+            out.append("outposts: ").append(dump.get("outposts")).append('\n');
             JsonObject construction = dump.getAsJsonObject("construction");
             out.append("paths: ").append(construction.get("paths")).append(" lamps: ").append(construction.get("lamps")).append('\n');
             JsonArray journal = data.getAsJsonArray("journal");

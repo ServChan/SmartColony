@@ -136,6 +136,8 @@
   "smartcolony.building.fletcher_hut": "Cabaña del flechero",
   "smartcolony.building.bakery": "Panadería",
   "smartcolony.building.tree_farm": "Vivero de árboles",
+  "smartcolony.role.porter": "Cargador",
+  "smartcolony.building.outpost": "Centro de acopio",
   "smartcolony.chat.iron_age": "Ha comenzado la edad del hierro: la fragua funde hierro.",
   "smartcolony.chat.lamp_posts": "Se levantó la primera farola: los caminos de la aldea se alinean con postes y antorchas.",
   "smartcolony.chat.lantern_posts": "Se levantó el primer poste con linterna: los caminos de la aldea brillan con linternas.",

@@ -726,14 +726,28 @@ public final class MinerJob extends Job {
         super.stash(level, villager, kept);
     }
 
+    @Override
+    protected boolean usesOutposts() {
+        return true;
+    }
+
+    @Override
+    protected String walkKind() {
+        return "mine";
+    }
+
     private void deposit(ServerLevel level, Villager villager) {
-        if (!atDepot(level, villager)) {
-            if (goDepot(level, villager) == Mover.Result.FAILED) {
+        if (!atDrop(level, villager)) {
+            if (goDrop(level, villager) == Mover.Result.FAILED) {
                 wait = 100;
             }
             return;
         }
-        depositAll(level, villager);
+        ColonyData.Outpost outpost = dropSite(level, villager);
+        dropAll(level, villager);
+        if (outpost != null) {
+            restock(level, villager, outpost, Ids.mc("cobblestone"), 24);
+        }
         fitItems.clear();
         int extraCobble = Inv.count(villager, Ids.mc("cobblestone")) - 24;
         if (extraCobble > 0) {

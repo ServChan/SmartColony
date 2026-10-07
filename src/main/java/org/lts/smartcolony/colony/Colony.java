@@ -54,6 +54,7 @@ public final class Colony {
     private final Improvements improvements;
     private final Survey survey;
     private final StorageRecovery recovery;
+    private final Outposts outposts;
     private boolean festivalAnnounced;
     private final TheftWatcher theft;
     private final Trader trader;
@@ -77,6 +78,7 @@ public final class Colony {
         this.defense = new Defense(this);
         this.survey = new Survey(this);
         this.recovery = new StorageRecovery(this);
+        this.outposts = new Outposts(this);
         this.construction = new Construction(this);
         this.migration = new Migration(this);
         this.improvements = new Improvements(this);
@@ -137,6 +139,10 @@ public final class Colony {
 
     public StorageRecovery recovery() {
         return recovery;
+    }
+
+    public Outposts outposts() {
+        return outposts;
     }
 
     public Migration migration() {
@@ -663,6 +669,7 @@ public final class Colony {
         Nursery.tick(level, this);
         survey.tick(level);
         recovery.tick(level);
+        outposts.tick(level, ticks);
         forest.scan(level);
         theft.tick(level);
         defense.tick(level, ticks);
@@ -818,7 +825,9 @@ public final class Colony {
                 org.lts.smartcolony.core.CrafterNeeds.pending(Role.FLETCHER, crafting),
                 org.lts.smartcolony.core.CrafterNeeds.pending(Role.SMITH, crafting),
                 org.lts.smartcolony.core.CrafterNeeds.pending(Role.COOK, crafting));
-        desired = RoleAllocator.withTargets(RoleAllocator.desired(needs), advisor.roleTargets(level.getGameTime()), adults);
+        desired = org.lts.smartcolony.core.PorterPlan.settle(
+                RoleAllocator.withTargets(RoleAllocator.desired(needs), advisor.roleTargets(level.getGameTime()), adults),
+                outposts.porterDemand(level));
         Map<String, Role> current = new LinkedHashMap<>();
         Map<String, Role> affinity = new HashMap<>();
         Set<String> locked = new java.util.HashSet<>();
@@ -958,6 +967,7 @@ public final class Colony {
         JsonObject fill = new JsonObject();
         warehouse.fill(level).forEach((category, value) -> fill.addProperty(category.key(), Math.round(value * 100) / 100.0));
         root.add("fill", fill);
+        root.add("outposts", outposts.debug(level));
         JsonObject roles = new JsonObject();
         desired.forEach((role, count) -> roles.addProperty(role.key(), count));
         root.add("desiredRoles", roles);

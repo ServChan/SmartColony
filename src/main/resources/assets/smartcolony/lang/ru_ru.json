@@ -136,6 +136,8 @@
   "smartcolony.building.fletcher_hut": "Хижина лучника",
   "smartcolony.building.bakery": "Пекарня",
   "smartcolony.building.tree_farm": "Питомник деревьев",
+  "smartcolony.role.porter": "Носильщик",
+  "smartcolony.building.outpost": "Выносной склад",
   "smartcolony.chat.iron_age": "Начался железный век: кузня плавит железо.",
   "smartcolony.chat.lamp_posts": "Поставлен первый уличный фонарь: вдоль деревенских дорожек теперь стоят столбы с факелами.",
   "smartcolony.chat.lantern_posts": "Поставлен первый фонарный столб: деревенские дорожки теперь освещают фонари.",

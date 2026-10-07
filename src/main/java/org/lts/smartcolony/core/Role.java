@@ -13,7 +13,8 @@ public enum Role {
     GUARD,
     FLETCHER,
     SMITH,
-    COOK;
+    COOK,
+    PORTER;
 
     public String key() {
         return name().toLowerCase(Locale.ROOT);
