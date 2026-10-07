@@ -199,7 +199,30 @@ public final class Hall {
                 valid.add(pos);
             }
         }
+        if (valid.size() < 4) {
+            valid.addAll(coveredCells(level, building, valid));
+        }
         cells = valid;
+    }
+
+    private static List<BlockPos> coveredCells(ServerLevel level, ColonyData.Building building, List<BlockPos> taken) {
+        List<BlockPos> found = new ArrayList<>();
+        BlockPos door = WorldUtil.bp(building.door);
+        int floor = building.origin.y() + 1;
+        for (int x = building.min.x() + 1; x < building.max.x(); x++) {
+            for (int z = building.min.z() + 1; z < building.max.z(); z++) {
+                BlockPos pos = new BlockPos(x, floor, z);
+                if (taken.contains(pos) || pos.distManhattan(door) <= 1 || !WorldUtil.loaded(level, pos) || !WorldUtil.standable(level, pos)
+                        || level.canSeeSky(pos)) {
+                    continue;
+                }
+                found.add(pos);
+                if (found.size() >= 16) {
+                    return found;
+                }
+            }
+        }
+        return found;
     }
 
     private void houseHead(ServerLevel level, ColonyData.Building building) {
