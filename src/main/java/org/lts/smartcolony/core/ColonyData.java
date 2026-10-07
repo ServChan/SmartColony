@@ -119,6 +119,7 @@ public final class ColonyData {
         public Map<String, String> swaps = new LinkedHashMap<>();
         public long started;
         public long waitingSince;
+        public boolean upgrade;
     }
 
     public static final class Mine {

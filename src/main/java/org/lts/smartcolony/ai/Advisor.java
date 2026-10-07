@@ -214,8 +214,14 @@ public final class Advisor {
         }
         root.add("buildings", built);
         JsonArray blueprints = new JsonArray();
-        Blueprints.IDS.forEach(blueprints::add);
+        Blueprints.IDS.stream().filter(id -> org.lts.smartcolony.core.TownHall.stageOf(id) == 0).forEach(blueprints::add);
         root.add("availableBlueprints", blueprints);
+        int hallStage = org.lts.smartcolony.core.TownHall.stage(data);
+        root.addProperty("townHallStage", hallStage);
+        if (hallStage < org.lts.smartcolony.core.TownHall.STAGES) {
+            root.addProperty("townHallNextStageNeedsAdults", org.lts.smartcolony.core.TownHall.requiredAdults(hallStage + 1,
+                    org.lts.smartcolony.SmartColonyConfig.get().townHallAdults));
+        }
         root.addProperty("maxParallelSites", colony.construction().maxProjects());
         if (data.mine != null) {
             root.addProperty("mine", data.mine.type + " " + data.mine.progress + "/" + data.mine.plan().size());
