@@ -12,7 +12,6 @@ public final class TreeFarmPlan {
     public static final int FIRST_FARM_ADULTS = 6;
     public static final int THIN_FOREST_ADULTS = 4;
     public static final int SECOND_FARM_ADULTS = 25;
-    public static final int MIN_DIRT = 40;
     public static final int FOREST_THIN_BELOW = 6;
 
     private TreeFarmPlan() {
@@ -30,6 +29,13 @@ public final class TreeFarmPlan {
 
     public static boolean needed(int adults, int existing, boolean basicsBuilt, boolean forestThin) {
         return basicsBuilt && existing < wanted(adults, forestThin);
+    }
+
+    public static final int DIRT_STOCK_CAP = 96;
+    public static final int DIRT_CARRY_CAP = 64;
+
+    public static boolean keepDirt(int carried, int stock) {
+        return stock < DIRT_STOCK_CAP && carried < DIRT_CARRY_CAP;
     }
 
     public static boolean forestThin(int knownTrees) {

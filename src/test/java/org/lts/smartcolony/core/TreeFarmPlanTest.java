@@ -87,6 +87,14 @@ class TreeFarmPlanTest {
     }
 
     @Test
+    void minersKeepDirtOnlyWhileStockAndPackAreLow() {
+        assertTrue(TreeFarmPlan.keepDirt(0, 0));
+        assertTrue(TreeFarmPlan.keepDirt(63, 95));
+        assertFalse(TreeFarmPlan.keepDirt(64, 0));
+        assertFalse(TreeFarmPlan.keepDirt(0, 96));
+    }
+
+    @Test
     void farmsAreWantedByColonySize() {
         assertEquals(0, TreeFarmPlan.wanted(5, false));
         assertEquals(1, TreeFarmPlan.wanted(6, false));

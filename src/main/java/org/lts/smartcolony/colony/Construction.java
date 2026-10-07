@@ -243,8 +243,7 @@ public final class Construction {
         }
         boolean basics = data().buildings.stream().anyMatch(b -> "house".equals(b.kind))
                 && data().buildings.stream().anyMatch(b -> "storage".equals(b.kind));
-        if (TreeFarmPlan.needed(adults, (int) built(TreeFarmPlan.ID), basics, TreeFarmPlan.forestThin(colony.forest().count()))
-                && stock.get(Ids.mc("dirt")) >= TreeFarmPlan.MIN_DIRT) {
+        if (TreeFarmPlan.needed(adults, (int) built(TreeFarmPlan.ID), basics, TreeFarmPlan.forestThin(colony.forest().count()))) {
             order.add(TreeFarmPlan.ID);
         }
         List<String> ready = new ArrayList<>();
@@ -268,9 +267,6 @@ public final class Construction {
         Stock stock = colony.warehouse().stock(level);
         if (TreeFarmPlan.ID.equals(blueprintId)) {
             materials.remove(Ids.mc("dirt"));
-            if (stock.get(Ids.mc("dirt")) < TreeFarmPlan.MIN_DIRT) {
-                return false;
-            }
         }
         for (String key : new ArrayList<>(materials.keySet())) {
             if (Ids.path(key).endsWith("_bed")) {
