@@ -122,5 +122,8 @@
   "smartcolony.command.ai_off": "Советник ИИ выключен для этой колонии.",
   "smartcolony.command.ai_now": "Советник сейчас посмотрит колонию.",
   "smartcolony.command.ai_global_off": "Советник ИИ выключен: поставьте aiEnabled = true в config/smartcolony.json и выполните /colony ai reload.",
-  "smartcolony.command.ai_reload": "Настройки перечитаны, советник ИИ: %s."
+  "smartcolony.command.ai_reload": "Настройки перечитаны, советник ИИ: %s.",
+  "smartcolony.role.fletcher": "Мастер луков",
+  "smartcolony.role.smith": "Кузнец",
+  "smartcolony.role.cook": "Повар"
 }

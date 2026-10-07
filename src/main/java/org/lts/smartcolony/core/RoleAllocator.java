@@ -9,7 +9,8 @@ import java.util.Set;
 
 public final class RoleAllocator {
     public record Needs(int adults, int wood, int stone, int iron, int foodPoints, int animal, int builderBacklog,
-                        boolean penReady, Set<Role> equippable, double threat) {
+                        boolean penReady, Set<Role> equippable, double threat,
+                        boolean fletcherReady, boolean smithReady, boolean cookReady) {
     }
 
     private RoleAllocator() {
@@ -48,6 +49,19 @@ public final class RoleAllocator {
         int workers = adults - guards - builders;
         result.put(Role.GUARD, guards);
         result.put(Role.BUILDER, builders);
+        int crafterBudget = Math.max(0, workers - 3);
+        int fletchers = needs.fletcherReady() && guards >= 1 && adults >= 6 ? (guards >= 10 ? 2 : 1) : 0;
+        int smiths = needs.smithReady() && adults >= 12 ? (adults >= 24 ? 2 : 1) : 0;
+        int cooks = needs.cookReady() && adults >= 10 ? 1 : 0;
+        fletchers = Math.min(fletchers, crafterBudget);
+        crafterBudget -= fletchers;
+        smiths = Math.min(smiths, crafterBudget);
+        crafterBudget -= smiths;
+        cooks = Math.min(cooks, crafterBudget);
+        result.put(Role.FLETCHER, fletchers);
+        result.put(Role.SMITH, smiths);
+        result.put(Role.COOK, cooks);
+        workers -= fletchers + smiths + cooks;
         if (workers <= 0) {
             return result;
         }
@@ -98,6 +112,7 @@ public final class RoleAllocator {
             case GUARD, BUILDER -> Math.max(1, adults / 2);
             case MINER -> Math.max(1, adults / 3);
             case HERDER -> 3;
+            case FLETCHER, SMITH, COOK -> Math.max(1, adults / 6);
             case FISHERMAN -> Math.max(1, adults / 4);
             default -> adults;
         };

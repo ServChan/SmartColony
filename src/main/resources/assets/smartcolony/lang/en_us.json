@@ -122,5 +122,8 @@
   "smartcolony.command.ai_off": "The AI advisor is off for this colony.",
   "smartcolony.command.ai_now": "The advisor will review the colony now.",
   "smartcolony.command.ai_global_off": "The AI advisor is off: set aiEnabled to true in config/smartcolony.json, then run /colony ai reload.",
-  "smartcolony.command.ai_reload": "Config reloaded, AI advisor %s."
+  "smartcolony.command.ai_reload": "Config reloaded, AI advisor %s.",
+  "smartcolony.role.fletcher": "Fletcher",
+  "smartcolony.role.smith": "Smith",
+  "smartcolony.role.cook": "Cook"
 }

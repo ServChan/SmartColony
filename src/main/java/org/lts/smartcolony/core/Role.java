@@ -10,7 +10,10 @@ public enum Role {
     FISHERMAN,
     HERDER,
     BUILDER,
-    GUARD;
+    GUARD,
+    FLETCHER,
+    SMITH,
+    COOK;
 
     public String key() {
         return name().toLowerCase(Locale.ROOT);
@@ -32,9 +35,11 @@ public enum Role {
         return switch (professionPath) {
             case "farmer" -> FARMER;
             case "fisherman" -> FISHERMAN;
-            case "shepherd", "butcher", "leatherworker" -> HERDER;
-            case "armorer", "weaponsmith", "fletcher" -> GUARD;
-            case "toolsmith", "mason" -> MINER;
+            case "shepherd", "leatherworker" -> HERDER;
+            case "fletcher" -> FLETCHER;
+            case "armorer", "weaponsmith", "toolsmith" -> SMITH;
+            case "butcher" -> COOK;
+            case "mason" -> MINER;
             case "cartographer", "librarian", "cleric" -> BUILDER;
             default -> LUMBERJACK;
         };

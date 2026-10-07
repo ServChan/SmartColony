@@ -187,19 +187,84 @@ class CoreLogicTest {
 
     @Test
     void rolesBootstrapThenScale() {
-        RoleAllocator.Needs few = new RoleAllocator.Needs(2, 0, 0, 0, 0, 0, 0, false, Set.of(), 0);
+        RoleAllocator.Needs few = new RoleAllocator.Needs(2, 0, 0, 0, 0, 0, 0, false, Set.of(), 0, false, false, false);
         EnumMap<Role, Integer> two = RoleAllocator.desired(few);
         assertEquals(1, two.get(Role.LUMBERJACK));
         assertEquals(1, two.get(Role.FARMER));
         assertEquals(0, two.get(Role.GUARD));
         RoleAllocator.Needs many = new RoleAllocator.Needs(10, 300, 0, 0, 500, 0, 1, true,
-                Set.of(Role.MINER, Role.FISHERMAN, Role.GUARD), 0);
+                Set.of(Role.MINER, Role.FISHERMAN, Role.GUARD), 0, false, false, false);
         EnumMap<Role, Integer> ten = RoleAllocator.desired(many);
         assertEquals(10, ten.values().stream().mapToInt(Integer::intValue).sum());
         assertEquals(2, ten.get(Role.GUARD));
         assertEquals(1, ten.get(Role.BUILDER));
         assertTrue(ten.get(Role.MINER) >= 1);
         assertTrue(ten.get(Role.HERDER) <= 1);
+    }
+
+    @Test
+    void craftersAreAllocatedOnlyWhenReadyAndLargeEnough() {
+        Set<Role> gear = Set.of(Role.MINER, Role.FISHERMAN, Role.GUARD);
+        RoleAllocator.Needs none = new RoleAllocator.Needs(30, 300, 300, 10, 500, 0, 0, true, gear, 0, false, false, false);
+        assertEquals(0, RoleAllocator.desired(none).get(Role.FLETCHER));
+        RoleAllocator.Needs all = new RoleAllocator.Needs(30, 300, 300, 10, 500, 0, 0, true, gear, 0, true, true, true);
+        EnumMap<Role, Integer> crew = RoleAllocator.desired(all);
+        assertEquals(1, crew.get(Role.FLETCHER));
+        assertEquals(2, crew.get(Role.SMITH));
+        assertEquals(1, crew.get(Role.COOK));
+        assertEquals(30, crew.values().stream().mapToInt(Integer::intValue).sum());
+        RoleAllocator.Needs small = new RoleAllocator.Needs(8, 300, 300, 10, 500, 0, 0, true, gear, 0, true, true, true);
+        EnumMap<Role, Integer> hamlet = RoleAllocator.desired(small);
+        assertEquals(1, hamlet.get(Role.FLETCHER));
+        assertEquals(0, hamlet.get(Role.SMITH));
+        assertEquals(0, hamlet.get(Role.COOK));
+        assertEquals(8, hamlet.values().stream().mapToInt(Integer::intValue).sum());
+        RoleAllocator.Needs army = new RoleAllocator.Needs(60, 300, 300, 10, 500, 0, 0, true, gear, 3.0, true, false, false);
+        assertEquals(2, RoleAllocator.desired(army).get(Role.FLETCHER));
+    }
+
+    @Test
+    void crafterWantsFollowColonyNeeds() {
+        Stock stock = new Stock();
+        stock.add(Ids.mc("stick"), 20);
+        stock.add(Ids.mc("string"), 6);
+        stock.add(Ids.mc("flint"), 4);
+        stock.add(Ids.mc("feather"), 4);
+        EnumMap<Role, Integer> roles = new EnumMap<>(Role.class);
+        roles.put(Role.GUARD, 5);
+        CrafterNeeds.Context ctx = new CrafterNeeds.Context(stock, roles, 20, 0);
+        var wants = CrafterNeeds.wants(Role.FLETCHER, ctx);
+        assertEquals(Ids.mc("bow"), wants.get(0).item());
+        assertEquals(3, wants.get(0).count());
+        assertEquals(Ids.mc("arrow"), wants.get(1).item());
+        assertTrue(CrafterNeeds.pending(Role.FLETCHER, ctx));
+        assertTrue(CrafterNeeds.wants(Role.COOK, ctx).isEmpty());
+        Stock cooking = new Stock();
+        cooking.add(Ids.mc("beef"), 3);
+        cooking.add(Ids.mc("wheat"), 9);
+        cooking.add(Ids.mc("coal"), 5);
+        var cookWants = CrafterNeeds.wants(Role.COOK, new CrafterNeeds.Context(cooking, roles, 10, 0));
+        assertEquals(Ids.mc("cooked_beef"), cookWants.get(0).item());
+        assertTrue(cookWants.get(0).smelt());
+        assertEquals(Ids.mc("bread"), cookWants.get(1).item());
+        assertEquals(3, cookWants.get(1).count());
+        Stock smithing = new Stock();
+        smithing.add(Ids.mc("cobblestone"), 20);
+        smithing.add(Ids.mc("stick"), 10);
+        roles.put(Role.MINER, 2);
+        roles.put(Role.LUMBERJACK, 2);
+        var tools = CrafterNeeds.wants(Role.SMITH, new CrafterNeeds.Context(smithing, roles, 20, 2));
+        assertEquals(Ids.mc("stone_sword"), tools.get(0).item());
+        assertEquals(2, tools.get(0).count());
+        assertTrue(tools.stream().anyMatch(w -> w.item().equals(Ids.mc("stone_pickaxe"))));
+        assertTrue(tools.stream().anyMatch(w -> w.item().equals(Ids.mc("stone_axe"))));
+    }
+
+    @Test
+    void vanillaProfessionsMapToCrafters() {
+        assertEquals(Role.FLETCHER, Role.affinity("fletcher"));
+        assertEquals(Role.SMITH, Role.affinity("toolsmith"));
+        assertEquals(Role.COOK, Role.affinity("butcher"));
     }
 
     @Test
@@ -223,13 +288,13 @@ class CoreLogicTest {
 
     @Test
     void longBuildQueuesCallMoreBuilders() {
-        RoleAllocator.Needs small = new RoleAllocator.Needs(40, 300, 300, 10, 500, 0, 20, true, Set.of(Role.MINER), 0);
+        RoleAllocator.Needs small = new RoleAllocator.Needs(40, 300, 300, 10, 500, 0, 20, true, Set.of(Role.MINER), 0, false, false, false);
         assertEquals(2, RoleAllocator.desired(small).get(Role.BUILDER));
-        RoleAllocator.Needs wall = new RoleAllocator.Needs(40, 300, 300, 10, 500, 0, 2000, true, Set.of(Role.MINER), 0);
+        RoleAllocator.Needs wall = new RoleAllocator.Needs(40, 300, 300, 10, 500, 0, 2000, true, Set.of(Role.MINER), 0, false, false, false);
         assertEquals(10, RoleAllocator.desired(wall).get(Role.BUILDER));
         assertEquals(40, RoleAllocator.desired(wall).values().stream().mapToInt(Integer::intValue).sum());
         assertEquals(1, RoleAllocator.desired(wall).get(Role.GUARD));
-        RoleAllocator.Needs site = new RoleAllocator.Needs(40, 300, 300, 10, 500, 0, 250, true, Set.of(Role.MINER, Role.GUARD), 0);
+        RoleAllocator.Needs site = new RoleAllocator.Needs(40, 300, 300, 10, 500, 0, 250, true, Set.of(Role.MINER, Role.GUARD), 0, false, false, false);
         assertEquals(4, RoleAllocator.desired(site).get(Role.BUILDER));
         assertEquals(10, RoleAllocator.desired(site).get(Role.FARMER));
         assertEquals(8, RoleAllocator.desired(site).get(Role.GUARD));

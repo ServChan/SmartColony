@@ -14,7 +14,9 @@ public final class AdvisorPrompt {
                 Roles: lumberjack (logs, saplings), miner (open-pit quarry: cobblestone, ores; needs a pickaxe), farmer \
                 (crops, food), fisherman (food; needs a fishing rod), herder (animals in the pen, wool, leather), builder \
                 (building sites, walls, repairs, decor, village house upgrades), guard (fights monsters; needs a sword or \
-                an axe). Idle villagers do nothing. Children cannot work.
+                an axe), fletcher (crafts bows and arrows for guards), smith (crafts tools, swords, iron armor, \
+                shears), cook (bread, cooked meat and fish). Crafters need materials in the storage and a workstation \
+                nearby. Idle villagers do nothing. Children cannot work.
 
                 Buildings (blueprint ids): house_small (1 bed), house_family (2 beds), house_garden (2 beds), storage_shed, \
                 pen, guard_post, watchtower, blacksmith, market, barn, chapel. New houses need beds, beds need wool, wool \
