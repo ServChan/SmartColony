@@ -93,6 +93,7 @@ public final class Improvements {
 
     public void tick(ServerLevel level) {
         migrateWall(level);
+        migratePen(level);
         if (!salvageSorted) {
             salvageSorted = true;
             sortSalvage();
@@ -1168,6 +1169,43 @@ public final class Improvements {
         return WALL_HEIGHT + Math.max(0, Math.min(MAX_RAISE, highest - column.y()));
     }
 
+    private static final int PEN_VERSION = 2;
+    private static final String PEN_CLEAR = "pen_clear";
+
+    private void migratePen(ServerLevel level) {
+        ColonyData.Pen pen = data().pen;
+        if (pen == null || data().penVersion >= PEN_VERSION) {
+            return;
+        }
+        if (!WorldUtil.loaded(level, WorldUtil.bp(pen.min)) || !WorldUtil.loaded(level, WorldUtil.bp(pen.max))) {
+            return;
+        }
+        int cleared = 0;
+        int y = pen.min.y();
+        for (int x = pen.min.x(); x <= pen.max.x(); x++) {
+            for (int z = pen.min.z(); z <= pen.max.z(); z++) {
+                boolean edge = x == pen.min.x() || x == pen.max.x() || z == pen.min.z() || z == pen.max.z();
+                if (!edge) {
+                    continue;
+                }
+                for (int dy = 0; dy <= 1; dy++) {
+                    BlockPos pos = new BlockPos(x, y + dy, z);
+                    BlockState state = level.getBlockState(pos);
+                    if (state.isAir() || WorldUtil.isAirLike(state) || state.getCollisionShape(level, pos).isEmpty()) {
+                        continue;
+                    }
+                    data().orders.addFirst(new ColonyData.Order(WorldUtil.pos(pos), "minecraft:air", PEN_CLEAR));
+                    cleared++;
+                }
+            }
+        }
+        data().penVersion = PEN_VERSION;
+        if (cleared > 0) {
+            colony.journal(level, "cleared " + cleared + " blocks along the pen fence so animals cannot climb out");
+        }
+        colony.markDirty();
+    }
+
     private void migrateWall(ServerLevel level) {
         ColonyData.Wall wall = data().wall;
         if (wall == null || data().wallVersion >= WALL_VERSION) {
@@ -1318,7 +1356,8 @@ public final class Improvements {
             BlockState current = level.getBlockState(pos);
             if (target != null && target.isAir()) {
                 boolean salvage = SALVAGE.equals(order.tag);
-                if (current.isAir() || !diggable(level, pos, current, salvage)) {
+                boolean penClear = PEN_CLEAR.equals(order.tag) && penClearable(level, pos, current);
+                if (current.isAir() || !penClear && !diggable(level, pos, current, salvage)) {
                     orders.remove(i);
                     done(order);
                     continue;
@@ -1585,6 +1624,17 @@ public final class Improvements {
 
     private boolean fineStand(BlockPos stand, BlockPos target) {
         return !colony.inMine(stand) && !nearQuarry(stand.getX(), stand.getZ(), 0) && Math.abs(stand.getY() - target.getY()) <= 4;
+    }
+
+    private static boolean penClearable(ServerLevel level, BlockPos pos, BlockState state) {
+        if (!state.getFluidState().isEmpty() || state.getDestroySpeed(level, pos) < 0 || state.getDestroySpeed(level, pos) > 3.5F) {
+            return false;
+        }
+        if (state.getBlock() instanceof net.minecraft.world.level.block.FenceBlock
+                || state.getBlock() instanceof net.minecraft.world.level.block.FenceGateBlock || state.is(net.minecraft.tags.BlockTags.LOGS)) {
+            return false;
+        }
+        return !(level.getBlockEntity(pos) instanceof net.minecraft.world.Container container) || container.isEmpty();
     }
 
     private boolean diggable(ServerLevel level, BlockPos pos, BlockState state, boolean salvage) {

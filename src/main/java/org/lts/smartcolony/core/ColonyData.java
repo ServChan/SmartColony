@@ -48,6 +48,7 @@ public final class ColonyData {
     public boolean villageSurveyed;
     public int surveyVersion;
     public int wallVersion;
+    public int penVersion;
     public boolean terrainSurveyed;
     public long lastMarket;
     public long lastGolem;
