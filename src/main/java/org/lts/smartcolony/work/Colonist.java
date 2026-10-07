@@ -23,6 +23,7 @@ public final class Colonist {
     private long releasedUntil;
     private String releaseReason = "";
     private long lastDangerCheck;
+    private final Hazards hazards = new Hazards(this);
 
     public void hold(ServerLevel level, Villager villager, long until, String reason) {
         releasedUntil = until;
@@ -44,6 +45,8 @@ public final class Colonist {
         this.uuid = uuid;
         this.colony = colony;
         this.mover.guard(pos -> colony.isProtected(pos, false));
+        this.mover.onAvoided(() -> colony.data().bump("lava_avoided", 1));
+        this.digger.onAvoided(() -> colony.data().bump("lava_avoided", 1));
     }
 
     public UUID uuid() {
@@ -143,6 +146,9 @@ public final class Colonist {
                 releasedUntil = now + 120;
                 releaseReason = "danger";
             }
+        }
+        if (hazards.tick(level, villager, now)) {
+            return;
         }
         boolean want = role != Role.IDLE
                 && !villager.isBaby()
@@ -274,6 +280,12 @@ public final class Colonist {
         }
         return !level.getEntitiesOfClass(LivingEntity.class, villager.getBoundingBox().inflate(6.0, 3.0, 6.0),
                 entity -> entity instanceof Enemy && entity.isAlive() && villager.hasLineOfSight(entity)).isEmpty();
+    }
+
+    void seize(ServerLevel level, Villager villager) {
+        if (!isControlled(villager)) {
+            take(level, villager);
+        }
     }
 
     private void take(ServerLevel level, Villager villager) {

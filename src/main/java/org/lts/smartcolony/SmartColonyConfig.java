@@ -29,6 +29,8 @@ public final class SmartColonyConfig {
     public boolean showRoleNames = true;
     public boolean notifyPlayers = true;
     public boolean stuckTeleport = true;
+    public boolean shelterInRain = true;
+    public float rainWorkRatio = 0.0f;
     public int blockPlaceTicks = 6;
     public int mineTargetY = 12;
     public int treeTarget = 12;
@@ -111,6 +113,7 @@ public final class SmartColonyConfig {
         surveyRefreshPerTick = clamp(surveyRefreshPerTick, 0, 128);
         workStart = clamp(workStart, 0, 23999);
         workEnd = clamp(workEnd, 0, 23999);
+        rainWorkRatio = Math.max(0.0f, Math.min(1.0f, rainWorkRatio));
         blockPlaceTicks = clamp(blockPlaceTicks, 1, 100);
         mineTargetY = clamp(mineTargetY, -58, 100);
         treeTarget = clamp(treeTarget, 0, 200);

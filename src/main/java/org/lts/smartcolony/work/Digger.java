@@ -28,6 +28,14 @@ public final class Digger {
     private int lastStage = -1;
     private final List<ItemStack> drops = new ArrayList<>();
 
+    private Runnable avoided = () -> {
+    };
+    private BlockPos avoidedAt;
+
+    public void onAvoided(Runnable action) {
+        avoided = action;
+    }
+
     public List<ItemStack> takeDrops() {
         List<ItemStack> copy = new ArrayList<>(drops);
         drops.clear();
@@ -78,6 +86,14 @@ public final class Digger {
         if (target == null || !target.equals(pos)) {
             abort(level, villager);
             target = pos.immutable();
+        }
+        if (Hazards.lavaTouches(level, pos)) {
+            if (!pos.equals(avoidedAt)) {
+                avoidedAt = pos.immutable();
+                avoided.run();
+            }
+            abort(level, villager);
+            return Result.FAILED;
         }
         ItemStack tool = villager.getMainHandItem();
         float perTick = speed(tool, state, level, pos);
