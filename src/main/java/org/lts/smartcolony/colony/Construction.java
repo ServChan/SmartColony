@@ -182,6 +182,7 @@ public final class Construction {
         this.level = level;
         long now = level.getGameTime();
         colony.improvements().tick(level);
+        dropDuplicates(level);
         for (ColonyData.Project project : new ArrayList<>(data().projects)) {
             if (project.phase.equals("reserve")) {
                 reserve(level, project);
@@ -533,6 +534,21 @@ public final class Construction {
         rt.cells = null;
         rt.clearList = null;
         rt.clearIndex = 0;
+    }
+
+    private void dropDuplicates(ServerLevel level) {
+        java.util.Set<String> seen = new java.util.HashSet<>();
+        for (ColonyData.Project project : new ArrayList<>(data().projects)) {
+            String id = project.building.blueprint;
+            if ("house".equals(project.building.kind) || project.upgrade) {
+                continue;
+            }
+            if (!seen.add(id) && (project.phase.equals("reserve") || project.phase.equals("clear") && project.cursor == 0)) {
+                colony.journal(level, "dropped a duplicate " + id + " site at " + project.building.origin);
+                abandon(level, project);
+                cooldown.remove(id);
+            }
+        }
     }
 
     void abandon(ServerLevel level, ColonyData.Project project) {
@@ -1240,6 +1256,9 @@ public final class Construction {
 
     public boolean forceProject(ServerLevel level, String blueprintId, BlockPos hint) {
         if (TownHall.stageOf(blueprintId) > 0) {
+            return false;
+        }
+        if (!blueprintId.startsWith("house") && data().projects.stream().anyMatch(p -> p.building.blueprint.equals(blueprintId))) {
             return false;
         }
         Blueprint blueprint = Blueprints.get(blueprintId);

@@ -76,6 +76,9 @@ public final class RoleAllocator {
         caps.put(Role.FISHERMAN, 1 + adults / 8);
         caps.put(Role.MINER, Math.max(1, Math.min(6, adults / 5)));
         caps.put(Role.FARMER, Math.max(2, adults / 4));
+        if (needs.wood() >= 256) {
+            caps.put(Role.LUMBERJACK, Math.max(1, adults / 12));
+        }
         result.put(Role.LUMBERJACK, 1);
         int left = workers - 1;
         if (left > 0) {
@@ -99,7 +102,7 @@ public final class RoleAllocator {
                 }
             }
             if (best == null) {
-                best = Role.LUMBERJACK;
+                best = needs.wood() >= 256 ? Role.IDLE : Role.LUMBERJACK;
                 for (Role spare : new Role[] {Role.MINER, Role.FARMER, Role.FISHERMAN}) {
                     Integer cap = caps.get(spare);
                     boolean usable = spare == Role.FARMER || needs.equippable().contains(spare);

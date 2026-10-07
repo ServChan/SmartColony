@@ -218,6 +218,15 @@ public final class HerderJob extends Job {
             }
         }
         long day = level.getDefaultClockTime() / 24000L;
+        boolean noShears = !Tools.SHEARS.test(villager.getMainHandItem()) && Inv.find(villager, Tools.SHEARS).isEmpty()
+                && colony().stockOf(level, id -> id.equals(Ids.mc("shears"))) == 0;
+        boolean needWool = colony().stockOf(level, id -> Ids.path(id).endsWith("_wool") || Ids.path(id).endsWith("_bed")) < 3;
+        List<Animal> sheepAdults = herd.get(Species.SHEEP).stream().filter(a -> !a.isBaby()).toList();
+        if (noShears && needWool && sheepAdults.size() > 2 && lastCullDay != level.getDefaultClockTime() / 24000L) {
+            action = Action.CULL;
+            target = sheepAdults.stream().filter(a -> !a.isInLove()).findFirst().orElse(sheepAdults.getFirst());
+            return;
+        }
         for (Species species : Species.values()) {
             List<Animal> adults = herd.get(species).stream().filter(a -> !a.isBaby()).toList();
             boolean over = herd.get(species).size() > cap;
