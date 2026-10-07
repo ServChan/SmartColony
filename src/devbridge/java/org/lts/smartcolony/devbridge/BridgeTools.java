@@ -104,6 +104,9 @@ public final class BridgeTools {
                 "x1", "y1", "z1", "x2", "y2", "z2"));
         tools.add(tool("topmap", "Top-down map of surface blocks around a point with a legend.",
                 props("x", "integer", "", "z", "integer", "", "radius", "integer", "max 40"), "x", "z"));
+        tools.add(tool("survey", "Terrain survey map around a point (one character per surface class, with a legend and region stats) plus the pre-build check of every colony project.",
+                props("id", "string", "colony id", "x", "integer", "centre x, default colony centre", "z", "integer", "centre z, default colony centre",
+                        "radius", "integer", "default 24, max 48")));
         tools.add(tool("log", "Tail of logs/latest.log.", props("lines", "integer", "default 80", "contains", "string", "filter")));
         tools.add(tool("found", "Found a colony at the given block (normally a bell).",
                 props("x", "integer", "", "y", "integer", "", "z", "integer", ""), "x", "y", "z"));
@@ -139,6 +142,7 @@ public final class BridgeTools {
             case "wait" -> waitTicks(args);
             case "blocks" -> onMain(() -> blocks(args));
             case "topmap" -> onMain(() -> topmap(args));
+            case "survey" -> onMain(() -> survey(args));
             case "log" -> log(args);
             case "found" -> onMain(() -> found(args));
             case "role" -> onMain(() -> role(args));
@@ -303,6 +307,35 @@ public final class BridgeTools {
         });
     }
 
+    private JsonObject survey(JsonObject args) {
+        Colony colony = pick(args);
+        if (colony == null) {
+            return text("no colony", true);
+        }
+        ServerLevel level = ColonyManager.levelOf(colony);
+        org.lts.smartcolony.core.TerrainMap map = colony.survey().map();
+        if (map == null) {
+            return text("the survey has not started yet", true);
+        }
+        int cx = integer(args, "x", colony.center().getX());
+        int cz = integer(args, "z", colony.center().getZ());
+        int radius = Math.max(1, Math.min(48, integer(args, "radius", 24)));
+        StringBuilder out = new StringBuilder();
+        out.append("complete=").append(colony.survey().complete()).append(" known=").append(map.knownCount()).append('/')
+                .append(map.columns()).append(" mapRadius=").append(map.radius()).append(" wraps=").append(map.wraps())
+                .append(" window=").append(cx).append(',').append(cz).append(" r=").append(radius).append('\n');
+        for (org.lts.smartcolony.core.TerrainMap.Surface surface : org.lts.smartcolony.core.TerrainMap.Surface.values()) {
+            out.append(surface.symbol()).append('=').append(surface.name().toLowerCase(java.util.Locale.ROOT)).append(' ');
+        }
+        out.append('\n');
+        org.lts.smartcolony.core.TerrainMap.Stats stats = map.region(cx - radius, cz - radius, cx + radius, cz + radius);
+        out.append("region: known ").append(stats.known()).append('/').append(stats.columns()).append(" ground ").append(stats.min())
+                .append("..").append(stats.max()).append(" median ").append(stats.median()).append(" maxStep ").append(stats.maxStep()).append('\n');
+        out.append(map.ascii(cx, cz, radius));
+        out.append("projects: ").append(colony.construction().siteChecks(level)).append('\n');
+        return text(out.toString(), false);
+    }
+
     private JsonObject rooms(JsonObject args) {
         Colony colony = pick(args);
         if (colony == null) {
@@ -373,8 +406,11 @@ public final class BridgeTools {
 
     private JsonObject command(JsonObject args) throws Exception {
         JsonArray results = new JsonArray();
-        for (JsonElement element : args.getAsJsonArray("commands")) {
-            String command = element.getAsString();
+        List<String> requested = commandList(args);
+        if (requested.isEmpty()) {
+            return text("no commands: pass \"commands\" as an array of strings (a single string or a \"command\" string also works)", true);
+        }
+        for (String command : requested) {
             if (command.startsWith("/")) {
                 command = command.substring(1);
             }
@@ -414,6 +450,30 @@ public final class BridgeTools {
             results.add(item);
         }
         return json(results);
+    }
+
+    private static List<String> commandList(JsonObject args) {
+        List<String> commands = new ArrayList<>();
+        for (String key : new String[] {"commands", "command"}) {
+            JsonElement value = args.get(key);
+            if (value == null || value.isJsonNull()) {
+                continue;
+            }
+            if (value.isJsonArray()) {
+                for (JsonElement element : value.getAsJsonArray()) {
+                    if (element.isJsonPrimitive() && !element.getAsString().isBlank()) {
+                        commands.add(element.getAsString().strip());
+                    }
+                }
+            } else if (value.isJsonPrimitive() && !value.getAsString().isBlank()) {
+                for (String line : value.getAsString().split("\\R")) {
+                    if (!line.isBlank()) {
+                        commands.add(line.strip());
+                    }
+                }
+            }
+        }
+        return commands;
     }
 
     private JsonObject waitTicks(JsonObject args) throws Exception {

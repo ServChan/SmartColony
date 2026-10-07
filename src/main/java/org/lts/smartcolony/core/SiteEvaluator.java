@@ -30,7 +30,19 @@ public final class SiteEvaluator {
             }
         }
         Arrays.sort(all);
-        int base = all[all.length / 2];
+        return evaluateAt(ground, blocked, all[all.length / 2], fillLimit, cutLimit);
+    }
+
+    public static Result evaluateAt(int[][] ground, boolean[][] blocked, int base, int fillLimit, int cutLimit) {
+        int sizeX = ground.length;
+        int sizeZ = ground[0].length;
+        for (int x = 0; x < sizeX; x++) {
+            for (int z = 0; z < sizeZ; z++) {
+                if (blocked[x][z]) {
+                    return new Result(false, 0, 0, 0, 0, 0, Double.MAX_VALUE);
+                }
+            }
+        }
         int fill = 0;
         int cut = 0;
         int maxFill = 0;

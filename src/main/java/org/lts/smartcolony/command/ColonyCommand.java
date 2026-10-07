@@ -56,6 +56,7 @@ public final class ColonyCommand {
                 .then(Commands.literal("info").executes(ColonyCommand::info))
                 .then(Commands.literal("found").executes(ColonyCommand::found)
                         .then(Commands.literal("here").executes(ColonyCommand::foundHere)))
+                .then(Commands.literal("list").executes(ColonyCommand::list))
                 .then(Commands.literal("disband").executes(ColonyCommand::disband))
                 .then(Commands.literal("stock").executes(ColonyCommand::stock))
                 .then(Commands.literal("journal").executes(ColonyCommand::journal))
@@ -73,6 +74,21 @@ public final class ColonyCommand {
                         .then(Commands.argument("villagers", EntityArgument.entities())
                                 .then(Commands.argument("role", StringArgumentType.word()).suggests(ROLES)
                                         .executes(ColonyCommand::role)))));
+    }
+
+    private static int list(CommandContext<CommandSourceStack> context) {
+        CommandSourceStack source = context.getSource();
+        if (ColonyManager.all().isEmpty()) {
+            source.sendSuccess(() -> Component.translatable("smartcolony.command.list_empty"), false);
+            return 0;
+        }
+        int count = 0;
+        for (Colony colony : ColonyManager.all()) {
+            source.sendSuccess(() -> Component.translatable("smartcolony.command.list_line", colony.data().name, colony.id(),
+                    colony.center().toShortString(), colony.colonists().size(), colony.data().radius), false);
+            count++;
+        }
+        return count;
     }
 
     private static int ai(CommandContext<CommandSourceStack> context, String mode) {

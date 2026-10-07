@@ -51,6 +51,8 @@ public final class Colony {
     private final Construction construction;
     private final Migration migration;
     private final Improvements improvements;
+    private final Survey survey;
+    private final StorageRecovery recovery;
     private boolean festivalAnnounced;
     private final TheftWatcher theft;
     private final Trader trader;
@@ -71,6 +73,8 @@ public final class Colony {
         this.sites = new Sites(this);
         this.economy = new Economy(this);
         this.defense = new Defense(this);
+        this.survey = new Survey(this);
+        this.recovery = new StorageRecovery(this);
         this.construction = new Construction(this);
         this.migration = new Migration(this);
         this.improvements = new Improvements(this);
@@ -119,6 +123,14 @@ public final class Colony {
 
     public Improvements improvements() {
         return improvements;
+    }
+
+    public Survey survey() {
+        return survey;
+    }
+
+    public StorageRecovery recovery() {
+        return recovery;
     }
 
     public Migration migration() {
@@ -344,6 +356,10 @@ public final class Colony {
     }
 
     public boolean isProtected(BlockPos pos, boolean includeFarms) {
+        return isProtected(pos, includeFarms, null);
+    }
+
+    public boolean isProtected(BlockPos pos, boolean includeFarms, ColonyData.Project ignore) {
         Pos p = WorldUtil.pos(pos);
         if (p.horizontalDistSq(data.depot) < 36 || p.horizontalDistSq(data.center) < 16) {
             return true;
@@ -354,7 +370,7 @@ public final class Colony {
             }
         }
         for (ColonyData.Project project : data.projects) {
-            if (project.building.contains(p, 2)) {
+            if (project != ignore && project.building.contains(p, 2)) {
                 return true;
             }
         }
@@ -604,6 +620,8 @@ public final class Colony {
             }
         }
         Nursery.tick(level, this);
+        survey.tick(level);
+        recovery.tick(level);
         forest.scan(level);
         theft.tick(level);
         defense.tick(level, ticks);

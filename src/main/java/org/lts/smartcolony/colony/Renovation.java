@@ -329,7 +329,7 @@ public final class Renovation {
             for (BlockPos awning : List.of(front, front.relative(out.getClockWise()), front.relative(out.getCounterClockWise()))) {
                 if (level.getBlockState(awning).isAir() && !planned.contains(awning)) {
                     planned.add(awning.immutable());
-                    orders.add(order(awning, Ids.mc(wood + "_stairs") + "[facing=" + out.getOpposite().getSerializedName() + ",half=bottom]"));
+                    orders.add(hung(awning, Ids.mc(wood + "_stairs") + "[facing=" + out.getOpposite().getSerializedName() + ",half=bottom]"));
                 }
             }
         }
@@ -355,6 +355,12 @@ public final class Renovation {
                 return;
             }
         }
+    }
+
+    private static ColonyData.Order hung(BlockPos pos, String state) {
+        ColonyData.Order order = order(pos, state);
+        order.attached = true;
+        return order;
     }
 
     private static ColonyData.Order order(BlockPos pos, String state) {

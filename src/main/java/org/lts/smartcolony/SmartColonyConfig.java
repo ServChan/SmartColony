@@ -21,6 +21,9 @@ public final class SmartColonyConfig {
     public int minVillagersToFound = 3;
     public int colonyRadius = 32;
     public int maxColonyRadius = 64;
+    public int surveyMargin = 32;
+    public int surveyColumnsPerTick = 96;
+    public int surveyRefreshPerTick = 12;
     public int workStart = 1000;
     public int workEnd = 10500;
     public boolean showRoleNames = true;
@@ -100,6 +103,9 @@ public final class SmartColonyConfig {
         minVillagersToFound = clamp(minVillagersToFound, 1, 50);
         colonyRadius = clamp(colonyRadius, 16, 96);
         maxColonyRadius = clamp(maxColonyRadius, colonyRadius, 128);
+        surveyMargin = clamp(surveyMargin, 0, 64);
+        surveyColumnsPerTick = clamp(surveyColumnsPerTick, 8, 512);
+        surveyRefreshPerTick = clamp(surveyRefreshPerTick, 0, 128);
         workStart = clamp(workStart, 0, 23999);
         workEnd = clamp(workEnd, 0, 23999);
         blockPlaceTicks = clamp(blockPlaceTicks, 1, 100);

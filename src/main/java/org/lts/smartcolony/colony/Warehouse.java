@@ -249,6 +249,9 @@ public final class Warehouse {
                 BlockPos at = WorldUtil.bp(data.depot).above();
                 net.minecraft.world.entity.item.ItemEntity entity = new net.minecraft.world.entity.item.ItemEntity(
                         level, at.getX() + 0.5, at.getY(), at.getZ() + 0.5, rest);
+                if (all(level).isEmpty()) {
+                    entity.setUnlimitedLifetime();
+                }
                 level.addFreshEntity(entity);
             }
         }

@@ -41,6 +41,7 @@ public final class ColonyData {
     public boolean villageSurveyed;
     public int surveyVersion;
     public int wallVersion;
+    public boolean terrainSurveyed;
     public long lastMarket;
     public long lastGolem;
     public long lastFeeding;
@@ -64,6 +65,7 @@ public final class ColonyData {
         public Pos pos;
         public String state;
         public String tag = "";
+        public boolean attached;
 
         public Order() {
         }

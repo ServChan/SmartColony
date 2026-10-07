@@ -327,7 +327,8 @@ public final class BuilderJob extends Job {
     }
 
     private void torch(ServerLevel level, Villager villager, BlockPos feet) {
-        if (!WorldUtil.isAirLike(level.getBlockState(feet)) || !WorldUtil.isAirLike(level.getBlockState(feet.above()))) {
+        if (!WorldUtil.isAirLike(level.getBlockState(feet)) || !WorldUtil.isAirLike(level.getBlockState(feet.above()))
+                || !WorldUtil.solidFloor(level, feet.below())) {
             return;
         }
         ItemStack fence = Inv.find(villager, stack -> stack.is(net.minecraft.tags.ItemTags.WOODEN_FENCES));
