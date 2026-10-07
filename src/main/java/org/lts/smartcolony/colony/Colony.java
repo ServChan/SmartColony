@@ -51,6 +51,7 @@ public final class Colony {
     private final Defense defense;
     private final Construction construction;
     private final Migration migration;
+    private final Tavern tavern;
     private final Improvements improvements;
     private final Survey survey;
     private final StorageRecovery recovery;
@@ -80,6 +81,7 @@ public final class Colony {
         this.recovery = new StorageRecovery(this);
         this.construction = new Construction(this);
         this.migration = new Migration(this);
+        this.tavern = new Tavern(this);
         this.improvements = new Improvements(this);
         this.theft = new TheftWatcher(this);
         this.trader = new Trader(this);
@@ -143,6 +145,10 @@ public final class Colony {
 
     public Migration migration() {
         return migration;
+    }
+
+    public Tavern tavern() {
+        return tavern;
     }
 
     public Construction construction() {
@@ -690,15 +696,17 @@ public final class Colony {
         economy.tick(level, ticks);
         trader.tick(level, ticks);
         migration.tick(level);
+        tavern.tick(level);
         if (ticks % 20 == 11) {
             advisor.tick(level);
         }
         boolean party = festival(level);
         if (party && !festivalAnnounced) {
             festivalAnnounced = true;
-            journal(level, "festival at the bell");
-            notify(level, Component.translatable("smartcolony.chat.festival"));
-            level.playSound(null, center(), net.minecraft.sounds.SoundEvents.BELL_BLOCK, net.minecraft.sounds.SoundSource.BLOCKS, 2.0F, 1.0F);
+            boolean atTavern = tavern.built();
+            journal(level, atTavern ? "festival at the tavern" : "festival at the bell");
+            notify(level, Component.translatable(atTavern ? "smartcolony.chat.festival_tavern" : "smartcolony.chat.festival"));
+            level.playSound(null, atTavern ? tavern.plaza() : center(), net.minecraft.sounds.SoundEvents.BELL_BLOCK, net.minecraft.sounds.SoundSource.BLOCKS, 2.0F, 1.0F);
         } else if (!party) {
             festivalAnnounced = false;
         }
@@ -717,7 +725,8 @@ public final class Colony {
         int radius = data.radius + 8;
         AABB box = new AABB(center()).inflate(radius, 24, radius);
         for (Villager villager : level.getEntitiesOfClass(Villager.class, box, Villager::isAlive)) {
-            if (colonists.containsKey(villager.getUUID()) || ColonyManager.colonyOf(villager) != null) {
+            if (colonists.containsKey(villager.getUUID()) || ColonyManager.colonyOf(villager) != null
+                    || villager.entityTags().contains(Tavern.TAG)) {
                 continue;
             }
             if (villager.position().distanceTo(net.minecraft.world.phys.Vec3.atCenterOf(center())) > radius) {
@@ -839,7 +848,9 @@ public final class Colony {
                 org.lts.smartcolony.core.CrafterNeeds.pending(Role.FLETCHER, crafting),
                 org.lts.smartcolony.core.CrafterNeeds.pending(Role.SMITH, crafting),
                 org.lts.smartcolony.core.CrafterNeeds.pending(Role.COOK, crafting));
-        desired = RoleAllocator.withTargets(RoleAllocator.desired(needs), advisor.roleTargets(level.getGameTime()), adults);
+        desired = RoleAllocator.withTargets(
+                org.lts.smartcolony.core.TavernRules.withInnkeeper(RoleAllocator.desired(needs), tavern.built(), adults),
+                advisor.roleTargets(level.getGameTime()), adults);
         desired = RoleAllocator.withUndertaker(desired, graveyard.undertakersWanted(level), adults);
         Map<String, Role> current = new LinkedHashMap<>();
         Map<String, Role> affinity = new HashMap<>();
@@ -957,6 +968,7 @@ public final class Colony {
     public void disband(ServerLevel level) {
         trader.dismiss(level);
         migration.releaseAll(level);
+        tavern.releaseAll(level);
         for (Map.Entry<UUID, Colonist> entry : colonists.entrySet()) {
             if (level.getEntity(entry.getKey()) instanceof Villager villager) {
                 if (Colonist.isControlled(villager)) {

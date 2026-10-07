@@ -184,5 +184,11 @@
   "smartcolony.cause.starve": "starved",
   "smartcolony.cause.magic": "cursed",
   "smartcolony.cause.other": "unknown cause",
-  "smartcolony.ui.graveyard": "Deaths: %s, buried: %s, items recovered: %s"
+  "smartcolony.ui.graveyard": "Deaths: %s, buried: %s, items recovered: %s",
+  "smartcolony.role.innkeeper": "Innkeeper",
+  "smartcolony.building.tavern": "tavern",
+  "smartcolony.chat.festival_tavern": "Festival! The villagers gather in front of the tavern to dance.",
+  "smartcolony.chat.traveller_arrived": "%s travellers are heading for the tavern.",
+  "smartcolony.chat.traveller_settled": "A traveller liked the colony and decided to stay.",
+  "smartcolony.ui.tavern": "Tavern: %s meals served · %s travellers · %s settled"
 }

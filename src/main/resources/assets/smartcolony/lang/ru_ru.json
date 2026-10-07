@@ -184,5 +184,11 @@
   "smartcolony.cause.starve": "умер от голода",
   "smartcolony.cause.magic": "поражён чарами",
   "smartcolony.cause.other": "причина неизвестна",
-  "smartcolony.ui.graveyard": "Погибло: %s, похоронено: %s, возвращено вещей: %s"
+  "smartcolony.ui.graveyard": "Погибло: %s, похоронено: %s, возвращено вещей: %s",
+  "smartcolony.role.innkeeper": "Трактирщик",
+  "smartcolony.building.tavern": "таверна",
+  "smartcolony.chat.festival_tavern": "Праздник! Жители собираются у таверны и танцуют.",
+  "smartcolony.chat.traveller_arrived": "К таверне идут путники: %s.",
+  "smartcolony.chat.traveller_settled": "Колония приглянулась страннику, и он решил остаться.",
+  "smartcolony.ui.tavern": "Таверна: обедов подано %s · путников %s · осело %s"
 }

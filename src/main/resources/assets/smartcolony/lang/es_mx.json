@@ -184,5 +184,11 @@
   "smartcolony.cause.starve": "murió de hambre",
   "smartcolony.cause.magic": "víctima de un hechizo",
   "smartcolony.cause.other": "causa desconocida",
-  "smartcolony.ui.graveyard": "Muertes: %s, enterrados: %s, objetos recuperados: %s"
+  "smartcolony.ui.graveyard": "Muertes: %s, enterrados: %s, objetos recuperados: %s",
+  "smartcolony.role.innkeeper": "Tabernero",
+  "smartcolony.building.tavern": "taberna",
+  "smartcolony.chat.festival_tavern": "¡Fiesta! Los aldeanos se reúnen frente a la taberna para bailar.",
+  "smartcolony.chat.traveller_arrived": "%s viajeros van rumbo a la taberna.",
+  "smartcolony.chat.traveller_settled": "A un viajero le gustó la colonia y decidió quedarse.",
+  "smartcolony.ui.tavern": "Taberna: %s comidas servidas · %s viajeros · %s asentados"
 }

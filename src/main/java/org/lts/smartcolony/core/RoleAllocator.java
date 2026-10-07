@@ -147,6 +147,7 @@ public final class RoleAllocator {
             case MINER -> Math.max(1, adults / 3);
             case HERDER -> 3;
             case FLETCHER, SMITH, COOK -> Math.max(1, adults / 6);
+            case INNKEEPER -> 1;
             case FISHERMAN -> Math.max(1, adults / 4);
             default -> adults;
         };

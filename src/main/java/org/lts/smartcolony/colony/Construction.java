@@ -40,6 +40,7 @@ import org.lts.smartcolony.core.PreBuildCheck;
 import org.lts.smartcolony.core.Role;
 import org.lts.smartcolony.core.SiteEvaluator;
 import org.lts.smartcolony.core.Stock;
+import org.lts.smartcolony.core.TavernRules;
 import org.lts.smartcolony.core.Tech;
 import org.lts.smartcolony.core.TreeFarmPlan;
 import org.lts.smartcolony.core.TownHall;
@@ -260,6 +261,9 @@ public final class Construction {
         }
         if (adults >= 10 && built("market") == 0) {
             order.add("market");
+        }
+        if (TavernRules.needed(adults, built(TavernRules.ID), TavernRules.foodStable(colony.foodPoints(level), adults))) {
+            order.add(TavernRules.ID);
         }
         if (data().pen != null && built("barn") == 0 && stock.get(Ids.mc("wheat")) >= 80) {
             order.add("barn");

@@ -147,6 +147,16 @@ public final class Colonist {
             want = false;
         }
         if (!want && role != Role.GUARD && !villager.isBaby() && villager.isAlive() && !villager.isSleeping()
+                && releasedUntil <= now && colony.tavern().dinnerOpen(level, uuid)) {
+            if (!isControlled(villager)) {
+                take(level, villager);
+            }
+            Mover.keepAfloat(villager);
+            if (colony.tavern().dine(level, villager, mover, uuid)) {
+                return;
+            }
+        }
+        if (!want && role != Role.GUARD && !villager.isBaby() && villager.isAlive() && !villager.isSleeping()
                 && releasedUntil <= now && !colony.workTime(level) && bedless(villager)) {
             if (!isControlled(villager)) {
                 take(level, villager);
@@ -185,7 +195,7 @@ public final class Colonist {
                 villager.stopSleeping();
             }
             Mover.keepAfloat(villager);
-            digger.bonus(1.0F + 0.12F * colony.skill(uuid, role));
+            digger.bonus(1.0F + 0.12F * colony.skill(uuid, role) + colony.tavern().workBonus(level, uuid));
             job.tick(level, villager);
         }
     }
@@ -211,10 +221,11 @@ public final class Colonist {
     }
 
     private void celebrate(ServerLevel level, Villager villager) {
-        net.minecraft.core.BlockPos bell = colony.center();
+        net.minecraft.core.BlockPos bell = colony.tavern().built() ? colony.tavern().plaza() : colony.center();
         double angle = (uuid.getLeastSignificantBits() & 0xFFFF) / 65536.0 * Math.PI * 2.0;
         double radius = 3.0 + (uuid.getMostSignificantBits() & 3);
-        net.minecraft.core.BlockPos spot = org.lts.smartcolony.util.WorldUtil.surface(level,
+        net.minecraft.core.BlockPos spot = colony.tavern().built() ? colony.tavern().festivalSpot(level, uuid)
+                : org.lts.smartcolony.util.WorldUtil.surface(level,
                 bell.getX() + (int) Math.round(Math.cos(angle) * radius), bell.getZ() + (int) Math.round(Math.sin(angle) * radius));
         if (mover.tick(level, villager, spot, 1.5, 0.55, false) == Mover.Result.MOVING) {
             return;

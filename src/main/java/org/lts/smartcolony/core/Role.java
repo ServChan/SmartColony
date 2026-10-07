@@ -14,7 +14,8 @@ public enum Role {
     FLETCHER,
     SMITH,
     COOK,
-    UNDERTAKER;
+    UNDERTAKER,
+    INNKEEPER;
 
     public String key() {
         return name().toLowerCase(Locale.ROOT);
