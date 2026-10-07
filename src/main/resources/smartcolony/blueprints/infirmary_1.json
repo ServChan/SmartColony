@@ -1,0 +1,98 @@
+{
+  "id": "infirmary_1",
+  "kind": "infirmary",
+  "beds": 0,
+  "door": [
+    5,
+    1
+  ],
+  "palette": {
+    "P": "minecraft:$wood_planks",
+    "L": "minecraft:$wood_log",
+    "l": "minecraft:$wood_slab[type=bottom]",
+    "t": "minecraft:$wood_slab[type=top]",
+    "W": "minecraft:white_carpet",
+    "B": "minecraft:barrel[facing=up]",
+    "O": "minecraft:composter",
+    "r": "minecraft:wall_torch[facing=north]"
+  },
+  "layers": [
+    [
+      "           ",
+      "PPPPPPPPPPP",
+      "PPPPPPPPPPP",
+      "PPPPPPPPPPP",
+      "PPPPPPPPPPP",
+      "PPPPPPPPPPP",
+      "PPPPPPPPPPP",
+      "PPPPPPPPPPP",
+      "PPPPPPPPPPP"
+    ],
+    [
+      "           ",
+      "L.........L",
+      "...........",
+      ".t.........",
+      "...........",
+      ".t.........",
+      "...........",
+      "....B.O....",
+      "LPPPPPPPPPL"
+    ],
+    [
+      "           ",
+      "L.........L",
+      "...........",
+      ".W.........",
+      "...........",
+      ".W.........",
+      "...........",
+      "....r.r....",
+      "LPPPPPPPPPL"
+    ],
+    [
+      "           ",
+      "L.........L",
+      "...........",
+      "...........",
+      "...........",
+      "...........",
+      "...........",
+      "...........",
+      "L.........L"
+    ],
+    [
+      "           ",
+      "lllllllllll",
+      "lllllllllll",
+      "lllllllllll",
+      "lllllllllll",
+      "lllllllllll",
+      "lllllllllll",
+      "lllllllllll",
+      "lllllllllll"
+    ],
+    [
+      "           ",
+      "           ",
+      "           ",
+      "           ",
+      "           ",
+      "           ",
+      "           ",
+      "           ",
+      "           "
+    ],
+    [
+      "           ",
+      "           ",
+      "           ",
+      "           ",
+      "           ",
+      "           ",
+      "           ",
+      "           ",
+      "           "
+    ]
+  ]
+}

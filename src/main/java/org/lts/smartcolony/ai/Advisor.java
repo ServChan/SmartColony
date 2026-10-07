@@ -214,7 +214,7 @@ public final class Advisor {
         }
         root.add("buildings", built);
         JsonArray blueprints = new JsonArray();
-        Blueprints.IDS.stream().filter(id -> org.lts.smartcolony.core.TownHall.stageOf(id) == 0).forEach(blueprints::add);
+        Blueprints.IDS.stream().filter(id -> !org.lts.smartcolony.core.Staged.isStaged(id)).forEach(blueprints::add);
         root.add("availableBlueprints", blueprints);
         int hallStage = org.lts.smartcolony.core.TownHall.stage(data);
         root.addProperty("townHallStage", hallStage);

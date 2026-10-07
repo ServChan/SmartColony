@@ -165,5 +165,13 @@
   "smartcolony.chat.townhall_stage": "The town hall is complete: stage %s of %s.",
   "smartcolony.ui.townhall": "Town hall: stage %s of %s · next at %s villagers",
   "smartcolony.ui.townhall_max": "Town hall: stage %s of %s (final)",
-  "smartcolony.ui.townhall_none": "Town hall: not built yet · from %s villagers"
+  "smartcolony.ui.townhall_none": "Town hall: not built yet · from %s villagers",
+  "smartcolony.role.medic": "Medic",
+  "smartcolony.building.infirmary_1": "infirmary: first-aid shelter",
+  "smartcolony.building.infirmary_2": "infirmary: house with a medic station",
+  "smartcolony.building.infirmary_3": "infirmary: hospital with a children's corner",
+  "smartcolony.chat.infirmary_stage": "The infirmary is complete: stage %s of %s.",
+  "smartcolony.ui.hospital": "Infirmary: stage %s of %s · wounded %s · healed %s · lives saved %s",
+  "smartcolony.ui.hospital_none": "Infirmary: not built yet · from %s villagers or after the first loss",
+  "smartcolony.ui.hospital_cured": "Zombie villagers cured: %s"
 }

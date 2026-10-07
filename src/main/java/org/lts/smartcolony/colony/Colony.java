@@ -63,6 +63,7 @@ public final class Colony {
     private final Set<UUID> ownedNames = new java.util.HashSet<>();
     private EnumMap<Role, Integer> desired = new EnumMap<>(Role.class);
     private final IronAge ironAge;
+    private final Ward ward;
     private boolean dirty;
     private long ticks;
     private long lastStorageWarning;
@@ -84,6 +85,7 @@ public final class Colony {
         this.trader = new Trader(this);
         this.advisor = new org.lts.smartcolony.ai.Advisor(this);
         this.ironAge = new IronAge(this);
+        this.ward = new Ward(this);
         for (Map.Entry<String, ColonyData.Member> entry : data.members.entrySet()) {
             UUID uuid = UUID.fromString(entry.getKey());
             Colonist colonist = new Colonist(uuid, this);
@@ -149,6 +151,10 @@ public final class Colony {
 
     public org.lts.smartcolony.ai.Advisor advisor() {
         return advisor;
+    }
+
+    public Ward ward() {
+        return ward;
     }
 
     public Trader trader() {
@@ -661,6 +667,7 @@ public final class Colony {
             }
         }
         Nursery.tick(level, this);
+        ward.tick(level);
         survey.tick(level);
         recovery.tick(level);
         forest.scan(level);
@@ -818,7 +825,9 @@ public final class Colony {
                 org.lts.smartcolony.core.CrafterNeeds.pending(Role.FLETCHER, crafting),
                 org.lts.smartcolony.core.CrafterNeeds.pending(Role.SMITH, crafting),
                 org.lts.smartcolony.core.CrafterNeeds.pending(Role.COOK, crafting));
-        desired = RoleAllocator.withTargets(RoleAllocator.desired(needs), advisor.roleTargets(level.getGameTime()), adults);
+        EnumMap<Role, Integer> baseline = RoleAllocator.reserveMedics(RoleAllocator.desired(needs),
+                org.lts.smartcolony.core.Hospital.medicsFor(adults, ward.stage() > 0, SmartColonyConfig.get().adultsPerMedic));
+        desired = RoleAllocator.withTargets(baseline, advisor.roleTargets(level.getGameTime()), adults);
         Map<String, Role> current = new LinkedHashMap<>();
         Map<String, Role> affinity = new HashMap<>();
         Set<String> locked = new java.util.HashSet<>();

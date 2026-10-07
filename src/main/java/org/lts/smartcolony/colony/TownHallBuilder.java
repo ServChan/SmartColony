@@ -12,6 +12,8 @@ import net.minecraft.world.level.block.state.BlockState;
 import org.lts.smartcolony.core.Blueprint;
 import org.lts.smartcolony.core.Blueprints;
 import org.lts.smartcolony.core.ColonyData;
+import org.lts.smartcolony.core.Hospital;
+import org.lts.smartcolony.core.Staged;
 import org.lts.smartcolony.core.TownHall;
 import org.lts.smartcolony.util.WorldUtil;
 
@@ -20,10 +22,14 @@ final class TownHallBuilder {
     }
 
     static ColonyData.Building standing(ColonyData data) {
+        return standing(data, TownHall.blueprint(1));
+    }
+
+    static ColonyData.Building standing(ColonyData data, String blueprintId) {
         ColonyData.Building best = null;
         for (ColonyData.Building building : data.buildings) {
-            if (TownHall.stageOf(building.blueprint) > 0
-                    && (best == null || TownHall.stageOf(building.blueprint) > TownHall.stageOf(best.blueprint))) {
+            if (Staged.sameFamily(blueprintId, building.blueprint)
+                    && (best == null || Staged.stageOf(building.blueprint) > Staged.stageOf(best.blueprint))) {
                 best = building;
             }
         }
@@ -71,10 +77,10 @@ final class TownHallBuilder {
     }
 
     static Map<String, Integer> materials(Construction construction, ServerLevel level, String blueprintId, String wood) {
-        if (TownHall.stageOf(blueprintId) <= 1) {
+        if (Staged.stageOf(blueprintId) <= 1) {
             return Blueprints.get(blueprintId).materials(wood);
         }
-        ColonyData.Building standing = standing(construction.colonyData());
+        ColonyData.Building standing = standing(construction.colonyData(), blueprintId);
         if (standing == null) {
             return Blueprints.get(blueprintId).materials(wood);
         }
@@ -100,6 +106,10 @@ final class TownHallBuilder {
     }
 
     static void finished(ServerLevel level, Colony colony, ColonyData.Building building) {
+        if (Hospital.stageOf(building.blueprint) > 0) {
+            colony.ward().finished(level, building);
+            return;
+        }
         int stage = TownHall.stageOf(building.blueprint);
         colony.journal(level, "town hall finished: stage " + stage + " of " + TownHall.STAGES + " at " + building.origin);
         colony.notify(level, Component.translatable("smartcolony.chat.townhall_stage", stage, TownHall.STAGES));

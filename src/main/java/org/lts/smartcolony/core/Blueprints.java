@@ -10,7 +10,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class Blueprints {
     public static final List<String> IDS = List.of("house_small", "house_family", "storage_shed", "guard_post", "pen",
             "house_garden", "blacksmith", "market", "barn", "watchtower", "chapel", "kindergarten",
-            "fletcher_hut", "bakery", "tree_farm", "townhall_1", "townhall_2", "townhall_3", "townhall_4", "townhall_5");
+            "fletcher_hut", "bakery", "tree_farm", "townhall_1", "townhall_2", "townhall_3", "townhall_4", "townhall_5",
+            "infirmary_1", "infirmary_2", "infirmary_3");
     private static final Map<String, Blueprint> CACHE = new ConcurrentHashMap<>();
 
     private Blueprints() {

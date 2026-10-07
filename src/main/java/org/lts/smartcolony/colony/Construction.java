@@ -41,6 +41,8 @@ import org.lts.smartcolony.core.SiteEvaluator;
 import org.lts.smartcolony.core.Stock;
 import org.lts.smartcolony.core.Tech;
 import org.lts.smartcolony.core.TreeFarmPlan;
+import org.lts.smartcolony.core.Hospital;
+import org.lts.smartcolony.core.Staged;
 import org.lts.smartcolony.core.TownHall;
 import org.lts.smartcolony.util.WorldUtil;
 
@@ -281,6 +283,11 @@ public final class Construction {
         if (hallStage > 0) {
             order.add(TownHall.blueprint(hallStage));
         }
+        int wardStage = Hospital.next(Hospital.stage(data()), Hospital.inProgress(data()), adults, data().buildings.size(),
+                data().stat("deaths") + data().stat("medic_wounded") + data().stat("first_injury") > 0, SmartColonyConfig.get().infirmaryAdults);
+        if (wardStage > 0 && satisfiable(level, Hospital.blueprint(wardStage), chooseWood(level))) {
+            order.add(Hospital.blueprint(wardStage));
+        }
         List<String> ready = new ArrayList<>();
         for (String id : order) {
             if (cooldown.getOrDefault(id, Long.MIN_VALUE) <= now && !ready.contains(id)) {
@@ -345,7 +352,7 @@ public final class Construction {
             return;
         }
         Blueprint blueprint = Blueprints.get(need);
-        ColonyData.Project project = TownHall.stageOf(need) > 0 ? townHallProject(level, need, wood) : findSite(level, blueprint, wood);
+        ColonyData.Project project = Staged.isStaged(need) ? townHallProject(level, need, wood) : findSite(level, blueprint, wood);
         if (project == null) {
             status = "no flat land for " + need;
             cooldown.put(need, level.getGameTime() + 6000);
@@ -1187,7 +1194,7 @@ public final class Construction {
         data().bump("buildings", 1);
         int reach = (int) Math.ceil(Math.sqrt(Math.max(building.min.horizontalDistSq(data().center), building.max.horizontalDistSq(data().center))));
         data().radius = Math.min(SmartColonyConfig.get().maxColonyRadius, Math.max(data().radius, reach + 6));
-        if (TownHall.stageOf(building.blueprint) > 0) {
+        if (Staged.isStaged(building.blueprint)) {
             TownHallBuilder.finished(level, colony, building);
         } else {
             colony.journal(level, "finished " + building.blueprint + " at " + building.origin);
@@ -1239,7 +1246,7 @@ public final class Construction {
     }
 
     public boolean forceProject(ServerLevel level, String blueprintId, BlockPos hint) {
-        if (TownHall.stageOf(blueprintId) > 0) {
+        if (Staged.isStaged(blueprintId)) {
             return false;
         }
         Blueprint blueprint = Blueprints.get(blueprintId);
@@ -1276,7 +1283,7 @@ public final class Construction {
     }
 
     private ColonyData.Project townHallProject(ServerLevel level, String blueprintId, String wood) {
-        ColonyData.Building standing = TownHallBuilder.standing(data());
+        ColonyData.Building standing = TownHallBuilder.standing(data(), blueprintId);
         if (standing != null) {
             return TownHallBuilder.upgrade(standing, blueprintId);
         }
@@ -1295,10 +1302,10 @@ public final class Construction {
 
     private void finishUpgrade(ServerLevel level, ColonyData.Project project) {
         lowerCrane(level, project);
-        ColonyData.Building standing = TownHallBuilder.standing(data());
+        ColonyData.Building standing = TownHallBuilder.standing(data(), project.building.blueprint);
         if (standing != null) {
             TownHallBuilder.apply(standing, project);
-            data().bump("townhall_upgrades", 1);
+            data().bump(Hospital.stageOf(project.building.blueprint) > 0 ? "infirmary_upgrades" : "townhall_upgrades", 1);
             TownHallBuilder.finished(level, colony, standing);
         }
         drop(project);

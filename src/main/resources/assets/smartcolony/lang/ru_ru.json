@@ -165,5 +165,13 @@
   "smartcolony.chat.townhall_stage": "Ратуша достроена: этап %s из %s.",
   "smartcolony.ui.townhall": "Ратуша: этап %s из %s · следующий при %s жителях",
   "smartcolony.ui.townhall_max": "Ратуша: этап %s из %s (последний)",
-  "smartcolony.ui.townhall_none": "Ратуша: ещё не построена · от %s жителей"
+  "smartcolony.ui.townhall_none": "Ратуша: ещё не построена · от %s жителей",
+  "smartcolony.role.medic": "Лекарь",
+  "smartcolony.building.infirmary_1": "лазарет: навес первой помощи",
+  "smartcolony.building.infirmary_2": "лазарет: дом со столом лекаря",
+  "smartcolony.building.infirmary_3": "лазарет: больница с детским уголком",
+  "smartcolony.chat.infirmary_stage": "Лазарет достроен: этап %s из %s.",
+  "smartcolony.ui.hospital": "Лазарет: этап %s из %s · раненых %s · вылечено %s · спасено жизней %s",
+  "smartcolony.ui.hospital_none": "Лазарет: ещё не построен · от %s жителей или после первой потери",
+  "smartcolony.ui.hospital_cured": "Вылечено зомби-жителей: %s"
 }

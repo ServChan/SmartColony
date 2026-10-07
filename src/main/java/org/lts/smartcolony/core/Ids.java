@@ -58,6 +58,14 @@ public final class Ids {
         return path(id).endsWith("_wool");
     }
 
+    public static final java.util.Set<String> SMALL_FLOWERS = java.util.Set.of(
+            "dandelion", "poppy", "blue_orchid", "allium", "azure_bluet", "red_tulip", "orange_tulip", "white_tulip",
+            "pink_tulip", "oxeye_daisy", "cornflower", "lily_of_the_valley");
+
+    public static boolean isSmallFlower(String id) {
+        return SMALL_FLOWERS.contains(path(id));
+    }
+
     public static boolean isCoal(String id) {
         String path = path(id);
         return path.equals("coal") || path.equals("charcoal");

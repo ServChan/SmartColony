@@ -190,7 +190,7 @@ public final class GuardJob extends Job {
         if (entity instanceof ServerPlayer player) {
             return colony().defense().isEnemyPlayer(player);
         }
-        return entity instanceof Enemy;
+        return entity instanceof Enemy && !colony().ward().spares(entity);
     }
 
     private LivingEntity pickTarget(ServerLevel level, Villager villager) {
@@ -554,6 +554,7 @@ public final class GuardJob extends Job {
         }
         String path = Ids.path(ItemIds.id(stack));
         return !path.equals("rotten_flesh") && !path.equals("spider_eye") && !path.equals("poisonous_potato")
+                && !path.equals("golden_apple") && !path.equals("enchanted_golden_apple") && !path.equals("suspicious_stew")
                 && !path.equals("pufferfish") && !path.equals("chorus_fruit");
     }
 

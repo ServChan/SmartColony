@@ -1,0 +1,107 @@
+{
+  "id": "infirmary_3",
+  "kind": "infirmary",
+  "beds": 0,
+  "door": [
+    5,
+    1
+  ],
+  "palette": {
+    "P": "minecraft:$wood_planks",
+    "L": "minecraft:$wood_log",
+    "X": "minecraft:$wood_log[axis=x]",
+    "Z": "minecraft:$wood_log[axis=z]",
+    "G": "minecraft:glass_pane",
+    "d": "minecraft:$wood_door[facing=south,half=lower,hinge=left,open=false]",
+    "u": "minecraft:$wood_door[facing=south,half=upper,hinge=left,open=false]",
+    "n": "minecraft:$wood_stairs[facing=north,half=bottom]",
+    "s": "minecraft:$wood_stairs[facing=south,half=bottom]",
+    "t": "minecraft:$wood_slab[type=top]",
+    "W": "minecraft:white_carpet",
+    "B": "minecraft:barrel[facing=up]",
+    "S": "minecraft:brewing_stand",
+    "H": "minecraft:water_cauldron[level=3]",
+    "T": "minecraft:lantern[hanging=true]",
+    "r": "minecraft:wall_torch[facing=north]",
+    "q": "minecraft:wall_torch[facing=south]"
+  },
+  "layers": [
+    [
+      "           ",
+      "PPPPPPPPPPP",
+      "PPPPPPPPPPP",
+      "PPPPPPPPPPP",
+      "PPPPPPPPPPP",
+      "PPPPPPPPPPP",
+      "PPPPPPPPPPP",
+      "PPPPPPPPPPP",
+      "PPPPPPPPPPP"
+    ],
+    [
+      "           ",
+      "LPPPPdPPPPL",
+      "P.........P",
+      "Pt.B.....tP",
+      "P..WW.....P",
+      "Pt.......tP",
+      "P.........P",
+      "Pt.BB.SH.tP",
+      "LPPPPPPPPPL"
+    ],
+    [
+      "           ",
+      "LPGPPuPPGPL",
+      "P..q...q..P",
+      "GW.......WG",
+      "P.........P",
+      "PW.......WP",
+      "G.........G",
+      "PW..r.r..WP",
+      "LPGPPPPPGPL"
+    ],
+    [
+      "           ",
+      "LXXXXXXXXXL",
+      "Z.........Z",
+      "Z.........Z",
+      "Z....T....Z",
+      "Z.........Z",
+      "Z....T....Z",
+      "Z.........Z",
+      "LXXXXXXXXXL"
+    ],
+    [
+      "           ",
+      "sssssssssss",
+      "PPPPPPPPPPP",
+      "PPPPPPPPPPP",
+      "PPPPPPPPPPP",
+      "PPPPPPPPPPP",
+      "PPPPPPPPPPP",
+      "PPPPPPPPPPP",
+      "nnnnnnnnnnn"
+    ],
+    [
+      "           ",
+      "           ",
+      "sssssssssss",
+      "P.........P",
+      "P.........P",
+      "P.........P",
+      "P.........P",
+      "nnnnnnnnnnn",
+      "           "
+    ],
+    [
+      "           ",
+      "           ",
+      "           ",
+      "sssssssssss",
+      "PPPPPPPPPPP",
+      "PPPPPPPPPPP",
+      "nnnnnnnnnnn",
+      "           ",
+      "           "
+    ]
+  ]
+}

@@ -12,6 +12,7 @@ import net.minecraft.world.entity.npc.villager.Villager;
 import org.lts.smartcolony.SmartColonyConfig;
 import org.lts.smartcolony.core.Category;
 import org.lts.smartcolony.core.ColonyData;
+import org.lts.smartcolony.core.Hospital;
 import org.lts.smartcolony.core.ItemClassifier;
 import org.lts.smartcolony.core.Reputation;
 import org.lts.smartcolony.core.Role;
@@ -50,7 +51,9 @@ public record ColonyView(
         String age,
         TraderInfo trader,
         int townHall,
-        int townHallNeeds) {
+        int townHallNeeds,
+        String hospital,
+        int hospitalNeeds) {
 
     public record TraderOffer(String give, int giveCount, String result, int resultCount, int uses) {
     }
@@ -167,6 +170,8 @@ public record ColonyView(
                         ? colony.advisor().state() : "off",
                 colony.advisor().state().equals("error") ? colony.advisor().error() : colony.advisor().thoughts(), data.age, traderInfo,
                 TownHall.stage(data), TownHall.stage(data) >= TownHall.STAGES ? 0
-                : TownHall.requiredAdults(TownHall.stage(data) + 1, SmartColonyConfig.get().townHallAdults));
+                : TownHall.requiredAdults(TownHall.stage(data) + 1, SmartColonyConfig.get().townHallAdults),
+                colony.ward().summary(), Hospital.stage(data) >= Hospital.STAGES ? 0
+                : Hospital.requiredAdults(Hospital.stage(data) + 1, SmartColonyConfig.get().infirmaryAdults));
     }
 }

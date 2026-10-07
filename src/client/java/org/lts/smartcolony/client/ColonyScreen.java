@@ -180,6 +180,19 @@ public final class ColonyScreen extends Screen {
                 : view.townHallNeeds() == 0 ? Component.translatable("smartcolony.ui.townhall_max", view.townHall(), 5)
                 : Component.translatable("smartcolony.ui.townhall", view.townHall(), 5, view.townHallNeeds());
         graphics.text(font, hall, x, y, view.townHall() == 0 ? TEXT_DIM : TEXT_NORMAL, false);
+        y += 14;
+        String[] ward = view.hospital() == null ? new String[0] : view.hospital().split("\\|");
+        int wardStage = ward.length >= 6 ? Integer.parseInt(ward[0]) : 0;
+        if (wardStage == 0) {
+            graphics.text(font, Component.translatable("smartcolony.ui.hospital_none", view.hospitalNeeds()), x, y, TEXT_DIM, false);
+        } else {
+            graphics.text(font, Component.translatable("smartcolony.ui.hospital", wardStage, 3, ward[1], ward[2], ward[3]), x, y,
+                    TEXT_NORMAL, false);
+            if (!"0".equals(ward[4])) {
+                y += 14;
+                graphics.text(font, Component.translatable("smartcolony.ui.hospital_cured", ward[4]), x, y, STATUS_ON, false);
+            }
+        }
         y += 16;
         if (view.children() > 0) {
             graphics.text(font, Component.translatable(view.kindergarten() ? "smartcolony.ui.kindergarten.yes" : "smartcolony.ui.kindergarten.no"),

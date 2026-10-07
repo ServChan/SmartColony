@@ -6,7 +6,8 @@
     "AbstractVillagerMixin",
     "MobAccessor",
     "VillagerMixin",
-    "WanderingTraderMixin"
+    "WanderingTraderMixin",
+    "ZombieVillagerInvoker"
   ],
   "injectors": {
     "defaultRequire": 1
