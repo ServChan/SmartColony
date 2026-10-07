@@ -4,9 +4,11 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.npc.villager.Villager;
 import net.minecraft.world.item.ItemStack;
@@ -28,6 +30,9 @@ import org.lts.smartcolony.util.WorldUtil;
 
 public final class MinerJob extends Job {
     private static final int CELLS_PER_TRIP = 48;
+    private static final int FIT_PER_TRIP = 64;
+    private static final int FIT_PER_STOP = 24;
+    private static final int TUNNEL_LOGS = 21;
     private List<Pos> route = List.of();
     private int waypoint;
     private int cellsThisTrip;
@@ -39,6 +44,10 @@ public final class MinerJob extends Job {
     private int cellIndex = -1;
     private int cellTicks;
     private int skippedInRow;
+    private int fitBudget;
+    private long fitRetry;
+    private Map<String, Integer> fitNeeds;
+    private final Set<String> fitItems = new HashSet<>();
 
     public MinerJob(Colonist colonist) {
         super(colonist);
@@ -58,6 +67,17 @@ public final class MinerJob extends Job {
     @Override
     protected boolean keep(ItemStack stack) {
         return tools().test(stack) || stack.is(Items.TORCH) || stack.is(Items.LADDER);
+    }
+
+    @Override
+    protected boolean cargoFull(Villager villager) {
+        int fitSlots = 0;
+        for (String id : fitItems) {
+            if (Inv.count(villager, id) > 0) {
+                fitSlots++;
+            }
+        }
+        return Inv.used(villager) - fitSlots >= depositThreshold || Inv.free(villager) == 0;
     }
 
     @Override
@@ -130,6 +150,7 @@ public final class MinerJob extends Job {
             wait = 600;
             return;
         }
+        fitNeeds = null;
         phase = "prepare";
     }
 
@@ -147,7 +168,11 @@ public final class MinerJob extends Job {
         ColonyData.Mine current = colony().data().mine;
         int ladderGap = ladderGap(level, villager, current);
         boolean fetchLadders = ladderGap > 0 && level.getGameTime() >= ladderRetry;
-        if (Inv.count(villager, Ids.mc("torch")) < 4 || Inv.count(villager, Ids.mc("cobblestone")) < 8 || fetchLadders) {
+        if (fitNeeds == null) {
+            fitNeeds = planFittings(level, current);
+        }
+        boolean fetchFits = !fitNeeds.isEmpty() && level.getGameTime() >= fitRetry;
+        if (Inv.count(villager, Ids.mc("torch")) < 4 || Inv.count(villager, Ids.mc("cobblestone")) < 8 || fetchLadders || fetchFits) {
             if (!atDepot(level, villager)) {
                 if (goDepot(level, villager) == Mover.Result.FAILED) {
                     wait = 200;
@@ -163,6 +188,9 @@ public final class MinerJob extends Job {
                     ladderRetry = level.getGameTime() + 6000;
                 }
             }
+            if (fetchFits) {
+                fetchFittings(level, villager);
+            }
         }
         if (current != null && current.quarry()) {
             furnishQuarry(level, villager, current);
@@ -176,7 +204,54 @@ public final class MinerJob extends Job {
         waypoint = 0;
         cellsThisTrip = 0;
         stuck = 0;
+        fitBudget = FIT_PER_TRIP;
         phase = "descend";
+    }
+
+    private Map<String, Integer> planFittings(ServerLevel level, ColonyData.Mine mine) {
+        if (mine == null) {
+            return Map.of();
+        }
+        if (mine.quarry() && !mine.headDone && colony().fitter().headFinished(level, mine)) {
+            mine.headDone = true;
+            colony().journal(level, "the quarry head is finished");
+            colony().notify(level, Component.translatable("smartcolony.chat.mine_head_done"));
+            colony().markDirty();
+        }
+        List<BlockPos> stops = new ArrayList<>();
+        for (Pos stop : mine.plan().routeTo(Math.min(mine.progress, mine.plan().size() - 1))) {
+            stops.add(WorldUtil.bp(stop));
+        }
+        if (!mine.quarry()) {
+            Map<String, Integer> due = colony().fitter().needs(level, mine, TUNNEL_LOGS, stops);
+            return due.isEmpty() ? due : Map.of(Ids.mc(colony().fitter().wood(level, mine) + "_log"), TUNNEL_LOGS);
+        }
+        return colony().fitter().needs(level, mine, FIT_PER_TRIP, stops);
+    }
+
+    private void fetchFittings(ServerLevel level, Villager villager) {
+        for (Map.Entry<String, Integer> need : fitNeeds.entrySet()) {
+            if (!need.getKey().equals(Ids.mc("torch")) && !need.getKey().equals(Ids.mc("cobblestone"))) {
+                fitItems.add(need.getKey());
+            }
+            int have = supply(level, villager, need.getKey(), need.getValue(), need.getValue());
+            if (have < need.getValue()) {
+                fitRetry = level.getGameTime() + 2400;
+            }
+        }
+        fitNeeds = Map.of();
+    }
+
+    private void fitHere(ServerLevel level, Villager villager) {
+        ColonyData.Mine mine = colony().data().mine;
+        if (mine == null || fitBudget <= 0) {
+            return;
+        }
+        int placed = colony().fitter().placeNear(level, villager, mine, Math.min(fitBudget, FIT_PER_STOP));
+        if (placed > 0) {
+            fitBudget -= placed;
+            wait = 6 + placed * 2;
+        }
     }
 
     private void beginReturn() {
@@ -201,6 +276,7 @@ public final class MinerJob extends Job {
             if (back) {
                 phase = "deposit";
             } else {
+                fitHere(level, villager);
                 phase = "dig";
             }
             return;
@@ -226,6 +302,9 @@ public final class MinerJob extends Job {
         }
         Mover.Result result = move(level, villager, target, 1.3);
         if (result == Mover.Result.ARRIVED) {
+            if (!back) {
+                fitHere(level, villager);
+            }
             waypoint++;
             stuck = 0;
         } else if (result == Mover.Result.FAILED) {
@@ -395,6 +474,9 @@ public final class MinerJob extends Job {
         veinIndex = 0;
         finishCell(mine, index);
         cellsThisTrip++;
+        if (!mine.quarry() && cellsThisTrip % 3 == 0) {
+            fitHere(level, villager);
+        }
         colony().markDirty();
         if (!vein.isEmpty()) {
             phase = "vein";
@@ -634,6 +716,7 @@ public final class MinerJob extends Job {
             return;
         }
         depositAll(level, villager);
+        fitItems.clear();
         int extraCobble = Inv.count(villager, Ids.mc("cobblestone")) - 24;
         if (extraCobble > 0) {
             Inv.remove(villager, stack -> stack.is(Items.COBBLESTONE), extraCobble);

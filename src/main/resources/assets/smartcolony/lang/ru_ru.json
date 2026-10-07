@@ -132,6 +132,7 @@
   "smartcolony.building.fletcher_hut": "Хижина лучника",
   "smartcolony.building.bakery": "Пекарня",
   "smartcolony.chat.iron_age": "Начался железный век: кузня плавит железо.",
+  "smartcolony.chat.mine_head_done": "Надшахтная часть карьера достроена: ворота, подъёмная вышка и сарай для инструментов.",
   "smartcolony.ui.age": "Эпоха: %s",
   "smartcolony.age.stone": "Каменный век",
   "smartcolony.age.iron": "Железный век",

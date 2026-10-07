@@ -134,6 +134,8 @@ public final class ColonyData {
         public boolean decorated;
         public int decorVersion;
         public Pos shed;
+        public String wood;
+        public boolean headDone;
 
         public boolean quarry() {
             return "quarry".equals(type) && corner != null;

@@ -374,7 +374,7 @@ public final class Colony {
             return true;
         }
         if (data.mine != null && data.mine.quarry() && p.x() >= data.mine.corner.x() - 1 && p.z() >= data.mine.corner.z() - 1
-                && p.x() <= data.mine.corner.x() + data.mine.width && p.z() <= data.mine.corner.z() + data.mine.width) {
+                && p.x() <= data.mine.corner.x() + data.mine.width + 2 && p.z() <= data.mine.corner.z() + data.mine.width) {
             return true;
         }
         Pos shed = data.mine != null ? data.mine.shed : null;
@@ -476,6 +476,15 @@ public final class Colony {
 
     public Map<Integer, Long> mineClaims() {
         return mineClaims;
+    }
+
+    private org.lts.smartcolony.work.Fitter fitter;
+
+    public org.lts.smartcolony.work.Fitter fitter() {
+        if (fitter == null) {
+            fitter = new org.lts.smartcolony.work.Fitter(this);
+        }
+        return fitter;
     }
 
     public boolean inMine(BlockPos pos) {

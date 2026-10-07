@@ -132,6 +132,7 @@
   "smartcolony.building.fletcher_hut": "Fletcher's hut",
   "smartcolony.building.bakery": "Bakery",
   "smartcolony.chat.iron_age": "The iron age has begun: the forge is smelting iron.",
+  "smartcolony.chat.mine_head_done": "The quarry head is finished: gate, headframe and tool shed.",
   "smartcolony.ui.age": "Age: %s",
   "smartcolony.age.stone": "Stone Age",
   "smartcolony.age.iron": "Iron Age",
