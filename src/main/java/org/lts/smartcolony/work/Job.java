@@ -3,6 +3,7 @@ package org.lts.smartcolony.work;
 import java.util.Comparator;
 import java.util.List;
 import java.util.function.Predicate;
+import java.util.function.UnaryOperator;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -11,8 +12,10 @@ import net.minecraft.world.entity.npc.villager.Villager;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.AABB;
 import org.lts.smartcolony.colony.Colony;
+import org.lts.smartcolony.core.ColonyData;
 import org.lts.smartcolony.core.Role;
 import org.lts.smartcolony.util.ItemIds;
+import org.lts.smartcolony.util.WorldUtil;
 
 public abstract class Job {
     public enum Equip {
@@ -49,6 +52,7 @@ public abstract class Job {
 
     public void onRelease(ServerLevel level, Villager villager) {
         phase = "start";
+        endDrop();
     }
 
     public String status() {
@@ -119,26 +123,153 @@ public abstract class Job {
     }
 
     protected boolean depositAll(ServerLevel level, Villager villager) {
+        Unloaded unloaded = unload(level, villager, stack -> colony().warehouse().insert(level, stack));
+        if (!unloaded.everything()) {
+            colony().storageFull();
+        }
+        return unloaded.everything();
+    }
+
+    private record Unloaded(int items, boolean everything) {
+    }
+
+    private Unloaded unload(ServerLevel level, Villager villager, UnaryOperator<ItemStack> sink) {
         var inventory = villager.getInventory();
         boolean everything = true;
+        int total = 0;
         for (int slot = 0; slot < inventory.getContainerSize(); slot++) {
             ItemStack stack = inventory.getItem(slot);
             if (stack.isEmpty() || keep(stack) || ration(stack)) {
                 continue;
             }
             int before = stack.getCount();
-            ItemStack rest = colony().warehouse().insert(level, stack);
+            ItemStack rest = sink.apply(stack);
             int delivered = before - rest.getCount();
             colony().delivered(colonist, ItemIds.id(stack), delivered);
+            total += delivered;
             inventory.setItem(slot, rest);
             if (!rest.isEmpty()) {
                 everything = false;
             }
         }
-        if (!everything) {
-            colony().storageFull();
+        return new Unloaded(total, everything);
+    }
+
+    public int cargoSlots(Villager villager) {
+        int slots = 0;
+        var inventory = villager.getInventory();
+        for (int slot = 0; slot < inventory.getContainerSize(); slot++) {
+            ItemStack stack = inventory.getItem(slot);
+            if (!stack.isEmpty() && !keep(stack) && !ration(stack)) {
+                slots++;
+            }
         }
-        return everything;
+        return slots;
+    }
+
+    public int surrenderCargo(Villager from, Villager to) {
+        var inventory = from.getInventory();
+        int moved = 0;
+        for (int slot = 0; slot < inventory.getContainerSize(); slot++) {
+            ItemStack stack = inventory.getItem(slot);
+            if (stack.isEmpty() || keep(stack) || ration(stack)) {
+                continue;
+            }
+            int before = stack.getCount();
+            ItemStack rest = Inv.add(to, stack.copy());
+            inventory.setItem(slot, rest);
+            moved += before - rest.getCount();
+        }
+        return moved;
+    }
+
+    protected boolean usesOutposts() {
+        return false;
+    }
+
+    protected String walkKind() {
+        return null;
+    }
+
+    private ColonyData.Outpost dropTarget;
+    private BlockPos dropOrigin;
+    private boolean dropChosen;
+
+    protected ColonyData.Outpost dropSite(ServerLevel level, Villager villager) {
+        if (dropChosen && dropTarget != null && !colony().outposts().all().contains(dropTarget)) {
+            dropChosen = false;
+        }
+        if (!dropChosen) {
+            dropOrigin = villager.blockPosition();
+            dropTarget = usesOutposts() ? colony().outposts().dropFor(level, dropOrigin) : null;
+            dropChosen = true;
+        }
+        return dropTarget;
+    }
+
+    protected void endDrop() {
+        dropChosen = false;
+        dropTarget = null;
+        dropOrigin = null;
+    }
+
+    protected boolean atDrop(ServerLevel level, Villager villager) {
+        ColonyData.Outpost outpost = dropSite(level, villager);
+        if (outpost == null) {
+            return atDepot(level, villager);
+        }
+        return Mover.distance(villager, WorldUtil.bp(outpost.door)) <= 3.0;
+    }
+
+    protected Mover.Result goDrop(ServerLevel level, Villager villager) {
+        ColonyData.Outpost outpost = dropSite(level, villager);
+        if (outpost == null) {
+            Mover.Result result = goDepot(level, villager);
+            if (result == Mover.Result.FAILED && walkKind() != null) {
+                colony().outposts().noteTrouble(walkKind());
+            }
+            return result;
+        }
+        Mover.Result result = move(level, villager, WorldUtil.bp(outpost.door), 2.5);
+        if (result == Mover.Result.FAILED) {
+            colony().outposts().unreachable(level, outpost);
+            endDrop();
+        } else if (result == Mover.Result.ARRIVED) {
+            colony().outposts().reached(outpost);
+        }
+        return result;
+    }
+
+    protected boolean dropAll(ServerLevel level, Villager villager) {
+        ColonyData.Outpost outpost = dropSite(level, villager);
+        if (outpost == null) {
+            endDrop();
+            return depositAll(level, villager);
+        }
+        BlockPos origin = dropOrigin;
+        Unloaded unloaded = unload(level, villager, stack -> colony().warehouse().insertOutpost(level, outpost, stack));
+        colony().outposts().deposited(level, outpost, unloaded.items(), origin);
+        endDrop();
+        return unloaded.everything();
+    }
+
+    protected int restock(ServerLevel level, Villager villager, ColonyData.Outpost outpost, String id, int want) {
+        int need = want - Inv.count(villager, id);
+        if (need <= 0) {
+            return 0;
+        }
+        List<ItemStack> taken = new java.util.ArrayList<>();
+        colony().warehouse().takeFromOutpost(level, outpost, stack -> ItemIds.id(stack).equals(id), need, taken);
+        int got = 0;
+        for (ItemStack stack : taken) {
+            int before = stack.getCount();
+            ItemStack rest = Inv.add(villager, stack);
+            got += before - rest.getCount();
+            if (!rest.isEmpty()) {
+                colony().warehouse().insertOutpost(level, outpost, rest);
+            }
+        }
+        return got;
     }
 
     protected Equip equip(ServerLevel level, Villager villager, Predicate<ItemStack> fits, List<String> craftOrder) {

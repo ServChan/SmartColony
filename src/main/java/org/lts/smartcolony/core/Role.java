@@ -16,7 +16,8 @@ public enum Role {
     COOK,
     UNDERTAKER,
     INNKEEPER,
-    TEACHER;
+    TEACHER,
+    PORTER;
 
     public String key() {
         return name().toLowerCase(Locale.ROOT);

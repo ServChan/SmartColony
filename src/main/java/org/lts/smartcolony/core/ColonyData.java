@@ -21,6 +21,7 @@ public final class ColonyData {
     public Project project;
     public List<Project> projects = new ArrayList<>();
     public Mine mine;
+    public List<Outpost> outposts = new ArrayList<>();
     public List<Pos> farms = new ArrayList<>();
     public Pen pen;
     public Map<String, Integer> reputation = new LinkedHashMap<>();
@@ -209,6 +210,19 @@ public final class ColonyData {
             }
             return new MinePlan(entrance, dirX, dirZ, depth);
         }
+    }
+
+    public static final class Outpost {
+        public String kind = "mine";
+        public Pos door = new Pos(0, 0, 0);
+        public Pos center = new Pos(0, 0, 0);
+        public List<Pos> containers = new ArrayList<>();
+        public long since;
+        public long lastUse;
+        public long blockedUntil;
+        public int strikes;
+        public int received;
+        public int hauled;
     }
 
     public static final class Pen {

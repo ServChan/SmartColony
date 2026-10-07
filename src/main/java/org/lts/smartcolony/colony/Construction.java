@@ -38,6 +38,7 @@ import org.lts.smartcolony.core.GuardDrill;
 import org.lts.smartcolony.core.Kindergarten;
 import org.lts.smartcolony.core.Schooling;
 import org.lts.smartcolony.core.Pos;
+import org.lts.smartcolony.core.PorterPlan;
 import org.lts.smartcolony.core.PreBuildCheck;
 import org.lts.smartcolony.core.Role;
 import org.lts.smartcolony.core.SiteEvaluator;
@@ -634,12 +635,23 @@ public final class Construction {
         return findSite(level, blueprint, wood, 4, Math.min(7, blueprint.sizeY() + 1));
     }
 
+    private record Search(BlockPos origin, int minDistance, int maxDistance, int settle, BlockPos facing, BlockPos pull,
+                          List<int[]> forbidden) {
+    }
+
     private ColonyData.Project findSite(ServerLevel level, Blueprint blueprint, String wood, int fillLimit, int cutLimit) {
         BlockPos center = colony.center();
-        int maxDistance = data().radius + 28;
+        return findSite(level, blueprint, wood, fillLimit, cutLimit,
+                new Search(center, 7, data().radius + 28, 12, center, null, List.of()));
+    }
+
+    private ColonyData.Project findSite(ServerLevel level, Blueprint blueprint, String wood, int fillLimit, int cutLimit, Search search) {
+        BlockPos center = search.origin();
+        BlockPos facing = search.facing();
+        int maxDistance = search.maxDistance();
         double bestScore = Double.MAX_VALUE;
         ColonyData.Project best = null;
-        for (int distance = 7; distance <= maxDistance; distance += 3) {
+        for (int distance = search.minDistance(); distance <= maxDistance; distance += 3) {
             int steps = Math.max(12, distance * 2);
             for (int i = 0; i < steps; i++) {
                 double angle = (i + (distance % 2) * 0.5) * Math.PI * 2.0 / steps;
@@ -648,11 +660,14 @@ public final class Construction {
                 if (siteHint != null && Math.hypot(px - siteHint.getX(), pz - siteHint.getZ()) > 14) {
                     continue;
                 }
-                int rotation = Blueprint.rotationFacing(center.getX() - px, center.getZ() - pz);
+                int rotation = Blueprint.rotationFacing(facing.getX() - px, facing.getZ() - pz);
                 int sx = blueprint.rotatedSizeX(rotation);
                 int sz = blueprint.rotatedSizeZ(rotation);
                 int ox = px - sx / 2;
                 int oz = pz - sz / 2;
+                if (!search.forbidden().isEmpty() && PorterPlan.overlaps(ox, oz, ox + sx - 1, oz + sz - 1, search.forbidden())) {
+                    continue;
+                }
                 if (sx * sz > 100 && !roughlyFlat(level, ox, oz, sx, sz, fillLimit + cutLimit)) {
                     continue;
                 }
@@ -668,7 +683,7 @@ public final class Construction {
                 if (!result.ok()) {
                     continue;
                 }
-                double score = result.score() + distance * 0.6 + sample.paths() * 3;
+                double score = result.score() + distance * 0.6 + sample.paths() * 3 + pullScore(search, px, pz);
                 if (score >= bestScore) {
                     continue;
                 }
@@ -678,7 +693,7 @@ public final class Construction {
                         continue;
                     }
                     result = SiteEvaluator.evaluate(sample.ground(), sample.blocked(), fillLimit, cutLimit);
-                    score = result.score() + distance * 0.6 + sample.paths() * 3;
+                    score = result.score() + distance * 0.6 + sample.paths() * 3 + pullScore(search, px, pz);
                     if (!result.ok() || score >= bestScore) {
                         continue;
                     }
@@ -689,11 +704,39 @@ public final class Construction {
                 bestScore = score;
                 best = project(blueprint, wood, ox, oz, rotation, result, sample.ground());
             }
-            if (best != null && distance > 12) {
+            if (best != null && distance > search.settle()) {
                 break;
             }
         }
         return best;
+    }
+
+    private static double pullScore(Search search, int px, int pz) {
+        return search.pull() == null ? 0.0 : PorterPlan.PULL_WEIGHT * Math.hypot(px - search.pull().getX(), pz - search.pull().getZ());
+    }
+
+    public boolean planOutpost(ServerLevel level, BlockPos anchor, int minRadius, int maxRadius, List<int[]> forbidden) {
+        Blueprint blueprint = Blueprints.get(PorterPlan.OUTPOST_ID);
+        String wood = chooseWood(level);
+        if (!satisfiable(level, PorterPlan.OUTPOST_ID, wood)) {
+            return false;
+        }
+        BlockPos depot = colony.depot();
+        ColonyData.Project project = findSite(level, blueprint, wood, SiteEvaluator.MAX_FILL, SiteEvaluator.MAX_CUT,
+                new Search(anchor, minRadius, maxRadius, minRadius + 4, depot, depot, forbidden));
+        if (project == null) {
+            return false;
+        }
+        project.started = level.getGameTime();
+        project.waitingSince = level.getGameTime();
+        data().projects.add(project);
+        recomputeRequired(level, project);
+        markFootprint(level, project);
+        colony.journal(level, "planned an outpost at " + project.building.origin + " for the walk from " + anchor.toShortString()
+                + " to the depot");
+        colony.markDirty();
+        reserve(level, project);
+        return true;
     }
 
     private boolean roughlyFlat(ServerLevel level, int ox, int oz, int sx, int sz, int spread) {
@@ -1222,7 +1265,9 @@ public final class Construction {
         drop(project);
         data().bump("buildings", 1);
         int reach = (int) Math.ceil(Math.sqrt(Math.max(building.min.horizontalDistSq(data().center), building.max.horizontalDistSq(data().center))));
-        data().radius = Math.min(SmartColonyConfig.get().maxColonyRadius, Math.max(data().radius, reach + 6));
+        if (!PorterPlan.OUTPOST_KIND.equals(building.kind)) {
+            data().radius = Math.min(SmartColonyConfig.get().maxColonyRadius, Math.max(data().radius, reach + 6));
+        }
         if (TownHall.stageOf(building.blueprint) > 0) {
             TownHallBuilder.finished(level, colony, building);
         } else {
@@ -1235,6 +1280,9 @@ public final class Construction {
         }
         paths.onBuilt(level, building);
         colony.improvements().furnish(level, building);
+        if (PorterPlan.OUTPOST_KIND.equals(building.kind)) {
+            colony.outposts().built(level, building);
+        }
         colony.markDirty();
     }
 
@@ -1275,7 +1323,7 @@ public final class Construction {
     }
 
     public boolean forceProject(ServerLevel level, String blueprintId, BlockPos hint) {
-        if (TownHall.stageOf(blueprintId) > 0) {
+        if (TownHall.stageOf(blueprintId) > 0 || PorterPlan.OUTPOST_ID.equals(blueprintId)) {
             return false;
         }
         if (!blueprintId.startsWith("house") && data().projects.stream().anyMatch(p -> p.building.blueprint.equals(blueprintId))) {

@@ -39,6 +39,11 @@ public final class Warehouse {
                 return true;
             }
         }
+        for (ColonyData.Outpost outpost : data.outposts) {
+            if (outpost.containers.contains(p)) {
+                return true;
+            }
+        }
         return false;
     }
 
@@ -58,7 +63,107 @@ public final class Warehouse {
         for (Category category : Category.values()) {
             result.addAll(containers(level, category));
         }
+        for (ColonyData.Outpost outpost : data.outposts) {
+            result.addAll(outpostContainers(level, outpost));
+        }
         return result;
+    }
+
+    public List<Container> outpostContainers(ServerLevel level, ColonyData.Outpost outpost) {
+        List<Container> result = new ArrayList<>();
+        for (Pos pos : outpost.containers) {
+            Container container = container(level, WorldUtil.bp(pos));
+            if (container != null) {
+                result.add(container);
+            }
+        }
+        return result;
+    }
+
+    public int outpostFree(ServerLevel level, ColonyData.Outpost outpost) {
+        int free = 0;
+        for (Container container : outpostContainers(level, outpost)) {
+            for (int slot = 0; slot < container.getContainerSize(); slot++) {
+                if (container.getItem(slot).isEmpty()) {
+                    free++;
+                }
+            }
+        }
+        return free;
+    }
+
+    public int outpostItems(ServerLevel level, ColonyData.Outpost outpost) {
+        int items = 0;
+        for (Container container : outpostContainers(level, outpost)) {
+            for (int slot = 0; slot < container.getContainerSize(); slot++) {
+                items += container.getItem(slot).getCount();
+            }
+        }
+        return items;
+    }
+
+    public int outpostCount(ServerLevel level, ColonyData.Outpost outpost, Predicate<ItemStack> filter) {
+        int items = 0;
+        for (Container container : outpostContainers(level, outpost)) {
+            for (int slot = 0; slot < container.getContainerSize(); slot++) {
+                ItemStack stack = container.getItem(slot);
+                if (!stack.isEmpty() && filter.test(stack)) {
+                    items += stack.getCount();
+                }
+            }
+        }
+        return items;
+    }
+
+    public ItemStack insertOutpost(ServerLevel level, ColonyData.Outpost outpost, ItemStack stack) {
+        if (stack.isEmpty()) {
+            return ItemStack.EMPTY;
+        }
+        ItemStack rest = insertInto(outpostContainers(level, outpost), stack.copy());
+        invalidate();
+        return rest;
+    }
+
+    public ItemStack takeLargest(ServerLevel level, ColonyData.Outpost outpost, int limit) {
+        Container bestContainer = null;
+        int bestSlot = -1;
+        int bestCount = 0;
+        for (Container container : outpostContainers(level, outpost)) {
+            for (int slot = 0; slot < container.getContainerSize(); slot++) {
+                int count = container.getItem(slot).getCount();
+                if (count > bestCount) {
+                    bestCount = count;
+                    bestContainer = container;
+                    bestSlot = slot;
+                }
+            }
+        }
+        if (bestContainer == null) {
+            return ItemStack.EMPTY;
+        }
+        ItemStack taken = bestContainer.getItem(bestSlot).split(Math.min(limit, bestCount));
+        bestContainer.setChanged();
+        invalidate();
+        return taken;
+    }
+
+    public int takeFromOutpost(ServerLevel level, ColonyData.Outpost outpost, Predicate<ItemStack> filter, int count, List<ItemStack> into) {
+        int remaining = count;
+        for (Container container : outpostContainers(level, outpost)) {
+            for (int slot = 0; slot < container.getContainerSize() && remaining > 0; slot++) {
+                ItemStack current = container.getItem(slot);
+                if (!current.isEmpty() && filter.test(current)) {
+                    int moved = Math.min(remaining, current.getCount());
+                    into.add(current.split(moved));
+                    remaining -= moved;
+                    container.setChanged();
+                }
+            }
+        }
+        if (remaining < count) {
+            invalidate();
+        }
+        return count - remaining;
     }
 
     public static Container container(ServerLevel level, BlockPos pos) {
