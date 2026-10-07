@@ -408,6 +408,10 @@ public final class MinerJob extends Job {
         for (int dy = 0; dy < cell.height(); dy++) {
             cellBlocks.add(feet.above(dy));
         }
+        if (!sealStand(level, villager, stand, cellBlocks)) {
+            finishCell(mine, index);
+            return;
+        }
         for (int dy = cell.height() - 1; dy >= 0; dy--) {
             BlockPos block = feet.above(dy);
             if (!seal(level, villager, block, cellBlocks, stand)) {
@@ -600,6 +604,22 @@ public final class MinerJob extends Job {
         }
     }
 
+    private boolean sealStand(ServerLevel level, Villager villager, BlockPos stand, Set<BlockPos> cell) {
+        for (Direction direction : Direction.Plane.HORIZONTAL) {
+            for (BlockPos at : new BlockPos[] {stand.relative(direction), stand.above().relative(direction)}) {
+                if (cell.contains(at) || !level.getFluidState(at).is(net.minecraft.tags.FluidTags.LAVA)) {
+                    continue;
+                }
+                if (!fillWithCobble(level, villager, at)) {
+                    colony().data().bump("lava_avoided", 1);
+                    return false;
+                }
+                colony().data().bump("fluids_sealed", 1);
+            }
+        }
+        return true;
+    }
+
     private boolean seal(ServerLevel level, Villager villager, BlockPos block, Set<BlockPos> cell, BlockPos stand) {
         for (Direction direction : Direction.values()) {
             BlockPos side = block.relative(direction);
@@ -611,7 +631,11 @@ public final class MinerJob extends Job {
                 continue;
             }
             if (!fillWithCobble(level, villager, side)) {
-                return fluid.getType() != Fluids.LAVA && fluid.getType() != Fluids.FLOWING_LAVA;
+                boolean lava = fluid.getType() == Fluids.LAVA || fluid.getType() == Fluids.FLOWING_LAVA;
+                if (lava) {
+                    colony().data().bump("lava_avoided", 1);
+                }
+                return !lava;
             }
             colony().data().bump("fluids_sealed", 1);
         }

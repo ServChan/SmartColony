@@ -27,6 +27,9 @@ public final class Mover {
         FAILED
     }
 
+    public static final int SCREEN_OFF = 0;
+    public static final int SCREEN_STRICT = 1;
+    public static final int SCREEN_TOLERANT = 2;
     private static final int LONG_HOP = 32;
 
     private BlockPos target;
@@ -39,6 +42,13 @@ public final class Mover {
     private String note = "";
     private java.util.function.Predicate<BlockPos> guarded = pos -> false;
     private int carveCooldown;
+    private int screen = SCREEN_STRICT;
+    private Runnable avoided = () -> {
+    };
+    private BlockPos avoidedGoal;
+    private BlockPos screenGoal;
+    private long screenTick;
+    private boolean screenUnsafe;
 
     public void reset() {
         target = null;
@@ -52,6 +62,24 @@ public final class Mover {
 
     public void guard(java.util.function.Predicate<BlockPos> area) {
         guarded = area;
+    }
+
+    public void screen(int mode) {
+        screen = mode;
+    }
+
+    public void onAvoided(Runnable action) {
+        avoided = action;
+    }
+
+    private boolean unsafeGoal(ServerLevel level, BlockPos goal) {
+        long now = level.getGameTime();
+        if (screenGoal == null || !screenGoal.equals(goal) || now - screenTick >= 20) {
+            screenGoal = goal.immutable();
+            screenTick = now;
+            screenUnsafe = Hazards.unsafeGoal(level, goal, screen == SCREEN_TOLERANT);
+        }
+        return screenUnsafe;
     }
 
     public String note() {
@@ -84,6 +112,16 @@ public final class Mover {
     }
 
     public Result tick(ServerLevel level, Villager villager, BlockPos goal, double reach, double speed, boolean allowRescue) {
+        if (screen != SCREEN_OFF && unsafeGoal(level, goal)) {
+            if (!goal.equals(avoidedGoal)) {
+                avoidedGoal = goal.immutable();
+                avoided.run();
+            }
+            villager.getNavigation().stop();
+            reset();
+            note = "hazard at goal";
+            return Result.FAILED;
+        }
         if (target == null || !target.equals(goal)) {
             reset();
             target = goal.immutable();
