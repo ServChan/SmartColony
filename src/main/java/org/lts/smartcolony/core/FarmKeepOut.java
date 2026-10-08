@@ -26,6 +26,15 @@ public final class FarmKeepOut {
     private final List<Box> boxes = new ArrayList<>();
     private final List<Disc> discs = new ArrayList<>();
     private final Set<Long> cells = new HashSet<>();
+    private final int roadMargin;
+
+    public FarmKeepOut() {
+        this(ROAD_MARGIN);
+    }
+
+    public FarmKeepOut(int roadMargin) {
+        this.roadMargin = Math.max(0, roadMargin);
+    }
 
     private static long key(int x, int z) {
         return ((long) x << 32) ^ (z & 0xFFFFFFFFL);
@@ -62,8 +71,8 @@ public final class FarmKeepOut {
         if (cells.isEmpty()) {
             return false;
         }
-        for (int dx = -ROAD_MARGIN; dx <= ROAD_MARGIN; dx++) {
-            for (int dz = -ROAD_MARGIN; dz <= ROAD_MARGIN; dz++) {
+        for (int dx = -roadMargin; dx <= roadMargin; dx++) {
+            for (int dz = -roadMargin; dz <= roadMargin; dz++) {
                 if (cells.contains(key(x + dx, z + dz))) {
                     return true;
                 }

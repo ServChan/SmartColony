@@ -119,12 +119,13 @@ public final class LumberjackJob extends Job {
             phase = "plant";
             return;
         }
-        if (colony().stockOf(level, Ids::isLog) >= WOOD_ENOUGH && !farmPlot) {
+        boolean enough = colony().stockOf(level, Ids::isLog) >= WOOD_ENOUGH && !farmPlot;
+        if (enough && !colony().forest().hasBlocking()) {
             status = "enough wood in storage";
             idle(level, 600);
             return;
         }
-        tree = colony().forest().claim(level, colonist.uuid(), villager.blockPosition());
+        tree = colony().forest().claim(level, colonist.uuid(), villager.blockPosition(), enough);
         if (tree == null) {
             status = "looking for natural trees";
             if (hasCargo(villager)) {
@@ -164,6 +165,9 @@ public final class LumberjackJob extends Job {
             index++;
         }
         if (index >= logs.size()) {
+            if (colony().forest().blocking(tree)) {
+                colony().data().bump("trees_cleared_near_buildings", 1);
+            }
             colony().forest().felled(tree);
             colony().data().bump("trees_felled", 1);
             if (colony().treeFarm().contains(tree)) {
@@ -247,6 +251,12 @@ public final class LumberjackJob extends Job {
         }
         BlockPos spot = tree;
         if (!WorldUtil.isAirLike(level.getBlockState(spot)) || !level.getBlockState(spot.below()).is(BlockTags.SUBSTRATE_OVERWORLD)) {
+            return;
+        }
+        if (!colony().treeAllowed(level, spot)) {
+            colony().data().bump("replant_skipped_near_buildings", 1);
+            colony().forest().release(colonist.uuid());
+            tree = null;
             return;
         }
         ItemStack sapling = Inv.find(villager, stack -> stack.is(ItemTags.SAPLINGS)

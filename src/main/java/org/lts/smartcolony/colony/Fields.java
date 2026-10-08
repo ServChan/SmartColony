@@ -15,6 +15,7 @@ import org.lts.smartcolony.core.FarmKeepOut;
 import org.lts.smartcolony.core.FarmPlan;
 import org.lts.smartcolony.core.Pier;
 import org.lts.smartcolony.core.Pos;
+import org.lts.smartcolony.core.TreeFarmPlan;
 import org.lts.smartcolony.util.WorldUtil;
 
 public final class Fields {
@@ -25,10 +26,19 @@ public final class Fields {
     private static final int DOOR_APRON = 3;
     private static final int MIN_LAND = 10;
 
+    record Margins(int plaza, int building, int door, int road, boolean trees) {
+    }
+
+    static final Margins FIELDS = new Margins(PLAZA_RADIUS, BUILDING_MARGIN, DOOR_APRON, FarmKeepOut.ROAD_MARGIN, false);
+    static final Margins GROVES = new Margins(10, 5, 5, 3, true);
+
     private final Colony colony;
     private FarmKeepOut keepOut = new FarmKeepOut();
     private long builtAt = -100000;
     private int signature = -1;
+    private FarmKeepOut groves = new FarmKeepOut();
+    private long grovesBuiltAt = -100000;
+    private int grovesSignature = -1;
 
     Fields(Colony colony) {
         this.colony = colony;
@@ -57,16 +67,46 @@ public final class Fields {
         return keepOut;
     }
 
+    private FarmKeepOut groveZones(ServerLevel level) {
+        long now = level.getGameTime();
+        int sign = currentSignature() + data().farms.size() * 29;
+        if (now - grovesBuiltAt >= FORCED_REBUILD_TICKS || sign != grovesSignature && now - grovesBuiltAt >= REBUILD_TICKS) {
+            groves = build(level, GROVES);
+            grovesBuiltAt = now;
+            grovesSignature = sign;
+        }
+        return groves;
+    }
+
+    public boolean treeBlocked(ServerLevel level, int x, int z) {
+        return groveZones(level).blocked(x, z) || FarmKeepOut.terrainBlocked(colony.survey().map(), x, z);
+    }
+
     private FarmKeepOut build(ServerLevel level) {
+        return build(level, FIELDS);
+    }
+
+    private FarmKeepOut build(ServerLevel level, Margins margins) {
         ColonyData d = data();
-        FarmKeepOut zones = new FarmKeepOut();
-        zones.addDisc(d.center.x(), d.center.z(), PLAZA_RADIUS);
-        zones.addDisc(d.depot.x(), d.depot.z(), PLAZA_RADIUS - 1);
+        FarmKeepOut zones = new FarmKeepOut(margins.road());
+        zones.addDisc(d.center.x(), d.center.z(), margins.plaza());
+        zones.addDisc(d.depot.x(), d.depot.z(), margins.plaza() - 1);
         for (ColonyData.Building building : d.buildings) {
-            addBuilding(zones, building);
+            if (margins.trees() && TreeFarmPlan.KIND.equals(building.kind)) {
+                continue;
+            }
+            addBuilding(zones, building, margins);
         }
         for (ColonyData.Project project : d.projects) {
-            addBuilding(zones, project.building);
+            if (margins.trees() && TreeFarmPlan.KIND.equals(project.building.kind)) {
+                continue;
+            }
+            addBuilding(zones, project.building, margins);
+        }
+        if (margins.trees()) {
+            for (Pos farm : d.farms) {
+                zones.addDisc(farm.x(), farm.z(), 9);
+            }
         }
         for (Pos road : d.roads) {
             zones.addCell(road.x(), road.z());
@@ -100,14 +140,16 @@ public final class Fields {
             }
         }
         if (d.pen != null) {
-            zones.addBox(d.pen.min.x(), d.pen.min.z(), d.pen.max.x(), d.pen.max.z(), BUILDING_MARGIN);
-            zones.addDisc(d.pen.gate.x(), d.pen.gate.z(), DOOR_APRON);
+            zones.addBox(d.pen.min.x(), d.pen.min.z(), d.pen.max.x(), d.pen.max.z(), margins.building());
+            zones.addDisc(d.pen.gate.x(), d.pen.gate.z(), margins.door());
         }
         for (Pos grave : d.graves) {
             zones.addDisc(grave.x(), grave.z(), 2);
         }
-        for (Pos tree : d.plantedTrees) {
-            zones.addDisc(tree.x(), tree.z(), 2);
+        if (!margins.trees()) {
+            for (Pos tree : d.plantedTrees) {
+                zones.addDisc(tree.x(), tree.z(), 2);
+            }
         }
         for (ColonyData.Outpost outpost : d.outposts) {
             zones.addDisc(outpost.door.x(), outpost.door.z(), 4);
@@ -132,9 +174,9 @@ public final class Fields {
         return zones;
     }
 
-    private static void addBuilding(FarmKeepOut zones, ColonyData.Building building) {
-        zones.addBox(building.min.x(), building.min.z(), building.max.x(), building.max.z(), BUILDING_MARGIN);
-        zones.addDisc(building.door.x(), building.door.z(), DOOR_APRON + 1);
+    private static void addBuilding(FarmKeepOut zones, ColonyData.Building building, Margins margins) {
+        zones.addBox(building.min.x(), building.min.z(), building.max.x(), building.max.z(), margins.building());
+        zones.addDisc(building.door.x(), building.door.z(), margins.door() + 1);
     }
 
     public boolean blocked(ServerLevel level, int x, int z) {

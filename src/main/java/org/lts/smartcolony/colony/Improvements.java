@@ -128,6 +128,10 @@ public final class Improvements {
         if (level.getGameTime() % 600 < 100) {
             inspect(level);
         }
+        if (level.getGameTime() % 1200 < 100 && data().orders.removeIf(order -> DECOR.equals(order.tag) && Ids.isSapling(order.state)
+                && !colony.treeAllowed(level, WorldUtil.bp(order.pos)))) {
+            colony.markDirty();
+        }
         if (level.getGameTime() - data().founded > 24000 && level.getGameTime() - lastDecor > 48000) {
             lastDecor = level.getGameTime();
             decorate(level);
@@ -191,9 +195,9 @@ public final class Improvements {
             if (Math.abs(dx) + Math.abs(dz) != 1) {
                 continue;
             }
-            BlockPos spot = WorldUtil.surface(level, a.x() - dz * 2, a.z() + dx * 2);
+            BlockPos spot = WorldUtil.surface(level, a.x() - dz * 4, a.z() + dx * 4);
             if (!decorSpot(level, spot) || !level.getBlockState(spot.below()).is(net.minecraft.tags.BlockTags.SUBSTRATE_OVERWORLD)
-                    || !WorldUtil.isAirLike(level.getBlockState(spot.above())) || nearLog(level, spot)) {
+                    || !WorldUtil.isAirLike(level.getBlockState(spot.above())) || nearLog(level, spot) || !colony.treeAllowed(level, spot)) {
                 continue;
             }
             String sapling = saplingInStock(level, wood);

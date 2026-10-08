@@ -81,4 +81,17 @@ class FarmKeepOutTest {
         assertTrue(FarmKeepOut.terrainBlocked(map, 0, 0));
         assertFalse(FarmKeepOut.terrainBlocked(null, 0, 0));
     }
+    @Test
+    void wideRoadMarginKeepsTreesOffTheRoadside() {
+        FarmKeepOut groves = new FarmKeepOut(3);
+        groves.addCell(0, 0);
+        groves.addBox(10, 10, 18, 18, 5);
+        assertTrue(groves.blocked(3, 0));
+        assertFalse(groves.blocked(4, 0));
+        assertTrue(groves.blocked(5, 14));
+        assertFalse(groves.blocked(4, 14));
+        FarmKeepOut fields = new FarmKeepOut();
+        fields.addCell(0, 0);
+        assertFalse(fields.blocked(2, 0));
+    }
 }

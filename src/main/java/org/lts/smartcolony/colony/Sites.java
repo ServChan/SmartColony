@@ -54,7 +54,7 @@ public final class Sites {
             BlockPos feet = WorldUtil.surface(level, x, z);
             if (!level.getBlockState(feet.below()).is(BlockTags.SUBSTRATE_OVERWORLD) || !WorldUtil.isAirLike(level.getBlockState(feet))
                     || !level.getFluidState(feet).isEmpty() || !canopyFree(level, feet) || colony.isProtected(feet)
-                    || onRoad(feet.below())) {
+                    || onRoad(feet.below()) || !colony.treeAllowed(level, feet)) {
                 continue;
             }
             boolean crowded = false;

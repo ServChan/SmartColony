@@ -23,6 +23,7 @@ public final class ForestIndex {
 
     private final Colony colony;
     private final Set<BlockPos> trees = new HashSet<>();
+    private final Set<BlockPos> blocking = new HashSet<>();
     private final Map<BlockPos, UUID> claims = new HashMap<>();
     private final Map<BlockPos, Long> rejected = new HashMap<>();
     private List<int[]> spiral;
@@ -95,6 +96,7 @@ public final class ForestIndex {
                     offsets = spiral();
                 }
                 trees.removeIf(base -> !WorldUtil.loaded(level, base) || !TreeScan.isLog(level.getBlockState(base)));
+                blocking.retainAll(trees);
             }
             int[] offset = offsets.get(cursor++);
             int x = center.getX() + offset[0];
@@ -109,7 +111,11 @@ public final class ForestIndex {
                 continue;
             }
             BlockPos base = TreeScan.baseOf(level, topPos);
-            if (!level.getBlockState(base.below()).is(BlockTags.SUBSTRATE_OVERWORLD) || (colony.isProtected(base) && !colony.treeFarm().contains(base))) {
+            if (!level.getBlockState(base.below()).is(BlockTags.SUBSTRATE_OVERWORLD)) {
+                continue;
+            }
+            boolean inTheWay = colony.treeInTheWay(level, base);
+            if (colony.isProtected(base) && !colony.treeFarm().contains(base) && !inTheWay) {
                 continue;
             }
             if (near(base)) {
@@ -117,6 +123,9 @@ public final class ForestIndex {
             }
             if (!TreeScan.naturalTree(level, base).isEmpty()) {
                 trees.add(base.immutable());
+                if (inTheWay) {
+                    blocking.add(base.immutable());
+                }
                 foundThisPass++;
             }
         }
@@ -131,7 +140,29 @@ public final class ForestIndex {
         return false;
     }
 
+    private boolean urgent(BlockPos tree) {
+        int radius = Math.max(32, colony.data().radius);
+        return blocking.contains(tree) && tree.distSqr(colony.center()) <= (double) radius * radius;
+    }
+
+    public boolean hasBlocking() {
+        for (BlockPos tree : blocking) {
+            if (!claims.containsKey(tree) && urgent(tree)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean blocking(BlockPos tree) {
+        return blocking.contains(tree);
+    }
+
     public BlockPos claim(ServerLevel level, UUID worker, BlockPos from) {
+        return claim(level, worker, from, false);
+    }
+
+    public BlockPos claim(ServerLevel level, UUID worker, BlockPos from, boolean blockingOnly) {
         release(worker);
         long now = level.getGameTime();
         rejected.entrySet().removeIf(entry -> entry.getValue() < now);
@@ -141,7 +172,7 @@ public final class ForestIndex {
         Iterator<BlockPos> it = trees.iterator();
         while (it.hasNext()) {
             BlockPos tree = it.next();
-            if (claims.containsKey(tree) || rejected.containsKey(tree)) {
+            if (claims.containsKey(tree) || rejected.containsKey(tree) || blockingOnly && !urgent(tree)) {
                 continue;
             }
             if (!WorldUtil.loaded(level, tree)) {
@@ -149,10 +180,13 @@ public final class ForestIndex {
             }
             if (!TreeScan.isLog(level.getBlockState(tree))) {
                 it.remove();
+                blocking.remove(tree);
                 continue;
             }
             double distance = tree.distSqr(from);
-            if (farms && colony.treeFarm().contains(tree)) {
+            if (blocking.contains(tree)) {
+                distance *= 0.05;
+            } else if (farms && colony.treeFarm().contains(tree)) {
                 distance *= 0.02;
             }
             if (distance < bestDistance) {
@@ -177,6 +211,7 @@ public final class ForestIndex {
 
     public void felled(BlockPos tree) {
         trees.remove(tree);
+        blocking.remove(tree);
         claims.remove(tree);
     }
 }

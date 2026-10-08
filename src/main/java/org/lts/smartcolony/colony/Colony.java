@@ -521,6 +521,29 @@ public final class Colony {
                 && animal.getZ() >= data.pen.min.z() && animal.getZ() < data.pen.max.z() + 1;
     }
 
+    public boolean treeAllowed(ServerLevel level, BlockPos pos) {
+        if (treeFarm.contains(pos)) {
+            return true;
+        }
+        return !isProtected(pos) && !fields.treeBlocked(level, pos.getX(), pos.getZ());
+    }
+
+    public boolean treeInTheWay(ServerLevel level, BlockPos base) {
+        if (treeFarm.contains(base)) {
+            return false;
+        }
+        Pos p = WorldUtil.pos(base);
+        if (!data.zones.isEmpty() && org.lts.smartcolony.core.Decree.inAny(data.zones, p.x(), p.z(), 0)) {
+            return false;
+        }
+        for (ColonyData.Building building : data.buildings) {
+            if (building.contains(p, 0)) {
+                return false;
+            }
+        }
+        return fields.treeBlocked(level, base.getX(), base.getZ());
+    }
+
     public void rememberPlanted(BlockPos pos) {
         data.plantedTrees.add(WorldUtil.pos(pos));
         while (data.plantedTrees.size() > 200) {

@@ -114,6 +114,15 @@ public final class Chores {
                 }
             }
         }
+        for (Pos planted : colony.data().plantedTrees) {
+            BlockPos pos = WorldUtil.bp(planted);
+            if (queue.size() >= MAX_QUEUE) {
+                break;
+            }
+            if (WorldUtil.loaded(level, pos) && level.getBlockState(pos).is(BlockTags.SAPLINGS) && !colony.treeAllowed(level, pos)) {
+                offer(new Chore(Kind.WEEDS, pos.immutable()));
+            }
+        }
         for (ItemEntity item : level.getEntitiesOfClass(ItemEntity.class, new AABB(colony.center()).inflate(colony.data().radius, 16, colony.data().radius),
                 item -> item.isAlive() && item.getAge() >= LOOT_MIN_AGE && !item.hasPickUpDelay())) {
             if (queue.size() >= MAX_QUEUE) {
