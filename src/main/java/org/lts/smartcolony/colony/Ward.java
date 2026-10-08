@@ -525,7 +525,34 @@ public final class Ward {
         if (entry != null && level.getGameTime() - entry.treatedAt < 200) {
             return true;
         }
+        if (Hospital.critical(patient.getHealth(), patient.getMaxHealth())) {
+            net.minecraft.world.item.ItemStack potion = colony.warehouse().extractOne(level, org.lts.smartcolony.util.ItemIds::healingPotion);
+            if (!potion.isEmpty()) {
+                net.minecraft.world.item.alchemy.PotionContents contents = potion.get(net.minecraft.core.component.DataComponents.POTION_CONTENTS);
+                if (contents != null) {
+                    contents.applyToLivingEntity(patient, 1.0F);
+                }
+                colony.warehouse().insert(level, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.GLASS_BOTTLE));
+                if (entry != null) {
+                    entry.treatedAt = level.getGameTime();
+                }
+                level.sendParticles(ParticleTypes.HEART, patient.getX(), patient.getY() + 1.5, patient.getZ(), 4, 0.4, 0.4, 0.4, 0.0);
+                data().bump("medic_potions", 1);
+                return true;
+            }
+        }
         Stock stock = colony.warehouse().stock(level);
+        if (stock.get(Hospital.BANDAGE) + stock.get(Hospital.REMEDY) + stock.get(Hospital.GOLDEN) == 0
+                && colony.warehouse().take(level, org.lts.smartcolony.core.Ids.mc("honey_bottle"), 1) == 1) {
+            patient.heal(patient.getMaxHealth() * 0.25F);
+            patient.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 200, 0));
+            colony.warehouse().insert(level, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.GLASS_BOTTLE));
+            if (entry != null) {
+                entry.treatedAt = level.getGameTime();
+            }
+            data().bump("medic_honey", 1);
+            return true;
+        }
         Hospital.Care care = Hospital.chooseCare(patient.getHealth(), patient.getMaxHealth(), stock.get(Hospital.BANDAGE),
                 stock.get(Hospital.REMEDY), stock.get(Hospital.GOLDEN));
         if (care == Hospital.Care.NONE) {

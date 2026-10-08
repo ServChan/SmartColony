@@ -72,6 +72,11 @@ public final class Colony {
     private EnumMap<Role, Integer> desired = new EnumMap<>(Role.class);
     private final IronAge ironAge;
     private final Ward ward;
+    private final Daily daily;
+    private final FireWatch fire;
+    private final Chores chores;
+    private final Contracts contracts;
+    private final Stable stable;
     private boolean dirty;
     private long ticks;
     private long lastStorageWarning;
@@ -99,6 +104,11 @@ public final class Colony {
         this.advisor = new org.lts.smartcolony.ai.Advisor(this);
         this.ironAge = new IronAge(this);
         this.ward = new Ward(this);
+        this.daily = new Daily(this);
+        this.fire = new FireWatch(this);
+        this.chores = new Chores(this);
+        this.contracts = new Contracts(this);
+        this.stable = new Stable(this);
         for (Map.Entry<String, ColonyData.Member> entry : data.members.entrySet()) {
             UUID uuid = UUID.fromString(entry.getKey());
             Colonist colonist = new Colonist(uuid, this);
@@ -188,6 +198,44 @@ public final class Colony {
 
     public Ward ward() {
         return ward;
+    }
+
+    public Daily daily() {
+        return daily;
+    }
+
+    public FireWatch fire() {
+        return fire;
+    }
+
+    public Chores chores() {
+        return chores;
+    }
+
+    public Contracts contracts() {
+        return contracts;
+    }
+
+    public Stable stable() {
+        return stable;
+    }
+
+    public boolean builtKind(String kind) {
+        for (ColonyData.Building building : data.buildings) {
+            if (kind.equals(building.kind)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public ColonyData.Building buildingOfKind(String kind) {
+        for (ColonyData.Building building : data.buildings) {
+            if (kind.equals(building.kind)) {
+                return building;
+            }
+        }
+        return null;
     }
 
     public Trader trader() {
@@ -423,6 +471,9 @@ public final class Colony {
     public boolean isProtected(BlockPos pos, boolean includeFarms, ColonyData.Project ignore) {
         Pos p = WorldUtil.pos(pos);
         if (p.horizontalDistSq(data.depot) < 36 || p.horizontalDistSq(data.center) < 16) {
+            return true;
+        }
+        if (!data.zones.isEmpty() && org.lts.smartcolony.core.Decree.inAny(data.zones, p.x(), p.z(), 0)) {
             return true;
         }
         for (ColonyData.Building building : data.buildings) {
@@ -723,6 +774,11 @@ public final class Colony {
         forest.scan(level);
         theft.tick(level);
         defense.tick(level, ticks);
+        daily.tick(level, ticks);
+        fire.tick(level, ticks);
+        chores.tick(level, ticks);
+        contracts.tick(level, ticks);
+        stable.tick(level, ticks);
         if (ticks % 200 == 7) {
             planRoles(level);
         }
@@ -877,7 +933,9 @@ public final class Colony {
         int stone = stock.get(Ids.mc("cobblestone")) + stock.get(Ids.mc("cobbled_deepslate"));
         int iron = stock.get(Ids.mc("iron_ingot")) + stock.get(Ids.mc("raw_iron"));
         int animal = stock.sum(id -> Ids.isWool(id) || id.equals(Ids.mc("leather")) || id.equals(Ids.mc("egg")) || id.equals(Ids.mc("feather")));
-        for (Map.Entry<String, Integer> entry : construction.missing().entrySet()) {
+        Map<String, Integer> shortages = new LinkedHashMap<>(construction.missing());
+        contracts.missing(level).forEach((id, count) -> shortages.merge(id, count, Integer::sum));
+        for (Map.Entry<String, Integer> entry : shortages.entrySet()) {
             String id = entry.getKey();
             if (Ids.isLog(id) || Ids.isPlanks(id) || id.contains("_door") || id.contains("_slab") || id.contains("_fence")) {
                 wood = Math.min(wood, 10);
@@ -905,6 +963,8 @@ public final class Colony {
         desired = RoleAllocator.withTargets(baseline, advisor.roleTargets(level.getGameTime()), adults);
         desired = RoleAllocator.withUndertaker(desired, graveyard.undertakersWanted(level), adults);
         desired = org.lts.smartcolony.core.PorterPlan.settle(desired, outposts.porterDemand(level));
+        desired = org.lts.smartcolony.core.Specialists.settle(desired, specialistWants(level, adults), adults);
+        desired = org.lts.smartcolony.core.Decree.apply(desired, org.lts.smartcolony.core.Decree.Focus.byKey(data.focus), adults);
         Map<String, Role> current = new LinkedHashMap<>();
         Map<String, Role> affinity = new HashMap<>();
         Set<String> locked = new java.util.HashSet<>();
@@ -957,6 +1017,24 @@ public final class Colony {
         if (!changes.isEmpty()) {
             markDirty();
         }
+    }
+
+    private org.lts.smartcolony.core.Specialists.Wants specialistWants(ServerLevel level, int adults) {
+        boolean nests = level.getPoiManager().getCountInRange(type -> type.is(net.minecraft.world.entity.ai.village.poi.PoiTypes.BEE_NEST)
+                || type.is(net.minecraft.world.entity.ai.village.poi.PoiTypes.BEEHIVE), center(), data.radius + 32,
+                net.minecraft.world.entity.ai.village.poi.PoiManager.Occupancy.ANY) > 0;
+        for (ColonyData.Discovery discovery : data.discoveries) {
+            if (org.lts.smartcolony.core.Expedition.NEST.equals(discovery.kind) && !discovery.used) {
+                nests = true;
+                break;
+            }
+        }
+        return new org.lts.smartcolony.core.Specialists.Wants(
+                org.lts.smartcolony.core.Specialists.masons(builtKind(org.lts.smartcolony.core.Specialists.MASONRY), adults),
+                org.lts.smartcolony.core.Specialists.beekeepers(builtKind(org.lts.smartcolony.core.Specialists.APIARY), nests, adults),
+                org.lts.smartcolony.core.Specialists.alchemists(builtKind(org.lts.smartcolony.core.Specialists.APOTHECARY), adults),
+                org.lts.smartcolony.core.Specialists.scribes(builtKind(org.lts.smartcolony.core.Specialists.LIBRARY), adults),
+                org.lts.smartcolony.core.Specialists.scouts(adults, true));
     }
 
     public int unarmedGuards(ServerLevel level) {

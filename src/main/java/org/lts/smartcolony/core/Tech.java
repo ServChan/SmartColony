@@ -8,6 +8,8 @@ public final class Tech {
     public static final String STONE_AGE = "stone";
     public static final String IRON_AGE = "iron";
     public static final String FORGE = "forge";
+    public static final String STONECUTTER = "stonecutter";
+    public static final String MASONRY_BLUEPRINT = "masonry";
     public static final String FORGE_BLUEPRINT = "blacksmith";
     public static final String FLETCHER_BLUEPRINT = "fletcher_hut";
     public static final String BAKERY_BLUEPRINT = "bakery";
@@ -23,6 +25,9 @@ public final class Tech {
         Set<String> result = new LinkedHashSet<>();
         if (blueprints.contains(FORGE_BLUEPRINT)) {
             result.add(FORGE);
+        }
+        if (blueprints.contains(MASONRY_BLUEPRINT)) {
+            result.add(STONECUTTER);
         }
         return result;
     }

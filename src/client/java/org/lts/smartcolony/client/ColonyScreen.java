@@ -31,11 +31,15 @@ public final class ColonyScreen extends Screen {
     private static final int STATUS_ON = 0xFF55FF55;
     private static final int STATUS_WARN = 0xFFFFC14D;
     private static final int STATUS_OFF = 0xFFFF5555;
-    private static final String[] TABS = {"overview", "storage", "villagers", "journal", "market"};
-    private static final Map<String, String> ROLE_ICONS = Map.of(
-            "idle", "minecraft:bread", "lumberjack", "minecraft:stone_axe", "miner", "minecraft:stone_pickaxe",
-            "farmer", "minecraft:stone_hoe", "fisherman", "minecraft:fishing_rod", "herder", "minecraft:wheat",
-            "builder", "minecraft:bricks", "guard", "minecraft:iron_sword", "teacher", "minecraft:book");
+    private static final String[] TABS = {"overview", "storage", "villagers", "journal", "market", "decrees"};
+    private static final String[] FOCUSES = {"balanced", "food", "defense", "build", "resources"};
+    private static final Map<String, String> ROLE_ICONS = Map.ofEntries(
+            Map.entry("idle", "minecraft:bread"), Map.entry("lumberjack", "minecraft:stone_axe"), Map.entry("miner", "minecraft:stone_pickaxe"),
+            Map.entry("farmer", "minecraft:stone_hoe"), Map.entry("fisherman", "minecraft:fishing_rod"), Map.entry("herder", "minecraft:wheat"),
+            Map.entry("builder", "minecraft:bricks"), Map.entry("guard", "minecraft:iron_sword"), Map.entry("teacher", "minecraft:book"),
+            Map.entry("mason", "minecraft:stone_bricks"), Map.entry("beekeeper", "minecraft:honey_bottle"),
+            Map.entry("alchemist", "minecraft:brewing_stand"), Map.entry("scribe", "minecraft:writable_book"),
+            Map.entry("scout", "minecraft:compass"), Map.entry("medic", "minecraft:golden_apple"), Map.entry("porter", "minecraft:chest"));
     private static final Map<String, String> STORAGE_ICONS = Map.of(
             "wood", "minecraft:oak_log", "mining", "minecraft:cobblestone", "food", "minecraft:wheat",
             "animal", "minecraft:white_wool", "arsenal", "minecraft:iron_sword");
@@ -56,6 +60,13 @@ public final class ColonyScreen extends Screen {
     private int mouseX;
     private int mouseY;
     private ItemStack hoverStack = ItemStack.EMPTY;
+    private final List<Chip> chips = new ArrayList<>();
+
+    private record Chip(int x, int y, int w, int h, String command) {
+        boolean contains(double px, double py) {
+            return px >= x && px < x + w && py >= y && py < y + h;
+        }
+    }
 
     public ColonyScreen(ColonyView view, String tab) {
         super(Component.translatable("smartcolony.ui.title"));
@@ -124,6 +135,7 @@ public final class ColonyScreen extends Screen {
         this.mouseX = mouseX;
         this.mouseY = mouseY;
         hoverStack = ItemStack.EMPTY;
+        chips.clear();
         graphics.fill(left, top, left + panelWidth, top + panelHeight, BG_CONTAINER);
         graphics.outline(left, top, panelWidth, panelHeight, BORDER_PRIMARY);
         graphics.fill(left + 1, top + 1, left + panelWidth - 1, top + 20, BG_HEADER);
@@ -142,6 +154,7 @@ public final class ColonyScreen extends Screen {
             case "villagers" -> villagers(graphics, x, y, w);
             case "journal" -> journal(graphics, x, y, w);
             case "market" -> market(graphics, x, y, w);
+            case "decrees" -> decrees(graphics, x, y, w);
             default -> overview(graphics, x, y, w);
         };
         graphics.disableScissor();
@@ -486,6 +499,103 @@ public final class ColonyScreen extends Screen {
             y += 20;
         }
         return y + 2;
+    }
+
+    @Override
+    public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent event, boolean doubleClick) {
+        if (event.y() >= contentTop && event.y() < contentBottom) {
+            for (Chip chip : chips) {
+                if (chip.contains(event.x(), event.y()) && minecraft != null && minecraft.player != null) {
+                    minecraft.player.connection.sendCommand(chip.command());
+                    ticks = 19;
+                    return true;
+                }
+            }
+        }
+        return super.mouseClicked(event, doubleClick);
+    }
+
+    private int chip(GuiGraphicsExtractor graphics, Component label, int x, int y, boolean active, String command) {
+        int w = font.width(label) + 10;
+        boolean hover = mouseX >= x && mouseX < x + w && mouseY >= y && mouseY < y + 14 && mouseY >= contentTop && mouseY < contentBottom;
+        graphics.fill(x, y, x + w, y + 14, active ? 0xFF1E4A3A : hover ? 0xFF22364F : BG_SLOT);
+        graphics.outline(x, y, w, 14, active ? STATUS_ON : hover ? ACCENT_CYAN : BORDER_PRIMARY);
+        graphics.text(font, label, x + 5, y + 3, active ? STATUS_ON : TEXT_NORMAL, false);
+        chips.add(new Chip(x, y, w, 14, command));
+        return x + w + 4;
+    }
+
+    private int decrees(GuiGraphicsExtractor graphics, int x, int y, int w) {
+        ColonyView.Society society = view.society();
+        y = heading(graphics, Component.translatable("smartcolony.ui.decree.focus"), x, y);
+        int cx = x;
+        for (String focus : FOCUSES) {
+            Component label = Component.translatable("smartcolony.decree.focus." + focus);
+            if (cx + font.width(label) + 10 > x + w) {
+                cx = x;
+                y += 18;
+            }
+            cx = chip(graphics, label, cx, y, focus.equals(society.focus()), "colony decree focus " + focus);
+        }
+        y += 18;
+        graphics.text(font, font.plainSubstrByWidth(Component.translatable("smartcolony.decree.hint." + society.focus()).getString(), w),
+                x, y, TEXT_DIM, false);
+        y += 16;
+        y = heading(graphics, Component.translatable("smartcolony.ui.decree.zones", society.zones().size()), x, y);
+        for (String zone : society.zones()) {
+            graphics.text(font, Component.translatable("smartcolony.ui.decree.zone", zone), x, y, TEXT_NORMAL, false);
+            y += 12;
+        }
+        cx = chip(graphics, Component.translatable("smartcolony.ui.decree.zone_add"), x, y, false, "colony decree zone add 8");
+        chip(graphics, Component.translatable("smartcolony.ui.decree.zone_remove"), cx, y, false, "colony decree zone remove");
+        y += 20;
+        y = heading(graphics, Component.translatable("smartcolony.ui.decree.orders", society.orders().size()), x, y);
+        if (society.orders().isEmpty()) {
+            graphics.text(font, font.plainSubstrByWidth(Component.translatable("smartcolony.ui.decree.orders_hint").getString(), w), x, y,
+                    TEXT_DIM, false);
+            y += 14;
+        } else {
+            for (String order : society.orders()) {
+                String[] parts = order.split("\\|");
+                Item item = BuiltInRegistries.ITEM.getValue(Identifier.tryParse(parts[0]));
+                graphics.text(font, Component.translatable("smartcolony.ui.decree.order", new ItemStack(item).getHoverName(), parts[1], parts[2],
+                        parts[3]), x, y, TEXT_NORMAL, false);
+                y += 12;
+            }
+            chip(graphics, Component.translatable("smartcolony.ui.decree.order_cancel"), x, y, false, "colony order cancel");
+            y += 20;
+        }
+        y = heading(graphics, Component.translatable("smartcolony.ui.decree.day"), x, y);
+        graphics.text(font, Component.translatable("smartcolony.ui.slot." + society.slot()), x, y, TEXT_NORMAL, false);
+        y += 12;
+        graphics.text(font, Component.translatable(society.fed() ? "smartcolony.ui.decree.fed" : "smartcolony.ui.decree.not_fed"), x, y,
+                society.fed() ? STATUS_ON : TEXT_DIM, false);
+        y += 12;
+        if (society.restDay()) {
+            graphics.text(font, Component.translatable("smartcolony.ui.decree.rest_day"), x, y, STATUS_WARN, false);
+            y += 12;
+        }
+        y += 4;
+        y = heading(graphics, Component.translatable("smartcolony.ui.decree.world"), x, y);
+        graphics.text(font, Component.translatable("smartcolony.ui.decree.discoveries", society.ores(), society.villages(), society.nests(),
+                society.recruits()), x, y, TEXT_NORMAL, false);
+        y += 12;
+        graphics.text(font, Component.translatable("smartcolony.ui.decree.logistics", society.caravans(), society.packAnimals()), x, y,
+                TEXT_NORMAL, false);
+        y += 12;
+        graphics.text(font, Component.translatable("smartcolony.ui.decree.safety", society.fires(), society.raids(), society.raidsWon(),
+                society.snowCleared(), society.chores()), x, y, TEXT_NORMAL, false);
+        y += 12;
+        graphics.text(font, Component.translatable("smartcolony.ui.decree.crafts", society.knowledge(), society.potions()), x, y,
+                TEXT_NORMAL, false);
+        y += 12;
+        StringBuilder built = new StringBuilder();
+        for (String kind : society.specialists()) {
+            built.append(built.isEmpty() ? "" : ", ").append(Component.translatable("smartcolony.building." + kind).getString());
+        }
+        graphics.text(font, font.plainSubstrByWidth(Component.translatable("smartcolony.ui.decree.workshops",
+                built.isEmpty() ? "-" : built.toString()).getString(), w), x, y, TEXT_DIM, false);
+        return y + 14;
     }
 
     private int heading(GuiGraphicsExtractor graphics, Component text, int x, int y) {

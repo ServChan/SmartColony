@@ -118,7 +118,8 @@ public final class MedicJob extends Job {
 
     private boolean suppliesAvailable(ServerLevel level) {
         Stock stock = colony().warehouse().stock(level);
-        return stock.get(Hospital.BANDAGE) + stock.get(Hospital.REMEDY) + stock.get(Hospital.GOLDEN) > 0;
+        return stock.get(Hospital.BANDAGE) + stock.get(Hospital.REMEDY) + stock.get(Hospital.GOLDEN)
+                + stock.get(org.lts.smartcolony.core.Ids.mc("honey_bottle")) + stock.get(org.lts.smartcolony.core.Ids.mc("potion")) > 0;
     }
 
     private void choose(ServerLevel level, Villager villager) {

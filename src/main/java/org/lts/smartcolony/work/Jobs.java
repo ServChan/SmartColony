@@ -23,7 +23,12 @@ public final class Jobs {
             case TEACHER -> new TeacherJob(colonist);
             case PORTER -> new PorterJob(colonist);
             case MEDIC -> new MedicJob(colonist);
-            case IDLE -> new IdleJob(colonist);
+            case MASON -> new MasonJob(colonist);
+            case BEEKEEPER -> new BeekeeperJob(colonist);
+            case ALCHEMIST -> new AlchemistJob(colonist);
+            case SCRIBE -> new ScribeJob(colonist);
+            case SCOUT -> new ScoutJob(colonist);
+            case IDLE -> new ChoresJob(colonist);
         };
     }
 

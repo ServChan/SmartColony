@@ -23,9 +23,9 @@ import org.lts.smartcolony.core.CrafterNeeds;
 import org.lts.smartcolony.core.RecipeBook;
 import org.lts.smartcolony.core.Role;
 
-public final class CrafterJob extends Job {
+public class CrafterJob extends Job {
     private static final int SCAN_RADIUS = 20;
-    private static final Set<String> WORKPLACES = Set.of("workshop", "fletchery", "bakery");
+    private static final Set<String> WORKPLACES = Set.of("workshop", "fletchery", "bakery", "masonry");
 
     private final Role role;
     private CrafterNeeds.Want order;
@@ -98,8 +98,15 @@ public final class CrafterJob extends Job {
                 return;
             }
         }
+        if (extraWork(level, villager)) {
+            return;
+        }
         status = "nothing to make";
         idle(level, 600);
+    }
+
+    protected boolean extraWork(ServerLevel level, Villager villager) {
+        return false;
     }
 
     private int feasible(org.lts.smartcolony.core.Stock stock, CrafterNeeds.Want want) {
@@ -243,6 +250,7 @@ public final class CrafterJob extends Job {
         return switch (role) {
             case FLETCHER -> SoundEvents.VILLAGER_WORK_FLETCHER;
             case SMITH -> SoundEvents.VILLAGER_WORK_TOOLSMITH;
+            case MASON -> SoundEvents.VILLAGER_WORK_MASON;
             default -> SoundEvents.VILLAGER_WORK_BUTCHER;
         };
     }
@@ -263,6 +271,7 @@ public final class CrafterJob extends Job {
         return switch (role) {
             case FLETCHER -> List.of(Blocks.FLETCHING_TABLE, Blocks.CRAFTING_TABLE);
             case SMITH -> smelt ? List.of(Blocks.FURNACE, Blocks.BLAST_FURNACE) : List.of(Blocks.SMITHING_TABLE, Blocks.ANVIL, Blocks.CRAFTING_TABLE);
+            case MASON -> smelt ? List.of(Blocks.FURNACE, Blocks.BLAST_FURNACE) : List.of(Blocks.STONECUTTER, Blocks.CRAFTING_TABLE);
             default -> smelt ? List.of(Blocks.SMOKER, Blocks.FURNACE) : List.of(Blocks.CRAFTING_TABLE);
         };
     }

@@ -34,6 +34,22 @@ public final class ItemIds {
         return new ItemStack(item, count);
     }
 
+    public static String potion(ItemStack stack) {
+        net.minecraft.world.item.alchemy.PotionContents contents = stack.get(net.minecraft.core.component.DataComponents.POTION_CONTENTS);
+        if (contents == null || contents.potion().isEmpty()) {
+            return "";
+        }
+        return contents.potion().get().unwrapKey().map(key -> key.identifier().getPath()).orElse("");
+    }
+
+    public static boolean healingPotion(ItemStack stack) {
+        return stack.is(Items.POTION) && org.lts.smartcolony.core.Brewing.healing(potion(stack));
+    }
+
+    public static boolean exists(String id) {
+        return item(id) != Items.AIR;
+    }
+
     public static boolean is(ItemStack stack, String id) {
         return !stack.isEmpty() && id(stack).equals(id);
     }

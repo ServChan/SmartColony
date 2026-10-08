@@ -24,7 +24,7 @@ public final class CrafterNeeds {
     }
 
     public static boolean crafter(Role role) {
-        return role == Role.FLETCHER || role == Role.SMITH || role == Role.COOK;
+        return role == Role.FLETCHER || role == Role.SMITH || role == Role.COOK || role == Role.MASON;
     }
 
     public static List<Want> wants(Role role, Context ctx) {
@@ -32,6 +32,7 @@ public final class CrafterNeeds {
             case FLETCHER -> fletcher(ctx);
             case SMITH -> smith(ctx);
             case COOK -> cook(ctx);
+            case MASON -> mason(ctx);
             default -> List.of();
         };
     }
@@ -127,6 +128,37 @@ public final class CrafterNeeds {
             result.add(new Want(Ids.mc("bucket"), 1, false));
         }
         return result;
+    }
+
+    private static List<Want> mason(Context ctx) {
+        List<Want> result = new ArrayList<>();
+        Stock stock = ctx.stock();
+        int sand = stock.get(Ids.mc("sand")) + stock.get(Ids.mc("red_sand"));
+        if (stock.get(Ids.mc("glass")) < 48 && sand > 0) {
+            result.add(new Want(Ids.mc("glass"), Math.min(8, sand), true));
+        }
+        int clay = stock.get(Ids.mc("clay_ball"));
+        if (stock.get(Ids.mc("bricks")) < 48 && clay >= 4) {
+            result.add(new Want(Ids.mc("bricks"), Math.min(4, clay / 4), false));
+        }
+        int stone = stock.get(Ids.mc("cobblestone")) + stock.get(Ids.mc("stone"));
+        if (stock.get(Ids.mc("stone_bricks")) < 64 && stone >= 96) {
+            result.add(new Want(Ids.mc("stone_bricks"), 8, false));
+        }
+        if (stock.get(Ids.mc("glass_pane")) < 32 && stock.get(Ids.mc("glass")) >= 12) {
+            result.add(new Want(Ids.mc("glass_pane"), 16, false));
+        }
+        if (stock.get(Ids.mc("glass_bottle")) < 6 && stock.get(Ids.mc("glass")) >= 6) {
+            result.add(new Want(Ids.mc("glass_bottle"), 3, false));
+        }
+        if (stock.get(Ids.mc("flower_pot")) < 4 && stock.get(Ids.mc("brick")) >= 6) {
+            result.add(new Want(Ids.mc("flower_pot"), 2, false));
+        }
+        return result;
+    }
+
+    public static boolean masonGathers(Stock stock) {
+        return stock.get(Ids.mc("sand")) + stock.get(Ids.mc("red_sand")) < 24 || stock.get(Ids.mc("clay_ball")) < 16;
     }
 
     private static List<Want> cook(Context ctx) {

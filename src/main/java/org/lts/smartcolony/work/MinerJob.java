@@ -82,7 +82,7 @@ public final class MinerJob extends Job {
     }
 
     @Override
-    protected boolean hasCargo(Villager villager) {
+    public boolean hasCargo(Villager villager) {
         return Inv.count(villager, stack -> !Tools.ANY_TOOL.test(stack) && !stack.is(Items.TORCH) && !stack.is(Items.LADDER) && !stack.is(Items.COBBLESTONE) && !ration(stack)) > 0;
     }
 

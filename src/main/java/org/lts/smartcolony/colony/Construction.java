@@ -51,6 +51,8 @@ import org.lts.smartcolony.core.Tech;
 import org.lts.smartcolony.core.TerrainMap;
 import org.lts.smartcolony.core.TreeFarmPlan;
 import org.lts.smartcolony.core.Hospital;
+import org.lts.smartcolony.core.HouseTier;
+import org.lts.smartcolony.core.Specialists;
 import org.lts.smartcolony.core.MaterialSwaps;
 import org.lts.smartcolony.core.Staged;
 import org.lts.smartcolony.core.TownHall;
@@ -177,7 +179,8 @@ public final class Construction {
     }
 
     public boolean hasWork(ServerLevel level) {
-        return !active().isEmpty() || !data().pendingRoad.isEmpty() || colony.improvements().hasWork(level);
+        return !active().isEmpty() || !data().pendingRoad.isEmpty() || colony.improvements().hasWork(level)
+                || colony.chores().snowPending();
     }
 
     public int backlog(ServerLevel level) {
@@ -245,10 +248,25 @@ public final class Construction {
             }
         }
         boolean housingShort = beds + plannedBeds < population + 1;
+        Stock stockNow = colony.warehouse().stock(level);
+        int stoneNow = stockNow.get(Ids.mc("cobblestone")) + stockNow.get(Ids.mc("stone")) + stockNow.get(Ids.mc("stone_bricks"));
+        long houseCount = data().buildings.stream().filter(b -> "house".equals(b.kind)).count();
+        ColonyData.Building toUpgrade = houseToUpgrade();
+        boolean upgrading = data().projects.stream().anyMatch(p -> HouseTier.isUpgrade(p.building.blueprint));
+        boolean landShort = cooldown.getOrDefault("house_family", Long.MIN_VALUE) > now
+                || cooldown.getOrDefault("house_small", Long.MIN_VALUE) > now;
+        int upgradable = toUpgrade == null ? 0 : (int) data().buildings.stream()
+                .filter(b -> HouseTier.upgradeOf(b.blueprint) != null).count();
+        boolean wantUpgrade = toUpgrade != null && HouseTier.wanted(adults, upgradable, upgrading, housingShort, stoneNow, landShort);
+        if (wantUpgrade && HouseTier.preferOverNewHouse(housingShort, landShort, upgradable, (int) houseCount)) {
+            order.add(HouseTier.upgradeOf(toUpgrade.blueprint));
+        }
         if (housingShort) {
-            long houses = data().buildings.stream().filter(b -> "house".equals(b.kind)).count()
-                    + data().projects.stream().filter(p -> "house".equals(p.building.kind)).count();
+            long houses = houseCount + data().projects.stream().filter(p -> "house".equals(p.building.kind)).count();
             order.add(adults < 6 ? "house_small" : houses % 2 == 0 ? "house_family" : "house_garden");
+        }
+        if (wantUpgrade && !order.contains(HouseTier.upgradeOf(toUpgrade.blueprint))) {
+            order.add(HouseTier.upgradeOf(toUpgrade.blueprint));
         }
         boolean hasPen = data().pen != null || data().buildings.stream().anyMatch(b -> "pen".equals(b.kind));
         if (!hasPen && adults >= 5) {
@@ -299,6 +317,25 @@ public final class Construction {
         }
         if (adults >= 14 && built("chapel") == 0) {
             order.add("chapel");
+        }
+        int sand = stock.get(Ids.mc("sand")) + stock.get(Ids.mc("red_sand"));
+        if (adults >= 10 && built(Specialists.MASONRY) == 0
+                && (stoneNow >= 128 || sand >= 24 || stock.get(Ids.mc("clay_ball")) >= 16)) {
+            order.add(Specialists.MASONRY);
+        }
+        if (adults >= 9 && built(Specialists.APIARY) == 0
+                && stock.get(Ids.mc("honeycomb")) + stock.get(Ids.mc("beehive")) * 3 >= 9) {
+            order.add(Specialists.APIARY);
+        }
+        if (adults >= 14 && built(Specialists.APOTHECARY) == 0 && Hospital.stage(data()) >= 1) {
+            order.add(Specialists.APOTHECARY);
+        }
+        if (adults >= 12 && built(Specialists.STABLE) == 0 && (!data().outposts.isEmpty()
+                || colony.desired().getOrDefault(Role.PORTER, 0) > 0)) {
+            order.add(Specialists.STABLE);
+        }
+        if (adults >= 12 && built(Specialists.LIBRARY) == 0 && built(Schooling.ID) > 0) {
+            order.add(Specialists.LIBRARY);
         }
         long cemeteries = data().buildings.stream().filter(b -> Cemetery.ID.equals(b.blueprint)).count();
         long cemeteryProjects = data().projects.stream().filter(p -> Cemetery.ID.equals(p.building.blueprint)).count();
@@ -373,8 +410,37 @@ public final class Construction {
         return count;
     }
 
+    private ColonyData.Building houseToUpgrade() {
+        for (ColonyData.Building building : data().buildings) {
+            if (HouseTier.upgradeOf(building.blueprint) != null && !upgrading(building)
+                    && !org.lts.smartcolony.core.Decree.inAny(data().zones, building.origin.x(), building.origin.z(), 0)) {
+                return building;
+            }
+        }
+        return null;
+    }
+
+    private ColonyData.Building houseFor(String upgrade) {
+        String base = HouseTier.baseOf(upgrade);
+        for (ColonyData.Building building : data().buildings) {
+            if (building.blueprint.equals(base) && !upgrading(building)) {
+                return building;
+            }
+        }
+        return null;
+    }
+
     private boolean satisfiable(ServerLevel level, String blueprintId, String wood) {
-        Map<String, Integer> materials = new TreeMap<>(TownHallBuilder.materials(this, level, blueprintId, wood));
+        Map<String, Integer> materials;
+        if (HouseTier.isUpgrade(blueprintId)) {
+            ColonyData.Building house = houseFor(blueprintId);
+            if (house == null) {
+                return false;
+            }
+            materials = new TreeMap<>(TownHallBuilder.pending(this, level, TownHallBuilder.upgrade(house, blueprintId)));
+        } else {
+            materials = new TreeMap<>(TownHallBuilder.materials(this, level, blueprintId, wood));
+        }
         materials.remove(Ids.mc("glass_pane"));
         Stock stock = colony.warehouse().stock(level);
         if (TreeFarmPlan.ID.equals(blueprintId)) {
@@ -438,7 +504,13 @@ public final class Construction {
             return;
         }
         Blueprint blueprint = Blueprints.get(need);
-        ColonyData.Project project = Staged.isStaged(need) ? townHallProject(level, need, wood) : findSite(level, blueprint, wood);
+        ColonyData.Project project;
+        if (HouseTier.isUpgrade(need)) {
+            ColonyData.Building house = houseFor(need);
+            project = house == null ? null : TownHallBuilder.upgrade(house, need);
+        } else {
+            project = Staged.isStaged(need) ? townHallProject(level, need, wood) : findSite(level, blueprint, wood);
+        }
         if (project == null) {
             status = "no flat land for " + need;
             cooldown.put(need, level.getGameTime() + 6000);
@@ -546,7 +618,7 @@ public final class Construction {
             if (swap != null) {
                 String props = cell.state().substring(id.length());
                 String newState = Blueprint.resolve(swap, building.wood);
-                if (Blueprint.blockId(newState).endsWith("_bed")) {
+                if (MaterialSwaps.keepsShape(id, Blueprint.blockId(newState)) && !newState.contains("[")) {
                     newState = newState + props;
                 }
                 result.add(new Blueprint.Cell(cell.x(), cell.y(), cell.z(), newState));
@@ -730,6 +802,8 @@ public final class Construction {
         int maxDistance = search.maxDistance();
         double bestScore = Double.MAX_VALUE;
         ColonyData.Project best = null;
+        List<org.lts.smartcolony.core.Clearance.Door> doors = doors();
+        List<org.lts.smartcolony.core.Clearance.Box> obstacles = obstacles();
         for (int distance = search.minDistance(); distance <= maxDistance; distance += 3) {
             int steps = Math.max(12, distance * 2);
             for (int i = 0; i < steps; i++) {
@@ -745,6 +819,9 @@ public final class Construction {
                 int ox = px - sx / 2;
                 int oz = pz - sz / 2;
                 if (!search.forbidden().isEmpty() && PorterPlan.overlaps(ox, oz, ox + sx - 1, oz + sz - 1, search.forbidden())) {
+                    continue;
+                }
+                if (!clear(blueprint, rotation, ox, oz, sx, sz, doors, obstacles)) {
                     continue;
                 }
                 if (sx * sz > 100 && !roughlyFlat(level, ox, oz, sx, sz, fillLimit + cutLimit)) {
@@ -788,6 +865,66 @@ public final class Construction {
             }
         }
         return best;
+    }
+
+    List<org.lts.smartcolony.core.Clearance.Door> doors() {
+        List<org.lts.smartcolony.core.Clearance.Door> doors = new ArrayList<>();
+        List<ColonyData.Building> all = new ArrayList<>(data().buildings);
+        for (ColonyData.Project project : data().projects) {
+            all.add(project.building);
+        }
+        for (ColonyData.Building building : all) {
+            if (building.door == null || building.blueprint.isEmpty() || "pen".equals(building.kind)) {
+                continue;
+            }
+            Blueprint blueprint = Blueprints.get(building.blueprint);
+            int[] out = org.lts.smartcolony.core.Clearance.outward(blueprint.doorX(), blueprint.doorZ(), blueprint.sizeX(), blueprint.sizeZ(),
+                    building.rotation);
+            doors.add(new org.lts.smartcolony.core.Clearance.Door(building.door.x(), building.door.z(), out[0], out[1]));
+        }
+        return doors;
+    }
+
+    List<org.lts.smartcolony.core.Clearance.Box> obstacles() {
+        List<org.lts.smartcolony.core.Clearance.Box> boxes = new ArrayList<>();
+        for (ColonyData.Building building : data().buildings) {
+            boxes.add(org.lts.smartcolony.core.Clearance.Box.of(building.min.x(), building.min.z(), building.max.x(), building.max.z()));
+        }
+        for (ColonyData.Project project : data().projects) {
+            ColonyData.Building building = project.building;
+            boxes.add(org.lts.smartcolony.core.Clearance.Box.of(building.min.x(), building.min.z(), building.max.x(), building.max.z()));
+        }
+        ColonyData.Pen pen = data().pen;
+        if (pen != null) {
+            boxes.add(org.lts.smartcolony.core.Clearance.Box.of(pen.min.x() - 1, pen.min.z() - 1, pen.max.x() + 1, pen.max.z() + 1));
+        }
+        return boxes;
+    }
+
+    private boolean clear(Blueprint blueprint, int rotation, int ox, int oz, int sx, int sz,
+                          List<org.lts.smartcolony.core.Clearance.Door> doors, List<org.lts.smartcolony.core.Clearance.Box> obstacles) {
+        org.lts.smartcolony.core.Clearance.Box footprint = org.lts.smartcolony.core.Clearance.Box.of(ox, oz, ox + sx - 1, oz + sz - 1);
+        if (org.lts.smartcolony.core.Decree.boxInAny(data().zones, footprint.minX(), footprint.minZ(), footprint.maxX(), footprint.maxZ(), 2)) {
+            return false;
+        }
+        int[] front = Blueprint.rotate(blueprint.doorX(), blueprint.doorZ() - 1, blueprint.sizeX(), blueprint.sizeZ(), rotation);
+        int[] out = org.lts.smartcolony.core.Clearance.outward(blueprint.doorX(), blueprint.doorZ(), blueprint.sizeX(), blueprint.sizeZ(), rotation);
+        org.lts.smartcolony.core.Clearance.Door own = "pen".equals(blueprint.kind()) || Pier.waterKind(blueprint.kind()) ? null
+                : new org.lts.smartcolony.core.Clearance.Door(ox + front[0], oz + front[1], out[0], out[1]);
+        if (!org.lts.smartcolony.core.Clearance.fits(footprint, own, obstacles, doors)) {
+            return false;
+        }
+        if (own != null) {
+            org.lts.smartcolony.core.Clearance.Box corridor = own.corridor();
+            for (int x = corridor.minX(); x <= corridor.maxX(); x++) {
+                for (int z = corridor.minZ(); z <= corridor.maxZ(); z++) {
+                    if (!footprint.contains(x, z) && colony.improvements().isWall(new Pos(x, 0, z))) {
+                        return false;
+                    }
+                }
+            }
+        }
+        return true;
     }
 
     private static double pullScore(Search search, int px, int pz) {
@@ -1107,7 +1244,16 @@ public final class Construction {
         if (road != null) {
             return road;
         }
-        return colony.improvements().next(level);
+        Task order = colony.improvements().next(level);
+        if (order != null) {
+            return order;
+        }
+        Chores.Chore snow = colony.chores().nextSnow(level, colony.depot());
+        if (snow != null) {
+            colony.chores().done(snow);
+            return new Task(Kind.CLEAR, snow.pos(), null, null, null, snow.pos());
+        }
+        return null;
     }
 
     private Task projectTask(ServerLevel level, ColonyData.Project project, long now) {
@@ -1459,6 +1605,20 @@ public final class Construction {
         if (PorterPlan.OUTPOST_ID.equals(blueprintId)) {
             return false;
         }
+        if (HouseTier.isUpgrade(blueprintId)) {
+            ColonyData.Building house = houseFor(blueprintId);
+            if (house == null || data().projects.stream().anyMatch(p -> HouseTier.isUpgrade(p.building.blueprint))) {
+                return false;
+            }
+            ColonyData.Project upgrade = TownHallBuilder.upgrade(house, blueprintId);
+            upgrade.started = level.getGameTime();
+            upgrade.waitingSince = level.getGameTime();
+            data().projects.add(upgrade);
+            recomputeRequired(level, upgrade);
+            colony.journal(level, "ordered " + blueprintId + " at " + house.origin);
+            colony.markDirty();
+            return true;
+        }
         if (!blueprintId.startsWith("house") && data().projects.stream().anyMatch(p -> p.building.blueprint.equals(blueprintId))) {
             return false;
         }
@@ -1542,6 +1702,22 @@ public final class Construction {
 
     private void finishUpgrade(ServerLevel level, ColonyData.Project project) {
         lowerCrane(level, project);
+        if (HouseTier.isUpgrade(project.building.blueprint)) {
+            for (ColonyData.Building house : data().buildings) {
+                if (house.origin.equals(project.building.origin)) {
+                    TownHallBuilder.apply(house, project);
+                    house.beds = project.building.beds;
+                    data().bump("houses_upgraded", 1);
+                    colony.journal(level, "house upgraded to " + house.blueprint + " at " + house.origin + ": " + house.beds + " beds");
+                    colony.notify(level, Component.translatable("smartcolony.chat.house_upgraded", house.beds));
+                    colony.improvements().furnish(level, house);
+                    break;
+                }
+            }
+            drop(project);
+            colony.markDirty();
+            return;
+        }
         ColonyData.Building standing = TownHallBuilder.standing(data(), project.building.blueprint);
         if (standing != null) {
             TownHallBuilder.apply(standing, project);

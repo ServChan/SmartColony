@@ -22,6 +22,7 @@ public final class PorterJob extends Job {
     private boolean looked;
     private int chase;
     private BlockPos meet;
+    private net.minecraft.world.entity.animal.equine.AbstractHorse pack;
 
     public PorterJob(Colonist colonist) {
         super(colonist);
@@ -50,7 +51,7 @@ public final class PorterJob extends Job {
 
     @Override
     public boolean wantsControl(ServerLevel level, Villager villager) {
-        if (hasCargo(villager) || !phase.equals("start")) {
+        if (hasCargo(villager) || !phase.equals("start") || pack != null) {
             return true;
         }
         if (!colony().workTime(level)) {
@@ -70,6 +71,19 @@ public final class PorterJob extends Job {
         colony().outposts().release(colonist.uuid());
         task = null;
         meet = null;
+        dropPack();
+    }
+
+    private void dropPack() {
+        if (pack != null && pack.isAlive() && pack.getLeashHolder() instanceof Villager) {
+            pack.removeLeash();
+        }
+        pack = null;
+        colony().stable().giveUp(colonist.uuid());
+    }
+
+    private boolean packEmpty() {
+        return pack == null || org.lts.smartcolony.colony.Stable.pack(pack).isEmpty();
     }
 
     @Override
@@ -84,6 +98,8 @@ public final class PorterJob extends Job {
             case "load" -> load(level, villager);
             case "toBuilder" -> toBuilder(level, villager);
             case "toDepot" -> toDepot(level, villager);
+            case "fetchPack" -> fetchPack(level, villager);
+            case "returnPack" -> returnPack(level, villager);
             default -> phase = "start";
         }
     }
@@ -112,6 +128,12 @@ public final class PorterJob extends Job {
         if (task.type() == Outposts.Type.HAUL) {
             status = "walking to the outpost at " + task.outpost().door;
             phase = "toOutpost";
+            if (pack == null && colony().stable().animals() > 0) {
+                pack = colony().stable().borrow(level, colonist.uuid(), villager.blockPosition());
+                if (pack != null) {
+                    phase = "fetchPack";
+                }
+            }
         } else {
             status = "going to a builder with a full load";
             chase = 0;
@@ -158,6 +180,27 @@ public final class PorterJob extends Job {
         }
         colony().outposts().release(colonist.uuid());
         task = null;
+        if (pack != null && pack.isAlive() && pack.getLeashHolder() == villager) {
+            net.minecraft.world.SimpleContainer bags = org.lts.smartcolony.colony.Stable.pack(pack);
+            int packed = 0;
+            while (true) {
+                ItemStack stack = colony().warehouse().takeLargest(level, outpost, 64);
+                if (stack.isEmpty()) {
+                    break;
+                }
+                int before = stack.getCount();
+                ItemStack rest = bags.addItem(stack);
+                packed += before - rest.getCount();
+                if (!rest.isEmpty()) {
+                    colony().warehouse().insertOutpost(level, outpost, rest);
+                    break;
+                }
+            }
+            if (packed > 0) {
+                moved += packed;
+                colony().data().bump("pack_items", packed);
+            }
+        }
         if (moved > 0) {
             colony().outposts().hauled(level, outpost, moved);
             gainXp(level, villager, 1);
@@ -198,8 +241,8 @@ public final class PorterJob extends Job {
     }
 
     private void toDepot(ServerLevel level, Villager villager) {
-        if (!hasCargo(villager)) {
-            phase = "start";
+        if (!hasCargo(villager) && packEmpty()) {
+            phase = pack != null ? "returnPack" : "start";
             return;
         }
         if (!atDepot(level, villager)) {
@@ -210,6 +253,62 @@ public final class PorterJob extends Job {
             return;
         }
         depositAll(level, villager);
-        phase = "start";
+        if (pack != null) {
+            net.minecraft.world.SimpleContainer bags = org.lts.smartcolony.colony.Stable.pack(pack);
+            for (int slot = 0; slot < bags.getContainerSize(); slot++) {
+                ItemStack stack = bags.getItem(slot);
+                if (stack.isEmpty()) {
+                    continue;
+                }
+                ItemStack rest = colony().warehouse().insert(level, stack);
+                bags.setItem(slot, rest);
+            }
+        }
+        phase = pack != null && packEmpty() ? "returnPack" : "start";
+    }
+
+    private void fetchPack(ServerLevel level, Villager villager) {
+        if (pack == null || !pack.isAlive() || pack.getLeashHolder() instanceof Villager holder && holder != villager) {
+            dropPack();
+            phase = task != null ? "toOutpost" : "start";
+            return;
+        }
+        status = "fetching a pack animal";
+        if (villager.distanceTo(pack) > 2.5) {
+            if (move(level, villager, pack.blockPosition(), 2.0) == Mover.Result.FAILED) {
+                dropPack();
+                phase = task != null ? "toOutpost" : "start";
+            }
+            return;
+        }
+        pack.setLeashedTo(villager, true);
+        colony().data().bump("pack_trips", 1);
+        phase = !packEmpty() ? "toDepot" : task != null ? "toOutpost" : "start";
+    }
+
+    private void returnPack(ServerLevel level, Villager villager) {
+        if (pack == null || !pack.isAlive() || pack.getLeashHolder() != villager) {
+            dropPack();
+            phase = "start";
+            return;
+        }
+        BlockPos post = colony().stable().freePost(level);
+        if (post == null) {
+            dropPack();
+            phase = "start";
+            return;
+        }
+        status = "returning the pack animal";
+        Mover.Result result = move(level, villager, post, 2.2);
+        if (result == Mover.Result.FAILED) {
+            dropPack();
+            phase = "start";
+            return;
+        }
+        if (result == Mover.Result.ARRIVED) {
+            colony().stable().tie(level, pack, post);
+            pack = null;
+            phase = "start";
+        }
     }
 }

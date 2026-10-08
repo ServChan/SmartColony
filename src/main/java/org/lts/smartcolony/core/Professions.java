@@ -21,12 +21,13 @@ public final class Professions {
             case GUARD -> "weaponsmith";
             case SMITH -> "armorer";
             case MINER -> "toolsmith";
-            case BUILDER -> "mason";
+            case BUILDER, MASON -> "mason";
             case COOK, INNKEEPER -> "butcher";
-            case MEDIC, UNDERTAKER -> "cleric";
-            case TEACHER -> "librarian";
-            case PORTER -> "cartographer";
-            case LUMBERJACK -> "leatherworker";
+            case MEDIC, UNDERTAKER, ALCHEMIST -> "cleric";
+            case TEACHER, SCRIBE -> "librarian";
+            case SCOUT -> "cartographer";
+            case PORTER, LUMBERJACK -> "leatherworker";
+            case BEEKEEPER -> "farmer";
             case IDLE -> null;
         };
     }

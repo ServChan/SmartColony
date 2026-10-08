@@ -1,18 +1,25 @@
 package org.lts.smartcolony.work;
 
 import java.util.UUID;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ItemParticleOption;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.npc.villager.Villager;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import org.lts.smartcolony.SmartColonyConfig;
 import org.lts.smartcolony.colony.Colony;
 import org.lts.smartcolony.core.HallRest;
 import org.lts.smartcolony.core.Role;
+import org.lts.smartcolony.core.Schedule;
 
 public final class Colonist {
     private final UUID uuid;
@@ -29,6 +36,11 @@ public final class Colonist {
     private long restBlockedUntil;
     private long nextHeal;
     private boolean resting;
+    private String pause = "";
+    private UUID leader;
+    private ChoresJob helper;
+    private long followUntil;
+    private long fightStarted;
 
     public void hold(ServerLevel level, Villager villager, long until, String reason) {
         releasedUntil = until;
@@ -154,7 +166,22 @@ public final class Colonist {
                 releaseReason = "danger";
             }
         }
+        BlockPos fire = colony.fire().assignment(uuid);
+        if (fire != null && !villager.isOnFire() && SmartColonyConfig.get().firefighting) {
+            if (fightFire(level, villager, fire, now)) {
+                return;
+            }
+        } else if (fightStarted != 0) {
+            fightStarted = 0;
+            endPause(level, villager, "fire");
+        }
         if (hazards.tick(level, villager, now)) {
+            return;
+        }
+        if (raidShelter(level, villager)) {
+            return;
+        }
+        if (leader != null && follow(level, villager, now)) {
             return;
         }
         if (restsAtHall(level, villager, now)) {
@@ -167,7 +194,10 @@ public final class Colonist {
                 release(level, villager, "morning");
             }
         }
-        boolean want = role != Role.IDLE
+        if (helps(level, villager)) {
+            return;
+        }
+        boolean want = (role != Role.IDLE || job.wantsControl(level, villager))
                 && !villager.isBaby()
                 && villager.isAlive()
                 && !villager.isTrading()
@@ -176,6 +206,20 @@ public final class Colonist {
                 && job.wantsControl(level, villager);
         if (villager.isSleeping() && role != Role.GUARD && role != Role.MEDIC) {
             want = false;
+        }
+        Schedule.Slot slot = colony.daily().slot(level);
+        boolean dayOff = (slot == Schedule.Slot.OFF || slot == Schedule.Slot.REST) && colony.daily().restDay(level)
+                && !Schedule.essential(role);
+        if (want && dayOff && Jobs.canInterrupt(this, villager)) {
+            want = false;
+        }
+        if (want && slot == Schedule.Slot.LUNCH && !Schedule.skipsBreaks(role) && !colony.festival(level)
+                && (pause.equals("lunch") || Jobs.canInterrupt(this, villager))) {
+            if (gather(level, villager, "lunch", colony.daily().lunchSpot(level, uuid), null)) {
+                return;
+            }
+        } else if (pause.equals("lunch")) {
+            endPause(level, villager, "lunch");
         }
         if (!want && role != Role.GUARD && !villager.isBaby() && villager.isAlive() && !villager.isSleeping()
                 && releasedUntil <= now && colony.tavern().dinnerOpen(level, uuid)) {
@@ -198,6 +242,19 @@ public final class Colonist {
             }
             return;
         }
+        boolean social = !want && !villager.isBaby() && villager.isAlive() && !villager.isSleeping() && role != Role.GUARD
+                && releasedUntil <= now && !villager.isTrading();
+        if (social && dayOff && slot == Schedule.Slot.REST) {
+            if (gather(level, villager, "rest", colony.daily().restSpot(level, uuid), colony.daily().eveningLook())) {
+                return;
+            }
+        } else if (social && slot == Schedule.Slot.EVENING && !bedless(villager)) {
+            if (gather(level, villager, "evening", colony.daily().eveningSpot(level, uuid), colony.daily().eveningLook())) {
+                return;
+            }
+        } else if (pause.equals("rest") || pause.equals("evening")) {
+            endPause(level, villager, pause);
+        }
         boolean controlled = isControlled(villager);
         if (want && !controlled) {
             take(level, villager);
@@ -217,11 +274,230 @@ public final class Colonist {
                 villager.stopSleeping();
             }
             Mover.keepAfloat(villager);
-            digger.bonus(1.0F + 0.12F * colony.skill(uuid, role) + colony.tavern().workBonus(level, uuid));
+            digger.bonus(1.0F + 0.12F * colony.skill(uuid, role) + colony.tavern().workBonus(level, uuid)
+                    + (colony.daily().fed(level) ? Schedule.FED_BONUS : 0.0F));
             job.tick(level, villager);
         }
     }
 
+
+    private boolean gather(ServerLevel level, Villager villager, String kind, BlockPos spot, BlockPos look) {
+        if (spot == null) {
+            return false;
+        }
+        if (!pause.equals(kind)) {
+            if (isControlled(villager)) {
+                release(level, villager, kind);
+            }
+            take(level, villager);
+            pause = kind;
+        } else if (!isControlled(villager)) {
+            take(level, villager);
+        }
+        Mover.keepAfloat(villager);
+        Mover.Result result = mover.tick(level, villager, spot, 1.6, 0.5, false);
+        if (result == Mover.Result.FAILED) {
+            endPause(level, villager, kind);
+            releasedUntil = level.getGameTime() + 400;
+            releaseReason = kind + " spot unreachable";
+            return false;
+        }
+        if (result == Mover.Result.ARRIVED) {
+            villager.getNavigation().stop();
+            long time = level.getGameTime() + (uuid.hashCode() & 63);
+            if (look != null) {
+                villager.getLookControl().setLookAt(look.getX() + 0.5, look.getY() + 1.5, look.getZ() + 0.5);
+            }
+            if (time % 160 == 0) {
+                villager.playAmbientSound();
+            }
+            if (kind.equals("lunch") && time % 60 == 0) {
+                level.sendParticles(new ItemParticleOption(ParticleTypes.ITEM, Items.BREAD),
+                        villager.getX(), villager.getY() + 1.6, villager.getZ(), 3, 0.1, 0.1, 0.1, 0.02);
+            }
+        }
+        return true;
+    }
+
+    private boolean helps(ServerLevel level, Villager villager) {
+        boolean wanted = role != Role.IDLE && role != Role.GUARD && role != Role.MEDIC && !villager.isBaby() && !villager.isSleeping()
+                && job.idling(level) && colony.workTime(level) && releasedUntil <= level.getGameTime()
+                && (pause.equals("chores") || colony.chores().pending() > 0) && !villager.isTrading();
+        if (!wanted) {
+            if (pause.equals("chores")) {
+                if (helper != null && helper.hasCargo(villager)) {
+                    helper.tick(level, villager);
+                    return true;
+                }
+                endPause(level, villager, "chores");
+            }
+            return false;
+        }
+        if (helper == null) {
+            helper = new ChoresJob(this);
+        }
+        if (!pause.equals("chores")) {
+            if (isControlled(villager)) {
+                release(level, villager, "chores");
+            }
+            take(level, villager);
+            pause = "chores";
+        } else if (!isControlled(villager)) {
+            take(level, villager);
+        }
+        Mover.keepAfloat(villager);
+        if (!helper.wantsControl(level, villager)) {
+            endPause(level, villager, "chores");
+            return false;
+        }
+        helper.tick(level, villager);
+        return true;
+    }
+
+    private void endPause(ServerLevel level, Villager villager, String kind) {
+        if (pause.equals(kind) || kind.equals("fire")) {
+            pause = "";
+            if (isControlled(villager)) {
+                release(level, villager, "back to work");
+            }
+        }
+    }
+
+    public String pause() {
+        return pause;
+    }
+
+    public void followLeader(UUID who, long until) {
+        leader = who;
+        followUntil = until;
+    }
+
+    public boolean following() {
+        return leader != null;
+    }
+
+    private boolean follow(ServerLevel level, Villager villager, long now) {
+        boolean home = villager.blockPosition().distSqr(colony.center()) <= (double) colony.data().radius * colony.data().radius;
+        if (now > followUntil || home || !(level.getEntity(leader) instanceof Villager guide) || !guide.isAlive()) {
+            leader = null;
+            if (pause.equals("follow")) {
+                pause = "";
+                if (isControlled(villager)) {
+                    release(level, villager, home ? "arrived" : "lost the guide");
+                }
+            }
+            if (home) {
+                colony.journal(level, "a new settler arrived with the scout");
+                colony.data().bump("settlers_recruited", 1);
+            }
+            return false;
+        }
+        if (!pause.equals("follow")) {
+            if (isControlled(villager)) {
+                release(level, villager, "follow");
+            }
+            take(level, villager);
+            pause = "follow";
+        } else if (!isControlled(villager)) {
+            take(level, villager);
+        }
+        Mover.keepAfloat(villager);
+        if (villager.distanceTo(guide) > 3.0) {
+            Mover.Result result = mover.tick(level, villager, guide.blockPosition(), 2.0, 0.6, false);
+            if (result == Mover.Result.FAILED && villager.distanceTo(guide) > 24) {
+                Mover.rescue(level, villager, guide.blockPosition());
+            }
+        } else {
+            villager.getNavigation().stop();
+            villager.getLookControl().setLookAt(guide);
+        }
+        return true;
+    }
+
+    private boolean raidShelter(ServerLevel level, Villager villager) {
+        boolean shelters = colony.defense().raidActive() && role != Role.GUARD && role != Role.MEDIC && colony.hall().restOpen()
+                && (bedless(villager) || villager.isBaby());
+        if (!shelters) {
+            if (pause.equals("raid")) {
+                endPause(level, villager, "raid");
+            }
+            return false;
+        }
+        BlockPos spot = colony.hall().restSpot(uuid);
+        if (spot == null) {
+            spot = colony.daily().lunchSpot(level, uuid);
+        }
+        if (spot == null) {
+            return false;
+        }
+        if (!pause.equals("raid")) {
+            if (isControlled(villager)) {
+                release(level, villager, "raid");
+            }
+            take(level, villager);
+            pause = "raid";
+            colony.data().bump("raid_sheltered", 1);
+        } else if (!isControlled(villager)) {
+            take(level, villager);
+        }
+        Mover.keepAfloat(villager);
+        mover.screen(Mover.SCREEN_OFF);
+        if (mover.tick(level, villager, spot, 1.2, 0.75, false) == Mover.Result.ARRIVED) {
+            villager.getNavigation().stop();
+        }
+        return true;
+    }
+
+    private boolean fightFire(ServerLevel level, Villager villager, BlockPos fire, long now) {
+        if (fightStarted == 0) {
+            fightStarted = now;
+            if (isControlled(villager)) {
+                release(level, villager, "fire");
+            }
+            take(level, villager);
+            pause = "fire";
+            colony.data().bump("firefighter_calls", 1);
+        } else if (!isControlled(villager)) {
+            take(level, villager);
+        }
+        if (!level.getBlockState(fire).is(BlockTags.FIRE)) {
+            BlockPos next = colony.fire().nextFire(fire);
+            if (next == null) {
+                colony.fire().release(uuid);
+                fightStarted = 0;
+                endPause(level, villager, "fire");
+                return false;
+            }
+            colony.fire().retarget(uuid, next);
+            fire = next;
+        }
+        if (now - fightStarted > 900) {
+            colony.fire().release(uuid);
+            fightStarted = 0;
+            endPause(level, villager, "fire");
+            return false;
+        }
+        Mover.keepAfloat(villager);
+        mover.screen(Mover.SCREEN_OFF);
+        double distance = Mover.distance(villager, fire);
+        if (distance > 3.2) {
+            if (mover.tick(level, villager, fire, 2.6, 0.8, false) == Mover.Result.FAILED && distance > 6.0) {
+                colony.fire().release(uuid);
+                fightStarted = 0;
+                endPause(level, villager, "fire");
+                return false;
+            }
+            return true;
+        }
+        villager.getNavigation().stop();
+        villager.getLookControl().setLookAt(fire.getX() + 0.5, fire.getY() + 0.5, fire.getZ() + 0.5);
+        if (Math.floorMod(now + uuid.hashCode(), 12) == 0) {
+            villager.swing(InteractionHand.MAIN_HAND, net.minecraft.world.item.component.SwingAnimation.DEFAULT, false);
+            colony.fire().extinguish(level, fire, colony.fire().bucketAvailable(level));
+            colony.gainXp(level, villager, role, 1);
+        }
+        return true;
+    }
 
     public boolean hallRestApplies() {
         return restBlockedUntil <= lastTick && colony.hall().restOpen();

@@ -57,7 +57,13 @@ public record ColonyView(
         Education education,
         String hospital,
         int hospitalNeeds,
-        Hall.Summary hall) {
+        Hall.Summary hall,
+        Society society) {
+
+    public record Society(String focus, List<String> zones, List<String> orders, String slot, boolean restDay, boolean fed,
+                          int ores, int villages, int nests, int recruits, int caravans, int packAnimals, int fires, int raids,
+                          int raidsWon, int knowledge, int potions, int snowCleared, int chores, List<String> specialists) {
+    }
 
     public record TavernInfo(boolean built, boolean open, int meals, int travellers, int settlers, int guests) {
     }
@@ -202,6 +208,42 @@ public record ColonyView(
 
                 colony.ward().summary(), Hospital.stage(data) >= Hospital.STAGES ? 0
                 : Hospital.requiredAdults(Hospital.stage(data) + 1, SmartColonyConfig.get().infirmaryAdults),
-                colony.hall().summary(level));
+                colony.hall().summary(level), society(level, colony));
+    }
+
+    private static Society society(ServerLevel level, Colony colony) {
+        ColonyData data = colony.data();
+        List<String> zones = new ArrayList<>();
+        for (org.lts.smartcolony.core.Decree.Zone zone : data.zones) {
+            zones.add(zone.x() + " " + zone.z() + " r" + zone.radius());
+        }
+        List<String> orders = new ArrayList<>();
+        for (ColonyData.Contract contract : data.contracts) {
+            orders.add(contract.item + "|" + (contract.delivered + contract.parcel) + "|" + contract.count + "|" + contract.parcel);
+        }
+        int ores = 0;
+        int villages = 0;
+        int nests = 0;
+        for (ColonyData.Discovery discovery : data.discoveries) {
+            switch (discovery.kind) {
+                case org.lts.smartcolony.core.Expedition.ORE -> ores++;
+                case org.lts.smartcolony.core.Expedition.VILLAGE -> villages++;
+                case org.lts.smartcolony.core.Expedition.NEST -> nests++;
+                default -> {
+                }
+            }
+        }
+        List<String> specialists = new ArrayList<>();
+        for (String kind : List.of(org.lts.smartcolony.core.Specialists.MASONRY, org.lts.smartcolony.core.Specialists.APIARY,
+                org.lts.smartcolony.core.Specialists.APOTHECARY, org.lts.smartcolony.core.Specialists.STABLE,
+                org.lts.smartcolony.core.Specialists.LIBRARY)) {
+            if (colony.builtKind(kind)) {
+                specialists.add(kind);
+            }
+        }
+        return new Society(data.focus, zones, orders, colony.daily().slot(level).name().toLowerCase(java.util.Locale.ROOT),
+                colony.daily().restDay(level), colony.daily().fed(level), ores, villages, nests, data.stat("settlers_recruited"),
+                data.caravans.size(), data.packAnimals.size(), data.stat("fires_put_out"), data.stat("raids"), data.stat("raids_won"),
+                data.knowledge, data.stat("potions_brewed"), data.stat("snow_cleared"), colony.chores().pending(), specialists);
     }
 }

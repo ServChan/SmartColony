@@ -73,6 +73,43 @@ public final class RecipeBook {
         craft(Ids.mc("shears"), 1, Ids.mc("iron_ingot"), 2);
         craft(Ids.mc("bucket"), 1, Ids.mc("iron_ingot"), 3);
         craft(Ids.mc("lead"), 2, Ids.mc("string"), 4, Ids.mc("slime_ball"), 1);
+        craft(Ids.mc("glass_bottle"), 3, Ids.mc("glass"), 3);
+        craft(Ids.mc("gold_nugget"), 9, Ids.mc("gold_ingot"), 1);
+        craft(Ids.mc("glistering_melon_slice"), 1, Ids.mc("melon_slice"), 1, Ids.mc("gold_nugget"), 8);
+        craft(Ids.mc("sugar"), 1, Ids.mc("sugar_cane"), 1);
+        craft(Ids.mc("fermented_spider_eye"), 1, Ids.mc("spider_eye"), 1, Ids.mc("brown_mushroom"), 1, Ids.mc("sugar"), 1);
+        craft(Ids.mc("book"), 1, Ids.mc("paper"), 3, Ids.mc("leather"), 1);
+        craft(Ids.mc("writable_book"), 1, Ids.mc("book"), 1, Ids.mc("ink_sac"), 1, Ids.mc("feather"), 1);
+        craft(Ids.mc("bookshelf"), 1, Recipe.GROUP_PLANKS, 6, Ids.mc("book"), 3);
+        craft(Ids.mc("lectern"), 1, Recipe.GROUP_WOODEN_SLAB, 4, Ids.mc("bookshelf"), 1);
+        craft(Ids.mc("enchanting_table"), 1, Ids.mc("book"), 1, Ids.mc("diamond"), 2, Ids.mc("obsidian"), 4);
+        craft(Ids.mc("beehive"), 1, Recipe.GROUP_PLANKS, 6, Ids.mc("honeycomb"), 3);
+        craft(Ids.mc("candle"), 1, Ids.mc("string"), 1, Ids.mc("honeycomb"), 1);
+        craft(Ids.mc("stonecutter"), 1, Ids.mc("iron_ingot"), 1, Ids.mc("stone"), 3);
+        craft(Ids.mc("bricks"), 1, Ids.mc("brick"), 4);
+        craft(Ids.mc("brick_stairs"), 4, Ids.mc("bricks"), 6);
+        craft(Ids.mc("brick_slab"), 6, Ids.mc("bricks"), 3);
+        craft(Ids.mc("brick_wall"), 6, Ids.mc("bricks"), 6);
+        craft(Ids.mc("stone_brick_wall"), 6, Ids.mc("stone_bricks"), 6);
+        craft(Ids.mc("cut_sandstone"), 4, Ids.mc("sandstone"), 4);
+        craft(Ids.mc("sandstone"), 1, Ids.mc("sand"), 4);
+        craft(Ids.mc("polished_andesite"), 4, Ids.mc("andesite"), 4);
+        craft(Ids.mc("flower_pot"), 1, Ids.mc("brick"), 3);
+        craft(Ids.mc("campfire"), 1, Ids.mc("stick"), 3, Recipe.GROUP_COAL, 1, Recipe.GROUP_LOGS, 3);
+        craft(Ids.mc("chiseled_stone_bricks"), 1, Ids.mc("stone_brick_slab"), 2);
+        cut(Ids.mc("stone_bricks"), 1, Ids.mc("stone"));
+        cut(Ids.mc("stone_brick_stairs"), 1, Ids.mc("stone_bricks"));
+        cut(Ids.mc("stone_brick_slab"), 2, Ids.mc("stone_bricks"));
+        cut(Ids.mc("stone_brick_wall"), 1, Ids.mc("stone_bricks"));
+        cut(Ids.mc("cobblestone_stairs"), 1, Ids.mc("cobblestone"));
+        cut(Ids.mc("cobblestone_slab"), 2, Ids.mc("cobblestone"));
+        cut(Ids.mc("cobblestone_wall"), 1, Ids.mc("cobblestone"));
+        cut(Ids.mc("brick_stairs"), 1, Ids.mc("bricks"));
+        cut(Ids.mc("brick_slab"), 2, Ids.mc("bricks"));
+        cut(Ids.mc("brick_wall"), 1, Ids.mc("bricks"));
+        cut(Ids.mc("chiseled_stone_bricks"), 1, Ids.mc("stone_bricks"));
+        smelt(Ids.mc("terracotta"), Ids.mc("clay"));
+        craft(Ids.mc("clay"), 1, Ids.mc("clay_ball"), 4);
         tools("wooden", Recipe.GROUP_PLANKS);
         tools("stone", Recipe.GROUP_STONE);
         tools("iron", Ids.mc("iron_ingot"));
@@ -123,6 +160,10 @@ public final class RecipeBook {
             inputs.merge((String) pairs[i], (Integer) pairs[i + 1], Integer::sum);
         }
         BY_OUTPUT.computeIfAbsent(output, key -> new ArrayList<>()).add(new Recipe(output, count, inputs, false));
+    }
+
+    private static void cut(String output, int count, String input) {
+        BY_OUTPUT.computeIfAbsent(output, key -> new ArrayList<>()).addFirst(new Recipe(output, count, Map.of(input, 1), false, Tech.STONECUTTER));
     }
 
     private static void smeltAt(String requires, String output, String input) {

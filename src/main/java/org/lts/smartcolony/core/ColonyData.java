@@ -61,6 +61,45 @@ public final class ColonyData {
     public String head = "";
     public boolean headHoused;
     public List<Pos> treasury = new ArrayList<>();
+    public String focus = Decree.Focus.BALANCED.key();
+    public List<Decree.Zone> zones = new ArrayList<>();
+    public List<Contract> contracts = new ArrayList<>();
+    public List<Discovery> discoveries = new ArrayList<>();
+    public List<Caravan> caravans = new ArrayList<>();
+    public long lastCaravan;
+    public int scoutTrips;
+    public List<String> packAnimals = new ArrayList<>();
+    public int knowledge;
+    public long chronicleDay = -1;
+    public long lastRaid;
+
+    public static final class Contract {
+        public String item = "";
+        public int count;
+        public int delivered;
+        public String player = "";
+        public long created;
+        public int parcel;
+        public boolean ready;
+    }
+
+    public static final class Discovery {
+        public String kind = "";
+        public String what = "";
+        public Pos pos = new Pos(0, 0, 0);
+        public int value;
+        public long time;
+        public long visited;
+        public boolean used;
+    }
+
+    public static final class Caravan {
+        public String from = "";
+        public String to = "";
+        public Map<String, Integer> goods = new LinkedHashMap<>();
+        public long departed;
+        public long arrives;
+    }
 
     public static final class Death {
         public String id = "";

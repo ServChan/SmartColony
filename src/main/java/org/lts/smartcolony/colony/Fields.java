@@ -122,6 +122,13 @@ public final class Fields {
                 zones.addDisc(stand.getX(), stand.getZ(), 4);
             }
         }
+        for (org.lts.smartcolony.core.Decree.Zone zone : d.zones) {
+            zones.addDisc(zone.x(), zone.z(), zone.radius() + 1);
+        }
+        for (org.lts.smartcolony.core.Clearance.Door door : colony.construction().doors()) {
+            org.lts.smartcolony.core.Clearance.Box corridor = door.corridor();
+            zones.addBox(corridor.minX(), corridor.minZ(), corridor.maxX(), corridor.maxZ(), 0);
+        }
         return zones;
     }
 

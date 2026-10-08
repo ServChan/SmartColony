@@ -78,10 +78,19 @@ class ResourcesTest {
         rich.add(Ids.mc("wheat"), 128);
         rich.add(Ids.mc("flint"), 4);
         rich.add(Ids.mc("dirt"), 400);
+        rich.add(Ids.mc("honeycomb"), 12);
         for (String id : Blueprints.IDS) {
             Blueprint blueprint = Blueprints.get(id);
-            Map<String, Integer> materials = blueprint.materials("oak");
+            Map<String, Integer> materials = new java.util.TreeMap<>(blueprint.materials("oak"));
             assertFalse(materials.isEmpty(), id);
+            Map<String, String> swaps = MaterialSwaps.propose(materials, Map.of(), true, (item, count) -> CraftPlanner.plan(rich, item, count).isPresent());
+            for (Map.Entry<String, String> swap : swaps.entrySet()) {
+                int count = materials.remove(swap.getKey());
+                Blueprint.Material replacement = Blueprint.material(MaterialSwaps.resolve(swap.getValue(), "oak"));
+                if (replacement != null) {
+                    materials.merge(replacement.item(), replacement.count() * count, Integer::sum);
+                }
+            }
             assertTrue(CraftPlanner.plan(rich, materials).isPresent(), id + " needs " + materials);
             assertTrue(blueprint.doorX() >= 0 && blueprint.doorX() < blueprint.sizeX(), id);
         }

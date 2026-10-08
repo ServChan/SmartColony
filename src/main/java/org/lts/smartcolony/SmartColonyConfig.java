@@ -46,6 +46,13 @@ public final class SmartColonyConfig {
     public int[] infirmaryAdults = {8, 16, 30};
     public int adultsPerMedic = 15;
     public boolean guardsAttackEnemyPlayers = true;
+    public boolean lunchBreak = true;
+    public boolean eveningGathering = true;
+    public int restDayEvery = 7;
+    public boolean firefighting = true;
+    public boolean snowClearing = true;
+    public boolean caravans = true;
+    public boolean recruitFromVillages = true;
     public boolean aiEnabled = false;
     public String aiApi = "ollama";
     public String aiEndpoint = "http://127.0.0.1:11434";
@@ -128,6 +135,7 @@ public final class SmartColonyConfig {
         townHallAdults = org.lts.smartcolony.core.TownHall.thresholds(townHallAdults);
         infirmaryAdults = org.lts.smartcolony.core.Hospital.thresholds(infirmaryAdults);
         adultsPerMedic = clamp(adultsPerMedic, 3, 100);
+        restDayEvery = restDayEvery <= 1 ? 0 : clamp(restDayEvery, 2, 30);
         aiApi = aiApi == null || !aiApi.trim().equalsIgnoreCase("openai") ? "ollama" : "openai";
         aiEndpoint = aiEndpoint == null || aiEndpoint.isBlank() ? "http://127.0.0.1:11434" : aiEndpoint.trim();
         aiModel = aiModel == null || aiModel.isBlank() ? "gemma4:latest" : aiModel.trim();

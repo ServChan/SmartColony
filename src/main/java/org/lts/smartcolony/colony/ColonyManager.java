@@ -86,6 +86,7 @@ public final class ColonyManager {
     }
 
     public static void stop(MinecraftServer stopping) {
+        Caravans.forget();
         for (Colony colony : COLONIES.values()) {
             ServerLevel level = levelOf(colony);
             if (level != null) {
@@ -176,6 +177,13 @@ public final class ColonyManager {
         if (ticks % 200 == 50) {
             ServerLevel overworld = current.overworld();
             Founding.autoFound(overworld);
+        }
+        if (ticks % 200 == 120) {
+            try {
+                Caravans.tick(current);
+            } catch (RuntimeException e) {
+                SmartColony.LOGGER.error("Caravan tick failed", e);
+            }
         }
         if (ticks % 6000 == 0 || (dirty && ticks % 1200 == 0)) {
             saveAsync();

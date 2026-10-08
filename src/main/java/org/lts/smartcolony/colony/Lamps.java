@@ -123,6 +123,10 @@ public final class Lamps {
         if (roads.contains(column) || aprons.contains(column)) {
             return null;
         }
+        if (org.lts.smartcolony.core.Decree.inAny(data().zones, x, z, 1)
+                || org.lts.smartcolony.core.Clearance.inCorridor(x, z, colony.construction().doors())) {
+            return null;
+        }
         int y = paths().ground(level, x, z);
         BlockPos ground = new BlockPos(x, y, z);
         BlockState state = level.getBlockState(ground);

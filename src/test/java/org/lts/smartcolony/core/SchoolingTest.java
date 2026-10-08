@@ -98,7 +98,8 @@ class SchoolingTest {
     void librariansAreTeachers() {
         assertEquals(Role.TEACHER, Role.affinity("librarian"));
         assertEquals(Role.MEDIC, Role.affinity("cleric"));
-        assertEquals(Role.BUILDER, Role.affinity("cartographer"));
+        assertEquals(Role.SCOUT, Role.affinity("cartographer"));
+        assertEquals(Role.MASON, Role.affinity("mason"));
         assertEquals(Role.TEACHER, Role.byKey("teacher"));
     }
 

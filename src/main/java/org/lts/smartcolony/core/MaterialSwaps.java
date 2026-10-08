@@ -34,6 +34,23 @@ public final class MaterialSwaps {
                 target = WOOD_PLATE;
             } else if (path.endsWith("_wool")) {
                 target = WOOD_PLANKS;
+            } else if (path.equals("bookshelf") || path.equals("glass")) {
+                target = WOOD_PLANKS;
+            } else if (path.equals("flower_pot")) {
+                target = WOOD_PLATE;
+            } else if (path.equals("lectern")) {
+                target = "minecraft:crafting_table";
+            } else if (path.equals("candle")) {
+                target = TORCH;
+            } else if (path.equals("bricks") || path.equals("stone_bricks") || path.equals("terracotta") || path.equals("chiseled_stone_bricks")
+                    || path.equals("polished_andesite") || path.equals("smooth_stone")) {
+                target = "minecraft:cobblestone";
+            } else if (path.equals("brick_stairs") || path.equals("stone_brick_stairs")) {
+                target = "minecraft:cobblestone_stairs";
+            } else if (path.equals("brick_slab") || path.equals("stone_brick_slab") || path.equals("smooth_stone_slab")) {
+                target = "minecraft:cobblestone_slab";
+            } else if (path.equals("brick_wall") || path.equals("stone_brick_wall")) {
+                target = "minecraft:cobblestone_wall";
             } else if (path.endsWith("_bed")) {
                 for (String color : Ids.COLORS) {
                     String bed = Ids.mc(color + "_bed");
@@ -48,6 +65,15 @@ public final class MaterialSwaps {
             }
         }
         return result;
+    }
+
+    public static boolean keepsShape(String from, String to) {
+        for (String suffix : new String[] {"_bed", "_stairs", "_slab", "_wall"}) {
+            if (from.endsWith(suffix) && to.endsWith(suffix)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public static String resolve(String target, String wood) {

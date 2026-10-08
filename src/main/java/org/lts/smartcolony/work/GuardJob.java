@@ -110,6 +110,9 @@ public final class GuardJob extends Job {
             eatCooldown--;
         }
         float health = villager.getHealth() / villager.getMaxHealth();
+        if (health < 0.5F && drinkPotion(level, villager)) {
+            return;
+        }
         if (healing || health < SmartColonyConfig.get().guardRetreatHealth) {
             heal(level, villager, health);
             return;
@@ -189,6 +192,14 @@ public final class GuardJob extends Job {
         if (training.handle(level, villager)) {
             return;
         }
+        if (colony().defense().raidActive()) {
+            BlockPos post = colony().defense().raidPost(level, colonist.uuid());
+            status = "holding the raid post";
+            if (move(level, villager, post, 2.0) == Mover.Result.ARRIVED) {
+                villager.getNavigation().stop();
+            }
+            return;
+        }
         if (colony().workTime(level)) {
             patrol(level, villager);
         } else {
@@ -266,6 +277,9 @@ public final class GuardJob extends Job {
             if (!sword.isEmpty()) {
                 Inv.add(villager, sword);
             }
+        }
+        if (Inv.count(villager, GuardJob::healingPotion) == 0) {
+            supply(level, villager, GuardJob::healingPotion, 1, 1);
         }
         if (hasBow) {
             supply(level, villager, Ids.mc("arrow"), 16, 48);
@@ -556,6 +570,29 @@ public final class GuardJob extends Job {
         villager.heal(amount);
         level.playSound(null, villager.blockPosition(), SoundEvents.GENERIC_EAT.value(), SoundSource.NEUTRAL, 0.8F, 1.0F);
         colony().data().bump("guard_meals", 1);
+    }
+
+    static boolean healingPotion(ItemStack stack) {
+        return ItemIds.healingPotion(stack);
+    }
+
+    private boolean drinkPotion(ServerLevel level, Villager villager) {
+        if (eatCooldown > 0) {
+            return false;
+        }
+        ItemStack potion = Inv.takeFirst(villager, GuardJob::healingPotion);
+        if (potion.isEmpty()) {
+            return false;
+        }
+        eatCooldown = 40;
+        net.minecraft.world.item.alchemy.PotionContents contents = potion.get(DataComponents.POTION_CONTENTS);
+        if (contents != null) {
+            contents.applyToLivingEntity(villager, 1.0F);
+        }
+        level.playSound(null, villager.blockPosition(), SoundEvents.GENERIC_DRINK.value(), SoundSource.NEUTRAL, 0.8F, 1.0F);
+        Inv.add(villager, new ItemStack(net.minecraft.world.item.Items.GLASS_BOTTLE));
+        colony().data().bump("guard_potions", 1);
+        return true;
     }
 
     private static boolean edible(ItemStack stack) {

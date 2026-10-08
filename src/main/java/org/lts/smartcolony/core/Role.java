@@ -18,7 +18,12 @@ public enum Role {
     INNKEEPER,
     TEACHER,
     PORTER,
-    MEDIC;
+    MEDIC,
+    MASON,
+    BEEKEEPER,
+    ALCHEMIST,
+    SCRIBE,
+    SCOUT;
 
     public String key() {
         return name().toLowerCase(Locale.ROOT);
@@ -44,9 +49,9 @@ public enum Role {
             case "fletcher" -> FLETCHER;
             case "armorer", "weaponsmith", "toolsmith" -> SMITH;
             case "butcher" -> COOK;
-            case "mason" -> MINER;
+            case "mason" -> MASON;
             case "librarian" -> TEACHER;
-            case "cartographer" -> BUILDER;
+            case "cartographer" -> SCOUT;
             case "cleric" -> MEDIC;
             default -> LUMBERJACK;
         };

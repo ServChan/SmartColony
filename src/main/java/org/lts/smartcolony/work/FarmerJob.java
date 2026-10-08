@@ -432,7 +432,7 @@ public final class FarmerJob extends Job {
     }
 
     @Override
-    protected boolean hasCargo(Villager villager) {
+    public boolean hasCargo(Villager villager) {
         return Inv.count(villager, stack -> !keep(stack) && !isSeed(stack) && !ration(stack)) > 0;
     }
 

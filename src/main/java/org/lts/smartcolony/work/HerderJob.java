@@ -57,7 +57,8 @@ public final class HerderJob extends Job {
         SHEAR,
         CULL,
         BREED,
-        CAPTURE
+        CAPTURE,
+        STABLE
     }
 
     private Action action;
@@ -250,6 +251,14 @@ public final class HerderJob extends Job {
         if (level.getGameTime() < captureCooldownUntil) {
             return;
         }
+        if (colony().stable().wantsAnimal(level)) {
+            net.minecraft.world.entity.animal.equine.AbstractHorse equine = colony().stable().findWild(level, villager);
+            if (equine != null) {
+                action = Action.STABLE;
+                target = equine;
+                return;
+            }
+        }
         Species wanted = null;
         int lowest = Integer.MAX_VALUE;
         for (Species species : Species.values()) {
@@ -352,6 +361,7 @@ public final class HerderJob extends Job {
             case CULL -> cull(level, villager, pen);
             case BREED -> breed(level, villager, pen);
             case CAPTURE -> capture(level, villager, pen);
+            case STABLE -> stable(level, villager, pen);
         }
     }
 
@@ -594,6 +604,76 @@ public final class HerderJob extends Job {
         done(level, villager, pen);
     }
 
+    private void stable(ServerLevel level, Villager villager, ColonyData.Pen pen) {
+        if (!leading && !exit(level, villager, pen)) {
+            return;
+        }
+        if (!(target instanceof net.minecraft.world.entity.animal.equine.AbstractHorse horse) || !horse.isAlive()) {
+            leading = false;
+            action = null;
+            target = null;
+            phase = "start";
+            return;
+        }
+        if (!leading) {
+            if (!approach(level, villager, horse, 2.5)) {
+                if (target == null) {
+                    phase = "start";
+                }
+                return;
+            }
+            if (horse.isLeashed() || horse.isVehicle()) {
+                target = null;
+                phase = "start";
+                return;
+            }
+            horse.setLeashedTo(villager, true);
+            leading = true;
+            return;
+        }
+        if (horse.getLeashHolder() != villager) {
+            for (ItemEntity lead : level.getEntitiesOfClass(ItemEntity.class, horse.getBoundingBox().inflate(4.0),
+                    item -> item.getItem().is(Items.LEAD) && item.getAge() < 40)) {
+                lead.discard();
+            }
+            leading = false;
+            target = null;
+            phase = "start";
+            return;
+        }
+        BlockPos post = colony().stable().freePost(level);
+        if (post == null) {
+            horse.removeLeash();
+            leading = false;
+            target = null;
+            phase = "start";
+            return;
+        }
+        status = "leading a " + net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.getKey(horse.getType()).getPath() + " to the stable";
+        Mover.Result result = colonist.mover().tick(level, villager, post, 2.2, 0.5, false);
+        if (result == Mover.Result.FAILED) {
+            horse.removeLeash();
+            leading = false;
+            target = null;
+            captureCooldownUntil = level.getGameTime() + 2400;
+            phase = "start";
+            return;
+        }
+        if (result == Mover.Result.ARRIVED && horse.distanceToSqr(post.getX() + 0.5, post.getY(), post.getZ() + 0.5) < 25) {
+            colony().stable().tie(level, horse, post);
+            leading = false;
+            gainXp(level, villager, 3);
+            colony().data().bump("stable_animals_brought", 1);
+            colony().journal(level, "herder tied a " + net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.getKey(horse.getType()).getPath()
+                    + " in the stable");
+            captureCooldownUntil = level.getGameTime() + 1200;
+            action = null;
+            target = null;
+            phase = "start";
+            wait = 20;
+        }
+    }
+
     private void deposit(ServerLevel level, Villager villager, ColonyData.Pen pen) {
         if (inside(pen, villager.getX(), villager.getZ()) && !exit(level, villager, pen)) {
             return;
@@ -610,7 +690,7 @@ public final class HerderJob extends Job {
     }
 
     @Override
-    protected boolean hasCargo(Villager villager) {
+    public boolean hasCargo(Villager villager) {
         return Inv.count(villager, stack -> !keep(stack) && !ration(stack)) > 0;
     }
 }

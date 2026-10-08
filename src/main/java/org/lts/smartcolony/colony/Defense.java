@@ -28,6 +28,11 @@ public final class Defense {
     private long alarmUntil;
     private long lastRing;
     private long lastAnnounce = -100000;
+    private boolean raidActive;
+    private long raidStarted;
+    private int raidDeathsBefore;
+    private int raidMembersBefore;
+    private int raidWave;
 
     public Defense(Colony colony) {
         this.colony = colony;
@@ -41,6 +46,7 @@ public final class Defense {
         if (ticks % 40 == 3) {
             scan(level);
             alarm(level);
+            raid(level);
         }
         if (ticks % 1200 == 5) {
             ThreatMap.decay(colony.data().threat, 0.8);
@@ -92,6 +98,78 @@ public final class Defense {
             colony.journal(level, "alarm: " + intruder.getType().toShortString() + " inside the village");
             colony.notify(level, Component.translatable("smartcolony.chat.alarm", intruder.getDisplayName()));
         }
+    }
+
+    public boolean raidActive() {
+        return raidActive;
+    }
+
+    private void raid(ServerLevel level) {
+        net.minecraft.world.entity.raid.Raid raid = level.getRaids().getNearbyRaid(colony.center(), 96 * 96);
+        boolean live = raid != null && !raid.isOver() && raid.isActive();
+        long now = level.getGameTime();
+        if (live && !raidActive) {
+            raidActive = true;
+            raidStarted = now;
+            raidWave = raid.getGroupsSpawned();
+            raidDeathsBefore = colony.data().stat("deaths");
+            raidMembersBefore = colony.colonists().size();
+            colony.data().bump("raids", 1);
+            colony.journal(level, "raid: pillagers are attacking the village, everyone takes cover");
+            colony.notify(level, Component.translatable("smartcolony.chat.raid_start"));
+        }
+        if (live) {
+            if (raid.getGroupsSpawned() > raidWave) {
+                raidWave = raid.getGroupsSpawned();
+                colony.journal(level, "raid: wave " + raidWave + " arrives");
+            }
+            alarmUntil = now + 400;
+            if (now - lastRing >= 200 && level.getBlockState(colony.center()).getBlock() instanceof net.minecraft.world.level.block.BellBlock bell) {
+                lastRing = now;
+                bell.attemptToRing(level, colony.center(), net.minecraft.core.Direction.NORTH);
+            }
+            for (java.util.Map.Entry<java.util.UUID, org.lts.smartcolony.work.Colonist> entry : colony.colonists().entrySet()) {
+                entry.getValue().hide(level, now + 400);
+            }
+            return;
+        }
+        if (!raidActive) {
+            return;
+        }
+        raidActive = false;
+        boolean won = raid == null || raid.isVictory() || !raid.isLoss();
+        int lost = Math.max(0, colony.data().stat("deaths") - raidDeathsBefore);
+        colony.data().lastRaid = now;
+        if (won) {
+            colony.data().bump("raids_won", 1);
+        }
+        colony.journal(level, "raid over after " + (now - raidStarted) / 20 + "s: " + (won ? "the village held" : "the village fell")
+                + ", lost " + lost + " of " + raidMembersBefore + "; inspecting the damage");
+        colony.notify(level, Component.translatable(won ? "smartcolony.chat.raid_won" : "smartcolony.chat.raid_lost", lost));
+        colony.improvements().inspectNow(level);
+        colony.markDirty();
+    }
+
+    public BlockPos raidPost(ServerLevel level, java.util.UUID guard) {
+        List<BlockPos> posts = new ArrayList<>();
+        ColonyData.Wall wall = colony.data().wall;
+        if (wall != null) {
+            for (org.lts.smartcolony.core.Pos gate : wall.gates) {
+                posts.add(WorldUtil.bp(gate));
+            }
+        }
+        for (ColonyData.Building building : colony.data().buildings) {
+            if ("tower".equals(building.kind) || "guard_post".equals(building.kind) || "townhall".equals(building.kind)) {
+                posts.add(WorldUtil.bp(building.door));
+            }
+        }
+        if (posts.isEmpty()) {
+            posts.addAll(nightPosts(level, 4));
+        }
+        if (posts.isEmpty()) {
+            return colony.center();
+        }
+        return posts.get(Math.floorMod(guard.hashCode(), posts.size()));
     }
 
     private AABB area(int extra) {

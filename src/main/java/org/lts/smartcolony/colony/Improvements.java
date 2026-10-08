@@ -407,6 +407,12 @@ public final class Improvements {
     private int inspectBuilding;
     private int inspectWall;
 
+    public void inspectNow(ServerLevel level) {
+        for (int i = 0; i < Math.max(1, data().buildings.size()); i++) {
+            inspect(level);
+        }
+    }
+
     private void inspect(ServerLevel level) {
         long repairs = data().orders.stream().filter(order -> REPAIR.equals(order.tag)).count();
         if (repairs >= 64) {

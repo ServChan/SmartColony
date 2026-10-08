@@ -68,7 +68,7 @@ public abstract class Job {
         return colonist.colony();
     }
 
-    protected boolean hasCargo(Villager villager) {
+    public boolean hasCargo(Villager villager) {
         return Inv.count(villager, stack -> !keep(stack) && !ration(stack)) > 0;
     }
 

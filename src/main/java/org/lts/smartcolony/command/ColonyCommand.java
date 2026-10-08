@@ -62,6 +62,8 @@ public final class ColonyCommand {
                 .then(Commands.literal("journal").executes(ColonyCommand::journal))
                 .then(Commands.literal("market").executes(ColonyCommand::market))
                 .then(Commands.literal("reputation").executes(ColonyCommand::reputation))
+                .then(DecreeCommand.decree())
+                .then(DecreeCommand.order(context))
                 .then(Commands.literal("build")
                         .then(Commands.argument("blueprint", StringArgumentType.word()).suggests(BLUEPRINTS)
                                 .executes(ColonyCommand::build)))

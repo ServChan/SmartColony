@@ -3,6 +3,7 @@
   "package": "org.lts.smartcolony.mixin",
   "compatibilityLevel": "JAVA_17",
   "mixins": [
+    "AbstractHorseAccessor",
     "AbstractVillagerMixin",
     "MobAccessor",
     "VillagerMixin",
