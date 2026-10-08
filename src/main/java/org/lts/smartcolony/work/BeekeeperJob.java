@@ -255,6 +255,7 @@ public final class BeekeeperJob extends Job {
                     BlockState state = level.getBlockState(pos);
                     return state.hasProperty(BeehiveBlock.HONEY_LEVEL) && state.getValue(BeehiveBlock.HONEY_LEVEL) >= BeehiveBlock.MAX_HONEY_LEVELS;
                 })
+                .filter(pos -> reachable(level, pos))
                 .min(Comparator.comparingDouble(pos -> pos.distSqr(villager.blockPosition())))
                 .orElse(null);
     }
@@ -264,21 +265,31 @@ public final class BeekeeperJob extends Job {
                 .map(record -> record.getPos())
                 .filter(pos -> WorldUtil.loaded(level, pos))
                 .filter(pos -> level.getBlockEntity(pos) instanceof BeehiveBlockEntity entity && entity.getOccupantCount() > 0)
+                .filter(pos -> reachable(level, pos))
                 .min(Comparator.comparingDouble(pos -> pos.distSqr(villager.blockPosition())))
                 .orElse(null);
     }
 
     private BlockPos below(ServerLevel level, BlockPos pos) {
-        for (int dy = 0; dy <= 6; dy++) {
-            BlockPos feet = pos.below(dy);
-            for (net.minecraft.core.Direction side : net.minecraft.core.Direction.Plane.HORIZONTAL) {
-                BlockPos at = feet.relative(side);
-                if (WorldUtil.standable(level, at)) {
-                    return at;
+        for (int radius = 1; radius <= 3; radius++) {
+            for (int dx = -radius; dx <= radius; dx++) {
+                for (int dz = -radius; dz <= radius; dz++) {
+                    if (Math.abs(dx) != radius && Math.abs(dz) != radius) {
+                        continue;
+                    }
+                    BlockPos feet = WorldUtil.surface(level, pos.getX() + dx, pos.getZ() + dz);
+                    if (WorldUtil.standable(level, feet) && level.getFluidState(feet.below()).isEmpty()
+                            && feet.getY() + 1.6 >= pos.getY() - 3.0) {
+                        return feet;
+                    }
                 }
             }
         }
-        return WorldUtil.surface(level, pos.getX(), pos.getZ());
+        return null;
+    }
+
+    private boolean reachable(ServerLevel level, BlockPos hive) {
+        return below(level, hive) != null;
     }
 
     private boolean reach(ServerLevel level, Villager villager, BlockPos pos) {
@@ -287,7 +298,8 @@ public final class BeekeeperJob extends Job {
             villager.getLookControl().setLookAt(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
             return true;
         }
-        if (move(level, villager, below(level, pos), 1.5) == Mover.Result.FAILED || ++timer > 1200) {
+        BlockPos stand = below(level, pos);
+        if (stand == null || move(level, villager, stand, 1.5) == Mover.Result.FAILED || ++timer > 1200) {
             task = Task.NONE;
             target = null;
             wait = 40;

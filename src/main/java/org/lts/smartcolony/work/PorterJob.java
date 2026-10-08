@@ -92,6 +92,11 @@ public final class PorterJob extends Job {
             wait--;
             return;
         }
+        if (pack != null && pack.isAlive() && pack.getLeashHolder() == villager && !phase.equals("fetchPack")
+                && org.lts.smartcolony.colony.Stable.keepClose(pack, villager)) {
+            status = "waiting for the pack animal";
+            return;
+        }
         switch (phase) {
             case "start" -> start(level, villager);
             case "toOutpost" -> toOutpost(level, villager);
@@ -305,7 +310,8 @@ public final class PorterJob extends Job {
             phase = "start";
             return;
         }
-        if (result == Mover.Result.ARRIVED) {
+        if ((result == Mover.Result.ARRIVED || Mover.distance(villager, post) <= 4.0)
+                && pack.distanceToSqr(post.getX() + 0.5, post.getY(), post.getZ() + 0.5) < 81) {
             colony().stable().tie(level, pack, post);
             pack = null;
             phase = "start";

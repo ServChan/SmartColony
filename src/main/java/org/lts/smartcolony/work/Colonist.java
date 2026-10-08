@@ -146,6 +146,9 @@ public final class Colonist {
         if (releasedUntil > level.getGameTime()) {
             return "released: " + releaseReason;
         }
+        if (!pause.isEmpty()) {
+            return pause + (pause.equals("chores") && helper != null ? ": " + helper.status() : "") + " | " + job.status();
+        }
         return job.status();
     }
 
@@ -296,6 +299,9 @@ public final class Colonist {
         }
         Mover.keepAfloat(villager);
         Mover.Result result = mover.tick(level, villager, spot, 1.6, 0.5, false);
+        if (result == Mover.Result.FAILED && look != null && Mover.distance(villager, look) <= 40.0) {
+            result = Mover.Result.ARRIVED;
+        }
         if (result == Mover.Result.FAILED) {
             endPause(level, villager, kind);
             releasedUntil = level.getGameTime() + 400;
@@ -322,6 +328,7 @@ public final class Colonist {
     private boolean helps(ServerLevel level, Villager villager) {
         boolean wanted = role != Role.IDLE && role != Role.GUARD && role != Role.MEDIC && !villager.isBaby() && !villager.isSleeping()
                 && job.idling(level) && colony.workTime(level) && releasedUntil <= level.getGameTime()
+                && colony.daily().slot(level) == Schedule.Slot.WORK
                 && (pause.equals("chores") || colony.chores().pending() > 0) && !villager.isTrading();
         if (!wanted) {
             if (pause.equals("chores")) {

@@ -123,7 +123,7 @@ public final class Stable {
     }
 
     public AbstractHorse findWild(ServerLevel level, Villager villager) {
-        int radius = SmartColonyConfig.get().forestRadius;
+        int radius = SmartColonyConfig.get().forestRadius + 48;
         return level.getEntitiesOfClass(AbstractHorse.class, new AABB(colony.center()).inflate(radius, 24, radius),
                         h -> h.isAlive() && !h.isBaby() && !h.isLeashed() && !h.isVehicle() && !h.isTamed()
                                 && !(h instanceof TraderLlama) && !(h instanceof net.minecraft.world.entity.animal.equine.SkeletonHorse)
@@ -187,6 +187,19 @@ public final class Stable {
 
     public void giveUp(UUID porter) {
         borrowed.entrySet().removeIf(entry -> entry.getValue().equals(porter));
+    }
+
+    public static boolean keepClose(AbstractHorse horse, Villager leader) {
+        double gap = horse.distanceTo(leader);
+        if (gap > 3.5) {
+            horse.getNavigation().moveTo(leader, 1.3);
+        }
+        if (gap > 6.0) {
+            leader.getNavigation().stop();
+            leader.getLookControl().setLookAt(horse);
+            return true;
+        }
+        return false;
     }
 
     public static SimpleContainer pack(AbstractHorse horse) {

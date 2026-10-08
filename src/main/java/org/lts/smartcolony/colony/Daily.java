@@ -124,11 +124,35 @@ public final class Daily {
         return eveningSpot(level, uuid);
     }
 
-    static BlockPos ring(ServerLevel level, BlockPos center, UUID uuid, double base) {
-        double angle = (uuid.getLeastSignificantBits() & 0xFFFF) / 65536.0 * Math.PI * 2.0;
-        double radius = base + (uuid.getMostSignificantBits() & 3);
-        return WorldUtil.surface(level, center.getX() + (int) Math.round(Math.cos(angle) * radius),
-                center.getZ() + (int) Math.round(Math.sin(angle) * radius));
+    BlockPos ring(ServerLevel level, BlockPos center, UUID uuid, double base) {
+        double start = (uuid.getLeastSignificantBits() & 0xFFFF) / 65536.0 * Math.PI * 2.0;
+        int extra = (int) (uuid.getMostSignificantBits() & 3);
+        for (int attempt = 0; attempt < 24; attempt++) {
+            double angle = start + attempt * Math.PI / 6.0;
+            double radius = base + (extra + attempt / 12) % 4;
+            int x = center.getX() + (int) Math.round(Math.cos(angle) * radius);
+            int z = center.getZ() + (int) Math.round(Math.sin(angle) * radius);
+            if (!WorldUtil.loaded(level, new BlockPos(x, 0, z))) {
+                continue;
+            }
+            BlockPos spot = WorldUtil.surface(level, x, z);
+            if (Math.abs(spot.getY() - center.getY() - 1) > 2 || !WorldUtil.standable(level, spot)
+                    || !level.getFluidState(spot.below()).isEmpty() || insideBuilding(spot)) {
+                continue;
+            }
+            return spot;
+        }
+        return WorldUtil.surface(level, center.getX(), center.getZ());
+    }
+
+    private boolean insideBuilding(BlockPos pos) {
+        org.lts.smartcolony.core.Pos p = WorldUtil.pos(pos);
+        for (ColonyData.Building building : colony.data().buildings) {
+            if (building.contains(p, 0)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public static boolean joins(Role role, boolean baby) {

@@ -69,6 +69,7 @@ public final class HerderJob extends Job {
     private int pullTicks;
     private long lastCullDay = -1;
     private long captureCooldownUntil;
+    private final Map<java.util.UUID, Long> unreachable = new java.util.HashMap<>();
 
     public HerderJob(Colonist colonist) {
         super(colonist);
@@ -253,7 +254,7 @@ public final class HerderJob extends Job {
         }
         if (colony().stable().wantsAnimal(level)) {
             net.minecraft.world.entity.animal.equine.AbstractHorse equine = colony().stable().findWild(level, villager);
-            if (equine != null) {
+            if (equine != null && !unreachable.containsKey(equine.getUUID())) {
                 action = Action.STABLE;
                 target = equine;
                 return;
@@ -298,7 +299,10 @@ public final class HerderJob extends Job {
         int radius = SmartColonyConfig.get().forestRadius;
         BlockPos center = colony().center();
         AABB area = new AABB(center).inflate(radius, 24, radius);
+        long now = level.getGameTime();
+        unreachable.values().removeIf(until -> until < now);
         return level.getEntitiesOfClass(Animal.class, area, a -> a.isAlive() && Species.of(a) == species && !a.isLeashed()
+                        && !unreachable.containsKey(a.getUUID())
                         && !inside(pen, a.getX(), a.getZ()) && !colony().isProtectedAnimal(a) && !enclosed(level, a, pen)
                         && !a.isInWater() && level.getFluidState(a.blockPosition().below()).isEmpty())
                 .stream()
@@ -410,6 +414,7 @@ public final class HerderJob extends Job {
             moveReach = 1.0;
         }
         if (move(level, villager, goal, moveReach) == Mover.Result.FAILED) {
+            unreachable.put(animal.getUUID(), level.getGameTime() + 6000);
             target = null;
         }
         return false;
@@ -650,6 +655,9 @@ public final class HerderJob extends Job {
             return;
         }
         status = "leading a " + net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.getKey(horse.getType()).getPath() + " to the stable";
+        if (org.lts.smartcolony.colony.Stable.keepClose(horse, villager)) {
+            return;
+        }
         Mover.Result result = colonist.mover().tick(level, villager, post, 2.2, 0.5, false);
         if (result == Mover.Result.FAILED) {
             horse.removeLeash();
@@ -659,7 +667,8 @@ public final class HerderJob extends Job {
             phase = "start";
             return;
         }
-        if (result == Mover.Result.ARRIVED && horse.distanceToSqr(post.getX() + 0.5, post.getY(), post.getZ() + 0.5) < 25) {
+        if ((result == Mover.Result.ARRIVED || Mover.distance(villager, post) <= 4.0)
+                && horse.distanceToSqr(post.getX() + 0.5, post.getY(), post.getZ() + 0.5) < 81) {
             colony().stable().tie(level, horse, post);
             leading = false;
             gainXp(level, villager, 3);

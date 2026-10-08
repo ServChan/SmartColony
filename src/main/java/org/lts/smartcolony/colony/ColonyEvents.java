@@ -67,6 +67,21 @@ public final class ColonyEvents {
         colony.memberDied(level, villager.getUUID());
     }
 
+    public static boolean trackHurt(LivingEntity entity, DamageSource source, float amount) {
+        if (entity instanceof Villager villager && amount > 0) {
+            Colony colony = ColonyManager.colonyOf(villager);
+            if (colony != null) {
+                String cause = source.typeHolder().unwrapKey().map(key -> key.identifier().getPath()).orElse("other");
+                Entity attacker = source.getEntity();
+                if (attacker != null) {
+                    cause += "_" + net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.getKey(attacker.getType()).getPath();
+                }
+                colony.data().bump("hurt_" + cause, Math.max(1, Math.round(amount)));
+            }
+        }
+        return true;
+    }
+
     public static boolean cushionMineFalls(LivingEntity entity, DamageSource source, float amount) {
         if (!(entity instanceof Villager villager) || !source.is(net.minecraft.tags.DamageTypeTags.IS_FALL)) {
             return true;

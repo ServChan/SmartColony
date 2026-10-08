@@ -41,6 +41,16 @@ Turns a vanilla village into a self-managing colony: categorized storage, lumber
 - **ИИ-советник (необязательно).** Локальная модель через Ollama или OpenAI-совместимый API раз в несколько минут смотрит на состояние колонии и может поправить не больше трёх ролей при явном перекосе, заказать постройку, крафт и спасение застрявшего жителя. По умолчанию выключен (`aiEnabled: false`). Без советника колония работает так же.
 - **Пирсы и дома на воде.** Мелководье (глубиной до 4 блоков) для колонии — стройплощадка: дороги пересекают его настилом из досок на брёвнах-сваях (сваи каждые 3 блока до дна, перила из заборов по бокам, концы открыты, фонари или факелы примерно через 8 блоков), а дома, причал и хижина рыбака встают на свайной платформе. Суша предпочтительнее, пока подходящее место на ней не слишком далеко. Всё оплачивается досками, брёвнами и заборами со склада. Причал и хижина рыбака планируются в приморских посёлках; рыбаки удят с причала. Струна для удочки: стражи подбирают её с пауков, колония не даёт луку забрать последние две нити, а торговец получает заказ на струну, пока удочки нет.
 - **Безопасность жителей.** Рабочие при виде монстра на время отпускаются к ванильному поведению (убегают); тонущих выталкивает на сушу; застрявших далеко от игрока колония переставляет на место.
+- **Набеги.** Во время набега разбойников колокол звонит, жители без кровати укрываются в ратуше, остальные прячутся по домам, стража стоит у ворот, башен и дверей ратуши, раненые стражники пьют зелья лечения. После набега колония подсчитывает потери и ставит ремонт всех зданий.
+- **Пожары.** Колония осматривает здания и склад, при огне ближайшие жители бегут тушить (с ведром воды на складе тушат сразу 5×5).
+- **Мелкие дела и снег.** Свободные жители и те, у кого своя работа простаивает, подбирают брошенные вещи, расчищают дорожки и проходы у дверей от травы, саженцев и паутины, а в снежных биомах сметают снег с дорог, у дверей и склада; строители без стройки тоже чистят снег.
+- **Распорядок дня.** Обед в середине дня (колония тратит еду, после обеда работа идёт на 10% быстрее), вечерний сбор у ратуши или колокола, выходной раз в 7 дней с посиделками у часовни, рынка или таверны.
+- **Указы.** Упор колонии (еда, оборона, стройка, ресурсы), запретные зоны, где колония не строит, не сажает и не копает, и заказы игрока: колония собирает или крафтит предметы и отдаёт их у ратуши или склада.
+- **Отступы.** Новое здание не ставится перед чужой дверью, а его дверь не упирается в стену, забор, загон или стену деревни; поля, фонари и посадки обходят проходы у дверей.
+- **Улучшение домов.** Малый, семейный дом и дом с двором перестраиваются в камне с дополнительными кроватями (2, 4 и 3).
+- **Новые мастерские и роли.** Мастерская каменщика (стекло, кирпич, каменный кирпич, камнерез; каменщик сам копает песок и глину), пасека и пасечник (мёд, соты, переселение пчёл из диких гнёзд), аптека и алхимик (настоящие зелья в варочной стойке, бинты и снадобья для лазарета), конюшня (пастух приводит лошадей, ослов и лам, носильщики берут вьючных животных), библиотека и писарь (тростник, бумага, книги, летопись колонии на кафедре, зачарование инструментов).
+- **Разведка.** Разведчики ходят в походы по сторонам света, отмечают рудные жилы, деревни и пчелиные гнёзда, добывают открытые жилы и приводят переселенцев из чужих деревень.
+- **Караваны.** Колонии с рынком или ратушей раз в день обмениваются излишками; путь занимает время, груз приходит на склад.
 
 ### Управление
 
@@ -52,6 +62,8 @@ Turns a vanilla village into a self-managing colony: categorized storage, lumber
 - `/colony build <чертёж>` — заказать постройку (`house_small`, `house_family`, `house_garden`, `storage_shed`, `guard_post`, `pen`, `blacksmith`, `market`, `barn`, `watchtower`, `chapel`);
 - `/colony ai` — состояние ИИ-советника и его последние мысли; `/colony ai on|off` — включить или выключить его для этой колонии, `/colony ai now` — спросить сразу, `/colony ai reload` — перечитать конфиг;
 - `/colony role <жители> <роль|auto>` — закрепить роль (`lumberjack`, `miner`, `farmer`, `fisherman`, `herder`, `builder`, `guard`, `idle`) или вернуть автоматический выбор;
+- `/colony decree focus <balanced|food|defense|build|resources>` — указ об упоре колонии; `/colony decree zone add [радиус]`, `remove`, `list` — запретные зоны; вкладка «Указы» в окне колонии делает то же кнопками;
+- `/colony order <предмет> <количество>` — заказать предметы у колонии, `/colony order list` и `/colony order cancel` — список и отмена;
 - `/colony disband` — распустить колонию (жители возвращаются к ванильному поведению, постройки остаются).
 
 ### Настройки
@@ -115,6 +127,16 @@ Turns a vanilla village into a self-managing colony: categorized storage, lumber
 - **AI advisor (optional).** A local model through Ollama or an OpenAI-compatible API looks at the colony every few minutes and may fix at most three roles when there is a clear imbalance, order a building, crafting or a rescue of a stuck villager. Off by default (`aiEnabled: false`); the colony works the same without it.
 - **Piers and houses on water.** Shallow water (up to 4 blocks deep) counts as building ground: roads cross it as a plank walkway on log piles (a post every 3 blocks down to the seabed, fence railings on the sides, open ends, a lantern or torch roughly every 8 blocks), and houses, the dock and the fisher hut stand on a piled platform. Land is preferred while a suitable site on it is not too far. Everything is paid for with planks, logs and fences from storage. The dock and the fisher hut are planned in seaside villages; fishermen fish from the dock. String for the rod: guards pick it up from spiders, the colony does not let bow crafting take the last two strings, and the trader gets a string order while there is no rod.
 - **Villager safety.** Workers who see a monster are briefly handed back to vanilla behaviour (they flee); drowning workers are pushed to land; stuck workers far from the player are moved into place.
+- **Raids.** During a pillager raid the bell rings, bedless villagers shelter in the town hall, the rest hide at home, guards hold the gates, towers and town hall door, and wounded guards drink healing potions. Afterwards the colony counts its losses and queues repairs for every building.
+- **Fires.** The colony checks its buildings and storage; the nearest villagers run to put out fire (with a water bucket in storage they clear 5×5 at once).
+- **Chores and snow.** Free villagers and workers whose own job is idle pick up dropped items, clear paths and doorways of grass, saplings and cobwebs, and in snowy biomes sweep snow from roads, doorways and storage; builders without a site also clear snow.
+- **Daily routine.** Midday lunch (the colony spends food, work is 10% faster afterwards), an evening gathering at the town hall or bell, and a day off every 7 days with a get-together at the chapel, market or tavern.
+- **Decrees.** Colony focus (food, defense, building, resources), no-build zones where the colony does not build, plant or dig, and player orders: the colony gathers or crafts items and hands them over at the town hall or storage.
+- **Clearance.** A new building never sits in front of another door, and its own door never faces a wall, fence, pen or village wall; fields, lamps and planting keep doorways clear.
+- **House upgrades.** Small, family and yard houses are rebuilt in stone with extra beds (2, 4 and 3).
+- **New workshops and roles.** Masonry workshop (glass, bricks, stone bricks, stonecutter; the mason digs sand and clay), apiary and beekeeper (honey, honeycomb, moving bees from wild nests), apothecary and alchemist (real potions in a brewing stand, bandages and remedies for the infirmary), stable (the herder brings horses, donkeys and llamas, porters take pack animals), library and scribe (sugar cane, paper, books, a colony chronicle on the lectern, tool enchanting).
+- **Scouting.** Scouts travel in all directions, mark ore veins, villages and bee nests, mine exposed veins and bring settlers from other villages.
+- **Caravans.** Colonies with a market or town hall trade surpluses once a day; the trip takes time and the goods arrive in storage.
 
 ### Controls
 
@@ -126,6 +148,8 @@ Turns a vanilla village into a self-managing colony: categorized storage, lumber
 - `/colony build <blueprint>` — order a building (`house_small`, `house_family`, `house_garden`, `storage_shed`, `guard_post`, `pen`, `blacksmith`, `market`, `barn`, `watchtower`, `chapel`);
 - `/colony ai` — AI advisor status and its latest thoughts; `/colony ai on|off` — turn it on or off for this colony, `/colony ai now` — ask right away, `/colony ai reload` — reload the config;
 - `/colony role <villagers> <role|auto>` — lock a role (`lumberjack`, `miner`, `farmer`, `fisherman`, `herder`, `builder`, `guard`, `idle`) or return to automatic choice;
+- `/colony decree focus <balanced|food|defense|build|resources>` — colony focus decree; `/colony decree zone add [radius]`, `remove`, `list` — no-build zones; the Decrees tab in the colony window does the same with buttons;
+- `/colony order <item> <count>` — order items from the colony, `/colony order list` and `/colony order cancel` — list and cancel;
 - `/colony disband` — disband the colony (villagers return to vanilla behaviour, buildings stay).
 
 ### Configuration
