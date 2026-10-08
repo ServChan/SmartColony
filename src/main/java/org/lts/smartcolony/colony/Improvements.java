@@ -104,6 +104,11 @@ public final class Improvements {
             surveyVillage(level);
             colony.markDirty();
         }
+        if (data().walkwayVersion < WALKWAY_VERSION) {
+            data().walkwayVersion = WALKWAY_VERSION;
+            openWalkways(level);
+            colony.markDirty();
+        }
         if (data().surveyVersion < 3) {
             data().surveyVersion = 3;
             for (ColonyData.Building building : data().buildings) {
@@ -406,6 +411,41 @@ public final class Improvements {
 
     private int inspectBuilding;
     private int inspectWall;
+
+    private static final int WALKWAY_VERSION = 1;
+    private static final java.util.Set<String> WALKWAY_FIXED = java.util.Set.of("townhall_3", "townhall_4", "townhall_5");
+
+    private void openWalkways(ServerLevel level) {
+        int queued = 0;
+        for (ColonyData.Building building : data().buildings) {
+            if (!WALKWAY_FIXED.contains(building.blueprint)) {
+                continue;
+            }
+            org.lts.smartcolony.core.Blueprint current = org.lts.smartcolony.core.Blueprints.get(building.blueprint);
+            BlockPos door = colony.construction().world(building, current.doorX(), 1, current.doorZ());
+            if (!WorldUtil.loaded(level, door) || !(level.getBlockState(door).getBlock() instanceof net.minecraft.world.level.block.DoorBlock)) {
+                continue;
+            }
+            for (int[] cell : org.lts.smartcolony.core.Blueprints.get(building.blueprint).airCells()) {
+                if (cell[1] < 1 || cell[1] > 2) {
+                    continue;
+                }
+                BlockPos pos = colony.construction().world(building, cell[0], cell[1], cell[2]);
+                if (!WorldUtil.loaded(level, pos)) {
+                    continue;
+                }
+                BlockState state = level.getBlockState(pos);
+                if (state.is(net.minecraft.tags.BlockTags.FENCES) || state.is(net.minecraft.tags.BlockTags.STAIRS)
+                        || state.is(net.minecraft.tags.BlockTags.TRAPDOORS)) {
+                    queueFirst(pos, "minecraft:air", SALVAGE);
+                    queued++;
+                }
+            }
+        }
+        if (queued > 0) {
+            colony.journal(level, "opening the passage to the back room of the town hall: " + queued + " blocks");
+        }
+    }
 
     public void inspectNow(ServerLevel level) {
         for (int i = 0; i < Math.max(1, data().buildings.size()); i++) {

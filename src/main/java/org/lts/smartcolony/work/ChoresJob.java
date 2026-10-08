@@ -78,6 +78,8 @@ public final class ChoresJob extends Job {
             case SNOW -> "clearing snow";
             case WEEDS -> "clearing the path";
             case LOOT -> "picking up dropped items";
+            case HEADROOM -> "clearing headroom";
+            case DOOR -> "mending a door";
         };
         Mover.Result result = move(level, villager, chore.pos(), chore.kind() == Chores.Kind.LOOT ? 1.2 : 2.2);
         if (result == Mover.Result.FAILED) {
@@ -115,6 +117,16 @@ public final class ChoresJob extends Job {
                 }
                 colony().data().bump("paths_weeded", 1);
             }
+            case HEADROOM -> {
+                BlockState state = level.getBlockState(chore.pos());
+                ItemStack drop = state.is(net.minecraft.tags.BlockTags.LOGS) ? new ItemStack(state.getBlock().asItem()) : ItemStack.EMPTY;
+                level.destroyBlock(chore.pos(), false, villager);
+                if (!drop.isEmpty()) {
+                    stash(level, villager, List.of(drop));
+                }
+                colony().data().bump("headroom_cleared", 1);
+            }
+            case DOOR -> colony().chores().fixDoor(level, chore.pos());
             case LOOT -> {
                 for (ItemEntity item : level.getEntitiesOfClass(ItemEntity.class, new AABB(chore.pos()).inflate(2.0), ItemEntity::isAlive)) {
                     if (Inv.free(villager) == 0) {

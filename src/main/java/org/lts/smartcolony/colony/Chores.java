@@ -26,7 +26,9 @@ public final class Chores {
     public enum Kind {
         SNOW,
         WEEDS,
-        LOOT
+        LOOT,
+        HEADROOM,
+        DOOR
     }
 
     public record Chore(Kind kind, BlockPos pos) {
@@ -71,6 +73,9 @@ public final class Chores {
             snowy = level.getBiome(center).value().coldEnoughToSnow(center, level.getSeaLevel());
         }
         claims.values().removeIf(at -> now - at > CLAIM_TICKS);
+        for (ColonyData.Building building : colony.data().buildings) {
+            doorway(level, building);
+        }
         List<Pos> roads = colony.data().roads;
         boolean clearSnow = snowy && SmartColonyConfig.get().snowClearing;
         if (!roads.isEmpty()) {
@@ -79,6 +84,7 @@ public final class Chores {
                 Pos road = roads.get(roadCursor);
                 BlockPos ground = new BlockPos(road.x(), colony.construction().paths().ground(level, road.x(), road.z()), road.z());
                 check(level, ground.above(), clearSnow);
+                headroom(level, ground.above(2));
             }
         }
         for (ColonyData.Building building : colony.data().buildings) {
@@ -94,6 +100,9 @@ public final class Chores {
                         check(level, cell.above(dy), clearSnow);
                     }
                 }
+                BlockPos feet = door.relative(out, k);
+                headroom(level, feet);
+                headroom(level, feet.above());
             }
         }
         if (clearSnow) {
@@ -151,6 +160,79 @@ public final class Chores {
         }
     }
 
+    private void headroom(ServerLevel level, BlockPos pos) {
+        if (WorldUtil.loaded(level, pos) && obstruction(level, pos)) {
+            offer(new Chore(Kind.HEADROOM, pos.immutable()));
+        }
+    }
+
+    boolean obstruction(ServerLevel level, BlockPos pos) {
+        BlockState state = level.getBlockState(pos);
+        if (state.isAir() || state.getCollisionShape(level, pos).isEmpty() && !state.is(Blocks.COBWEB)) {
+            return false;
+        }
+        if (state.is(BlockTags.LEAVES) || state.is(Blocks.VINE) || state.is(Blocks.COBWEB) || state.is(Blocks.SNOW)
+                || state.is(Blocks.SNOW_BLOCK) || state.is(Blocks.POWDER_SNOW) || state.is(BlockTags.SAPLINGS)) {
+            return true;
+        }
+        if (state.is(BlockTags.LOGS)) {
+            org.lts.smartcolony.core.Pos at = WorldUtil.pos(pos);
+            for (ColonyData.Building building : colony.data().buildings) {
+                if (building.contains(at, 0)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        return false;
+    }
+
+    private void doorway(ServerLevel level, ColonyData.Building building) {
+        if (building.blueprint.isEmpty() || "pen".equals(building.kind)) {
+            return;
+        }
+        if (building.door == null) {
+            return;
+        }
+        BlockPos front = WorldUtil.bp(building.door);
+        BlockPos lower = front.relative(colony.construction().paths().outward(building).getOpposite());
+        if (!WorldUtil.loaded(level, lower)) {
+            return;
+        }
+        BlockState state = level.getBlockState(lower);
+        if (!(state.getBlock() instanceof net.minecraft.world.level.block.DoorBlock) && level.getBlockState(lower.below()).getBlock()
+                instanceof net.minecraft.world.level.block.DoorBlock) {
+            lower = lower.below();
+            state = level.getBlockState(lower);
+        }
+        if (!(state.getBlock() instanceof net.minecraft.world.level.block.DoorBlock)
+                || state.getValue(net.minecraft.world.level.block.DoorBlock.HALF)
+                != net.minecraft.world.level.block.state.properties.DoubleBlockHalf.LOWER) {
+            return;
+        }
+        BlockState upper = level.getBlockState(lower.above());
+        if (upper.getBlock() instanceof net.minecraft.world.level.block.DoorBlock) {
+            return;
+        }
+        if (upper.isAir() || upper.is(BlockTags.LEAVES) || upper.is(Blocks.VINE) || upper.is(Blocks.SNOW) || upper.canBeReplaced()) {
+            fixDoor(level, lower.above());
+        } else {
+            offer(new Chore(Kind.DOOR, lower.above()));
+        }
+    }
+
+    public void fixDoor(ServerLevel level, BlockPos upper) {
+        BlockState lower = level.getBlockState(upper.below());
+        if (!(lower.getBlock() instanceof net.minecraft.world.level.block.DoorBlock)) {
+            return;
+        }
+        BlockState top = lower.setValue(net.minecraft.world.level.block.DoorBlock.HALF,
+                net.minecraft.world.level.block.state.properties.DoubleBlockHalf.UPPER);
+        level.setBlock(upper, top, net.minecraft.world.level.block.Block.UPDATE_CLIENTS);
+        level.setBlock(upper.below(), lower, net.minecraft.world.level.block.Block.UPDATE_CLIENTS);
+        colony.data().bump("doors_repaired", 1);
+    }
+
     static boolean weed(BlockState state) {
         if (state.isAir() || !state.getFluidState().isEmpty()) {
             return false;
@@ -164,8 +246,9 @@ public final class Chores {
 
     private void offer(Chore chore) {
         long key = chore.pos().asLong() * 31 + chore.kind().ordinal();
-        if (queue.size() < MAX_QUEUE && queued.add(key)) {
-            if (chore.kind() == Kind.SNOW) {
+        boolean urgent = chore.kind() == Kind.DOOR || chore.kind() == Kind.HEADROOM;
+        if ((queue.size() < MAX_QUEUE || urgent && queue.size() < MAX_QUEUE + 32) && queued.add(key)) {
+            if (chore.kind() == Kind.SNOW || chore.kind() == Kind.DOOR || chore.kind() == Kind.HEADROOM) {
                 queue.addFirst(chore);
             } else {
                 queue.addLast(chore);
@@ -200,7 +283,7 @@ public final class Chores {
 
     public boolean snowPending() {
         for (Chore chore : queue) {
-            if (chore.kind() == Kind.SNOW) {
+            if (chore.kind() == Kind.SNOW || chore.kind() == Kind.HEADROOM) {
                 return true;
             }
         }
@@ -210,7 +293,7 @@ public final class Chores {
     public Chore nextSnow(ServerLevel level, BlockPos near) {
         long now = level.getGameTime();
         for (Chore chore : queue) {
-            if (chore.kind() != Kind.SNOW) {
+            if (chore.kind() != Kind.SNOW && chore.kind() != Kind.HEADROOM) {
                 continue;
             }
             Long claimed = claims.get(chore.pos().asLong());
@@ -238,6 +321,9 @@ public final class Chores {
             case SNOW -> state.is(Blocks.SNOW) || state.is(Blocks.POWDER_SNOW);
             case WEEDS -> weed(state);
             case LOOT -> !level.getEntitiesOfClass(ItemEntity.class, new AABB(chore.pos()).inflate(1.5), ItemEntity::isAlive).isEmpty();
+            case HEADROOM -> obstruction(level, chore.pos());
+            case DOOR -> level.getBlockState(chore.pos().below()).getBlock() instanceof net.minecraft.world.level.block.DoorBlock
+                    && !(level.getBlockState(chore.pos()).getBlock() instanceof net.minecraft.world.level.block.DoorBlock);
         };
     }
 

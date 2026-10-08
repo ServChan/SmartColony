@@ -10,13 +10,12 @@
     "A": "minecraft:grass_block",
     "B": "minecraft:dirt_path",
     "C": "minecraft:$wood_fence",
-    "D": "minecraft:$wood_fence_gate[facing=south,open=false]",
-    "E": "minecraft:$wood_log",
-    "F": "minecraft:beehive[facing=north,honey_level=0]",
-    "G": "minecraft:$wood_slab[type=bottom]",
-    "H": "minecraft:barrel[facing=up]",
-    "I": "minecraft:composter",
-    "J": "minecraft:lantern[hanging=false]"
+    "D": "minecraft:$wood_log",
+    "E": "minecraft:beehive[facing=north,honey_level=0]",
+    "F": "minecraft:$wood_slab[type=bottom]",
+    "G": "minecraft:barrel[facing=up]",
+    "H": "minecraft:composter",
+    "I": "minecraft:lantern[hanging=false]"
   },
   "layers": [
     [
@@ -34,27 +33,27 @@
     ],
     [
       "...........",
-      "CCCCCDCCCCC",
+      "CCCCC.CCCCC",
       "C.........C",
       "C    .    C",
       "C    .    C",
       "C    .    C",
       "C.........C",
       "C.........C",
-      "C.E..E..E.C",
-      "CI.......HC",
+      "C.D..D..D.C",
+      "CH.......GC",
       "CCCCCCCCCCC"
     ],
     [
       "...........",
-      ".J.......J.",
+      ".I.......I.",
       "...........",
       "...........",
       "...........",
       "...........",
       "...........",
       "...........",
-      "..F..F..F..",
+      "..E..E..E..",
       "...........",
       "..........."
     ],
@@ -67,7 +66,7 @@
       "...........",
       "...........",
       "...........",
-      "..G..G..G..",
+      "..F..F..F..",
       "...........",
       "..........."
     ],

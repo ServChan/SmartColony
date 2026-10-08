@@ -72,6 +72,7 @@ public final class ColonyData {
     public int knowledge;
     public long chronicleDay = -1;
     public long lastRaid;
+    public int walkwayVersion;
 
     public static final class Contract {
         public String item = "";
