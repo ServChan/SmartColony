@@ -137,7 +137,7 @@ public final class ScribeJob extends Job {
             return;
         }
         if (stock.get(Ids.mc("enchanting_table")) > 0 && library() != null && find(level, Blocks.ENCHANTING_TABLE) == null
-                && !library().swaps.containsKey(Ids.mc("red_carpet"))) {
+                && !Ids.mc("enchanting_table").equals(library().swaps.get(Ids.mc("red_carpet")))) {
             library().swaps.put(Ids.mc("red_carpet"), Ids.mc("enchanting_table"));
             colony().journal(level, "the scribe asked for the enchanting table to be set up in the library");
             colony().markDirty();

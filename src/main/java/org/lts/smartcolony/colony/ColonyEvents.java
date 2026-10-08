@@ -77,21 +77,35 @@ public final class ColonyEvents {
                     cause += "_" + net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.getKey(attacker.getType()).getPath();
                 }
                 colony.data().bump("hurt_" + cause, Math.max(1, Math.round(amount)));
+                Colonist victim = colony.colonists().get(villager.getUUID());
+                if (victim != null) {
+                    colony.data().bump("hurt_" + cause + "_" + victim.role().key() + (victim.pause().isEmpty() ? "" : "_" + victim.pause()),
+                            Math.max(1, Math.round(amount)));
+                }
             }
         }
         return true;
     }
+
+    private static final float SHORT_FALL = 6.0F;
 
     public static boolean cushionMineFalls(LivingEntity entity, DamageSource source, float amount) {
         if (!(entity instanceof Villager villager) || !source.is(net.minecraft.tags.DamageTypeTags.IS_FALL)) {
             return true;
         }
         Colony colony = ColonyManager.colonyOf(villager);
-        if (colony == null || !colony.inMine(villager.blockPosition())) {
+        if (colony == null) {
             return true;
         }
-        colony.data().bump("mine_falls_cushioned", 1);
-        return false;
+        if (colony.inMine(villager.blockPosition())) {
+            colony.data().bump("mine_falls_cushioned", 1);
+            return false;
+        }
+        if (Colonist.isControlled(villager) && amount <= SHORT_FALL) {
+            colony.data().bump("short_falls_cushioned", 1);
+            return false;
+        }
+        return true;
     }
 
     public static void afterDeath(LivingEntity entity, DamageSource source) {

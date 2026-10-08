@@ -110,11 +110,21 @@ public final class Chores {
             if (queue.size() >= MAX_QUEUE) {
                 break;
             }
-            if (level.getNearestPlayer(item, 6.0) instanceof Player || nearGrave(item.blockPosition())) {
+            if (level.getNearestPlayer(item, 6.0) instanceof Player || nearGrave(item.blockPosition()) || !onGround(level, item.blockPosition())) {
                 continue;
             }
             offer(new Chore(Kind.LOOT, item.blockPosition()));
         }
+    }
+
+    private boolean onGround(ServerLevel level, BlockPos pos) {
+        if (colony.inMine(pos) || colony.data().mine != null && colony.data().mine.quarry() && colony.isProtected(pos, false)
+                && pos.getY() < WorldUtil.surfaceY(level, pos.getX(), pos.getZ()) - 1) {
+            return false;
+        }
+        int surface = WorldUtil.surfaceY(level, pos.getX(), pos.getZ());
+        return Math.abs(pos.getY() - surface) <= 1 && level.getFluidState(pos).isEmpty()
+                && WorldUtil.standable(level, new BlockPos(pos.getX(), surface, pos.getZ()));
     }
 
     private boolean nearGrave(BlockPos pos) {
@@ -131,6 +141,9 @@ public final class Chores {
             return;
         }
         BlockState state = level.getBlockState(pos);
+        if (Math.abs(pos.getY() - WorldUtil.surfaceY(level, pos.getX(), pos.getZ())) > 2) {
+            return;
+        }
         if (clearSnow && (state.is(Blocks.SNOW) || state.is(Blocks.POWDER_SNOW))) {
             offer(new Chore(Kind.SNOW, pos.immutable()));
         } else if (weed(state)) {
