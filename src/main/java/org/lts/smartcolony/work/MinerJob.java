@@ -19,6 +19,7 @@ import net.minecraft.world.level.block.FallingBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.Fluids;
+import org.lts.smartcolony.colony.Colony;
 import org.lts.smartcolony.core.ColonyData;
 import org.lts.smartcolony.core.Ids;
 import org.lts.smartcolony.core.DigPlan;
@@ -87,7 +88,15 @@ public final class MinerJob extends Job {
     }
 
     public boolean underground(Villager villager) {
-        ColonyData.Mine mine = colony().data().mine;
+        for (ColonyData.Mine mine : colony().allMines()) {
+            if (underground(villager, mine)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean underground(Villager villager, ColonyData.Mine mine) {
         if (mine == null || villager.getY() >= mine.entrance.y() - 2) {
             return false;
         }
@@ -126,6 +135,11 @@ public final class MinerJob extends Job {
             case "vein" -> vein(level, villager);
             case "return" -> travel(level, villager, true);
             case "deposit" -> deposit(level, villager);
+            case "kit" -> kit(level, villager);
+            case "trek" -> trek(level, villager);
+            case "assay" -> assay(level, villager);
+            case "lode" -> lode(level, villager);
+            case "bore" -> bore(level, villager);
             default -> phase = "start";
         }
     }
@@ -145,14 +159,329 @@ public final class MinerJob extends Job {
             wait = 100;
             return;
         }
-        ColonyData.Mine mine = colony().ensureMine(level);
-        if (mine == null) {
+        ColonyData.Mine main = colony().ensureMine(level);
+        if (colony().workTime(level) && colony().prospects(level, colonist.uuid())) {
+            ColonyData.Discovery target = colony().prospectFor(level, colonist.uuid());
+            if (target != null) {
+                deposit = target;
+                prospectMined = 0;
+                prospectFails = 0;
+                bores = 0;
+                phase = "kit";
+                return;
+            }
+        }
+        site = colony().mineFor(level, colonist.uuid());
+        if (main == null || site == null) {
             status = "no place for a mine";
             wait = 600;
             return;
         }
         fitNeeds = null;
         phase = "prepare";
+    }
+
+    private ColonyData.Mine mine() {
+        if (site == null || !colony().allMines().contains(site)) {
+            site = colony().data().mine;
+        }
+        return site;
+    }
+
+    private static final int PROSPECT_TICKS = 6000;
+    private static final int PROSPECT_RADIUS = 12;
+    private static final int PROSPECT_VEIN = 96;
+    private ColonyData.Mine site;
+    private ColonyData.Discovery deposit;
+    private long prospectStart;
+    private int prospectMined;
+    private int prospectFails;
+    private final ArrayDeque<BlockPos> lode = new ArrayDeque<>();
+    private final Set<BlockPos> skipped = new HashSet<>();
+    private static final int MAX_BORES = 4;
+    private List<org.lts.smartcolony.core.Bore.Step> bore = List.of();
+    private int boreIndex;
+    private BlockPos boreTarget;
+    private int bores;
+
+    private boolean prospectOver(ServerLevel level, Villager villager) {
+        return deposit == null || level.getGameTime() - prospectStart > PROSPECT_TICKS || !colony().workTime(level)
+                || cargoFull(villager) || villager.getHealth() < villager.getMaxHealth() * 0.5F;
+    }
+
+    private void endProspect(ServerLevel level, Colony.Prospect outcome) {
+        if (deposit != null) {
+            colony().prospectDone(level, deposit, prospectMined, outcome);
+            if (outcome != Colony.Prospect.TRIP) {
+                colony().releaseProspect(colonist.uuid());
+            }
+        }
+        deposit = null;
+        lode.clear();
+        skipped.clear();
+        phase = "deposit";
+    }
+
+    private void kit(ServerLevel level, Villager villager) {
+        Equip equip = equip(level, villager, Tools.PICKAXE, Tools.PICKAXES);
+        if (equip == Equip.BUSY) {
+            return;
+        }
+        if (equip == Equip.MISSING) {
+            status = "no pickaxe in storage";
+            idle(level, 600);
+            deposit = null;
+            phase = "start";
+            return;
+        }
+        if (Inv.count(villager, Ids.mc("torch")) < 2 || Inv.count(villager, Ids.mc("cobblestone")) < 8) {
+            if (!atDepot(level, villager)) {
+                if (goDepot(level, villager) == Mover.Result.FAILED) {
+                    wait = 200;
+                    deposit = null;
+                    phase = "start";
+                }
+                return;
+            }
+            supply(level, villager, Ids.mc("torch"), 2, 8);
+            supply(level, villager, Ids.mc("cobblestone"), 8, 16);
+        }
+        prospectStart = level.getGameTime();
+        phase = "trek";
+    }
+
+    private void trek(ServerLevel level, Villager villager) {
+        if (prospectOver(level, villager)) {
+            endProspect(level, Colony.Prospect.TRIP);
+            return;
+        }
+        BlockPos ore = WorldUtil.bp(deposit.pos);
+        if (!level.isPositionEntityTicking(ore)) {
+            status = "the ore deposit is too far from the player";
+            endProspect(level, Colony.Prospect.TRIP);
+            return;
+        }
+        BlockPos goal = WorldUtil.surface(level, ore.getX(), ore.getZ());
+        status = "walking to the ore at " + ore.toShortString();
+        Mover.Result result = move(level, villager, goal, 5.0);
+        if (result == Mover.Result.ARRIVED || result == Mover.Result.FAILED && villager.blockPosition().distSqr(ore) < 24 * 24) {
+            phase = "assay";
+        } else if (result == Mover.Result.FAILED) {
+            prospectFails++;
+            if (prospectFails > 3) {
+                colony().journal(level, "prospector found no way to the ore at " + ore.toShortString());
+                endProspect(level, Colony.Prospect.UNREACHABLE);
+            }
+        }
+    }
+
+    private void assay(ServerLevel level, Villager villager) {
+        BlockPos center = WorldUtil.bp(deposit.pos);
+        int r = PROSPECT_RADIUS;
+        List<BlockPos> found = new ArrayList<>();
+        for (BlockPos pos : BlockPos.betweenClosed(center.offset(-r, -r, -r), center.offset(r, 8, r))) {
+            if (found.size() >= PROSPECT_VEIN || !WorldUtil.loaded(level, pos)) {
+                continue;
+            }
+            BlockState state = level.getBlockState(pos);
+            if (isOre(state) && Digger.canHarvest(villager.getMainHandItem(), state) && open(level, pos) && !skipped.contains(pos)) {
+                found.add(pos.immutable());
+            }
+        }
+        BlockPos here = villager.blockPosition();
+        found.sort(java.util.Comparator.comparingDouble(pos -> pos.distSqr(here)));
+        lode.clear();
+        lode.addAll(found);
+        status = found.isEmpty() ? "no reachable ore left here" : "found " + found.size() + " ore blocks";
+        if (found.isEmpty()) {
+            endProspect(level, skipped.isEmpty() ? Colony.Prospect.EMPTY : prospectMined > 0 ? Colony.Prospect.TRIP : Colony.Prospect.UNREACHABLE);
+            return;
+        }
+        phase = "lode";
+    }
+
+    private static boolean open(ServerLevel level, BlockPos pos) {
+        for (Direction direction : Direction.values()) {
+            BlockState next = level.getBlockState(pos.relative(direction));
+            if (next.isAir() || next.canBeReplaced() && next.getFluidState().isEmpty()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void lode(ServerLevel level, Villager villager) {
+        if (prospectOver(level, villager)) {
+            endProspect(level, Colony.Prospect.TRIP);
+            return;
+        }
+        while (!lode.isEmpty() && !isOre(level.getBlockState(lode.peek()))) {
+            lode.poll();
+        }
+        if (lode.isEmpty()) {
+            phase = "assay";
+            return;
+        }
+        BlockPos ore = lode.peek();
+        status = "mining the ore the scouts found (" + prospectMined + " so far)";
+        if (villager.getEyePosition().distanceTo(net.minecraft.world.phys.Vec3.atCenterOf(ore)) > 4.2) {
+            BlockPos stand = ScoutJob.standNear(level, ore);
+            if (stand == null) {
+                if (!boreTo(level, villager, ore)) {
+                    skipped.add(lode.poll());
+                }
+                return;
+            }
+            Mover.Result result = move(level, villager, stand, 1.2);
+            if (result == Mover.Result.FAILED && !boreTo(level, villager, ore)) {
+                skipped.add(lode.poll());
+            }
+            return;
+        }
+        if (!seal(level, villager, ore, Set.of(ore), villager.blockPosition())) {
+            skipped.add(lode.poll());
+            return;
+        }
+        Digger.Result result = colonist.digger().tick(level, villager, ore, true);
+        if (result == Digger.Result.DONE) {
+            stash(level, villager, colonist.digger().takeDrops());
+            lode.poll();
+            prospectMined++;
+            colony().data().bump("ores_mined", 1);
+            gainXp(level, villager, 2);
+            for (Direction direction : Direction.values()) {
+                BlockPos next = ore.relative(direction);
+                if (WorldUtil.loaded(level, next) && isOre(level.getBlockState(next)) && !lode.contains(next)) {
+                    lode.addFirst(next.immutable());
+                }
+            }
+        } else if (result == Digger.Result.FAILED) {
+            skipped.add(lode.poll());
+        }
+    }
+
+    private boolean boreTo(ServerLevel level, Villager villager, BlockPos ore) {
+        if (bores >= MAX_BORES || villager.blockPosition().distSqr(ore) > 24 * 24) {
+            return false;
+        }
+        List<org.lts.smartcolony.core.Bore.Step> route = org.lts.smartcolony.core.Bore.route(WorldUtil.pos(villager.blockPosition()),
+                WorldUtil.pos(ore), org.lts.smartcolony.core.Bore.MAX_STEPS);
+        if (route == null || route.isEmpty()) {
+            return false;
+        }
+        for (org.lts.smartcolony.core.Bore.Step step : route) {
+            BlockPos feet = WorldUtil.bp(step.feet());
+            if (!WorldUtil.loaded(level, feet) || colony().isProtected(feet)) {
+                return false;
+            }
+            for (int dy = 0; dy < step.height(); dy++) {
+                if (!borable(level, villager, feet.above(dy))) {
+                    return false;
+                }
+            }
+        }
+        bore = route;
+        boreIndex = 0;
+        boreTarget = ore.immutable();
+        bores++;
+        colony().data().bump("prospect_bores", 1);
+        phase = "bore";
+        return true;
+    }
+
+    private static boolean borable(ServerLevel level, Villager villager, BlockPos pos) {
+        BlockState state = level.getBlockState(pos);
+        if (WorldUtil.isAirLike(state) || !state.getFluidState().isEmpty()) {
+            return true;
+        }
+        return level.getBlockEntity(pos) == null && state.getDestroySpeed(level, pos) >= 0 && state.getDestroySpeed(level, pos) <= 5.0F
+                && Digger.canHarvest(villager.getMainHandItem(), state);
+    }
+
+    private void abortBore() {
+        if (boreTarget != null) {
+            lode.remove(boreTarget);
+            skipped.add(boreTarget);
+        }
+        bore = List.of();
+        boreTarget = null;
+        phase = "lode";
+    }
+
+    private void bore(ServerLevel level, Villager villager) {
+        if (prospectOver(level, villager)) {
+            bore = List.of();
+            endProspect(level, Colony.Prospect.TRIP);
+            return;
+        }
+        if (boreIndex >= bore.size()) {
+            bore = List.of();
+            boreTarget = null;
+            phase = "lode";
+            return;
+        }
+        org.lts.smartcolony.core.Bore.Step step = bore.get(boreIndex);
+        BlockPos feet = WorldUtil.bp(step.feet());
+        status = "digging a passage to the ore " + (boreIndex + 1) + "/" + bore.size();
+        Set<BlockPos> cell = new HashSet<>();
+        for (int dy = 0; dy < step.height(); dy++) {
+            cell.add(feet.above(dy));
+        }
+        for (int dy = step.height() - 1; dy >= 0; dy--) {
+            BlockPos block = feet.above(dy);
+            if (!seal(level, villager, block, cell, villager.blockPosition())) {
+                abortBore();
+                return;
+            }
+            BlockState state = level.getBlockState(block);
+            if (!state.getFluidState().isEmpty()) {
+                if (!fillWithCobble(level, villager, block)) {
+                    abortBore();
+                }
+                return;
+            }
+            if (!WorldUtil.isAirLike(state) || !state.isAir() && !state.getCollisionShape(level, block).isEmpty()) {
+                if (!borable(level, villager, block)) {
+                    abortBore();
+                    return;
+                }
+                boolean ore = isOre(state);
+                Digger.Result result = colonist.digger().tick(level, villager, block, true);
+                if (result == Digger.Result.DONE) {
+                    stash(level, villager, colonist.digger().takeDrops());
+                    colony().data().bump("blocks_mined", 1);
+                    if (ore) {
+                        prospectMined++;
+                        colony().data().bump("ores_mined", 1);
+                    }
+                } else if (result == Digger.Result.FAILED) {
+                    abortBore();
+                }
+                return;
+            }
+            if (!state.isAir() && state.canBeReplaced()) {
+                colonist.digger().breakNow(level, villager, block, false);
+            }
+        }
+        BlockPos floor = feet.below();
+        if (!WorldUtil.solidFloor(level, floor) && !fillWithCobble(level, villager, floor) && !fillFromStorage(level, villager, floor)) {
+            abortBore();
+            return;
+        }
+        if (Mover.distance(villager, feet) > 0.9) {
+            Mover.Result result = move(level, villager, feet, 0.5);
+            if (result == Mover.Result.FAILED && !Mover.rescue(level, villager, feet)) {
+                abortBore();
+            }
+            if (result != Mover.Result.ARRIVED) {
+                return;
+            }
+        }
+        if (boreIndex % 5 == 4 && level.getBrightness(LightLayer.BLOCK, feet) < 4 && level.getBrightness(LightLayer.SKY, feet) < 8
+                && Inv.count(villager, Ids.mc("torch")) > 0 && Placer.placeTorch(level, villager, feet)) {
+            Inv.remove(villager, stack -> stack.is(Items.TORCH), 1);
+        }
+        boreIndex++;
     }
 
     private void prepare(ServerLevel level, Villager villager) {
@@ -166,7 +495,7 @@ public final class MinerJob extends Job {
             phase = "start";
             return;
         }
-        ColonyData.Mine current = colony().data().mine;
+        ColonyData.Mine current = mine();
         int ladderGap = ladderGap(level, villager, current);
         boolean fetchLadders = ladderGap > 0 && level.getGameTime() >= ladderRetry;
         if (fitNeeds == null) {
@@ -200,7 +529,7 @@ public final class MinerJob extends Job {
             phase = "deposit";
             return;
         }
-        ColonyData.Mine mine = colony().data().mine;
+        ColonyData.Mine mine = mine();
         route = mine.plan().routeTo(Math.min(mine.progress, mine.plan().size() - 1));
         waypoint = 0;
         cellsThisTrip = 0;
@@ -244,7 +573,7 @@ public final class MinerJob extends Job {
     }
 
     private void fitHere(ServerLevel level, Villager villager) {
-        ColonyData.Mine mine = colony().data().mine;
+        ColonyData.Mine mine = mine();
         if (mine == null || fitBudget <= 0) {
             return;
         }
@@ -261,7 +590,7 @@ public final class MinerJob extends Job {
         if (status != null && !status.startsWith("climbing") && !status.startsWith("going")) {
             lastReturn = status;
         }
-        ColonyData.Mine mine = colony().data().mine;
+        ColonyData.Mine mine = mine();
         returning = true;
         if (mine == null) {
             phase = "deposit";
@@ -352,10 +681,14 @@ public final class MinerJob extends Job {
     }
 
     private void dig(ServerLevel level, Villager villager) {
-        ColonyData.Mine mine = colony().data().mine;
+        ColonyData.Mine mine = mine();
+        if (mine == null) {
+            beginReturn();
+            return;
+        }
         DigPlan plan = mine.plan();
         if (mine.progress >= plan.size()) {
-            colony().mineExhausted(level);
+            colony().mineExhausted(level, mine);
             beginReturn();
             lastReturn = "mine worked out";
             return;
@@ -384,7 +717,7 @@ public final class MinerJob extends Job {
             colony().markDirty();
             if (skippedInRow >= 8) {
                 skippedInRow = 0;
-                colony().mineExhausted(level);
+                colony().mineExhausted(level, mine);
                 beginReturn();
             }
             return;
@@ -497,7 +830,7 @@ public final class MinerJob extends Job {
     private int claimed = -1;
 
     private int pickCell(ServerLevel level, ColonyData.Mine mine, DigPlan plan) {
-        java.util.Map<Integer, Long> claims = colony().mineClaims();
+        java.util.Map<Integer, Long> claims = colony().mineClaims(mine);
         long now = level.getGameTime();
         claims.values().removeIf(at -> now - at > 600);
         if (claimed >= mine.progress && claimed < plan.size() && claims.containsKey(claimed)) {
@@ -524,7 +857,7 @@ public final class MinerJob extends Job {
     }
 
     private void finishCell(ColonyData.Mine mine, int index) {
-        colony().mineClaims().remove(index);
+        colony().mineClaims(mine).remove(index);
         claimed = -1;
         if (index == mine.progress) {
             mine.progress++;

@@ -111,17 +111,17 @@ public final class ForestIndex {
                 continue;
             }
             BlockPos base = TreeScan.baseOf(level, topPos);
-            if (!level.getBlockState(base.below()).is(BlockTags.SUBSTRATE_OVERWORLD)) {
+            boolean inTheWay = colony.treeInTheWay(level, base);
+            if (!inTheWay && !level.getBlockState(base.below()).is(BlockTags.SUBSTRATE_OVERWORLD)) {
                 continue;
             }
-            boolean inTheWay = colony.treeInTheWay(level, base);
             if (colony.isProtected(base) && !colony.treeFarm().contains(base) && !inTheWay) {
                 continue;
             }
             if (near(base)) {
                 continue;
             }
-            if (!TreeScan.naturalTree(level, base).isEmpty()) {
+            if (!(inTheWay ? TreeScan.obstacleTree(level, base) : TreeScan.naturalTree(level, base)).isEmpty()) {
                 trees.add(base.immutable());
                 if (inTheWay) {
                     blocking.add(base.immutable());

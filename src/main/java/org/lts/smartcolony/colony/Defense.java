@@ -267,8 +267,8 @@ public final class Defense {
                 route.add(point);
             }
         }
-        if (colony.data().mine != null) {
-            route.add(WorldUtil.bp(colony.data().mine.entrance));
+        for (ColonyData.Mine mine : colony.allMines()) {
+            route.add(WorldUtil.bp(mine.entrance));
         }
         return route;
     }

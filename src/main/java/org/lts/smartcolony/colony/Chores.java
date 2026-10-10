@@ -136,7 +136,7 @@ public final class Chores {
     }
 
     private boolean onGround(ServerLevel level, BlockPos pos) {
-        if (colony.inMine(pos) || colony.data().mine != null && colony.data().mine.quarry() && colony.isProtected(pos, false)
+        if (colony.inMine(pos) || colony.allMines().stream().anyMatch(ColonyData.Mine::quarry) && colony.isProtected(pos, false)
                 && pos.getY() < WorldUtil.surfaceY(level, pos.getX(), pos.getZ()) - 1) {
             return false;
         }

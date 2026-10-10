@@ -111,7 +111,7 @@ final class TownHallBuilder {
             return;
         }
         int stage = TownHall.stageOf(building.blueprint);
-        colony.journal(level, "town hall finished: stage " + stage + " of " + TownHall.STAGES + " at " + building.origin);
+        colony.journal(level, "inn finished: stage " + stage + " of " + TownHall.STAGES + " at " + building.origin);
         colony.notify(level, Component.translatable("smartcolony.chat.townhall_stage", stage, TownHall.STAGES));
     }
 }

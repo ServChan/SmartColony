@@ -38,6 +38,35 @@ public final class TreeScan {
                 || (state.getBlock() instanceof LeavesBlock && !isNaturalLeaf(state));
     }
 
+    private static boolean dwelling(BlockState state) {
+        return state.is(BlockTags.PLANKS) || state.is(BlockTags.DOORS) || state.is(BlockTags.BEDS) || state.is(BlockTags.WOOL)
+                || state.is(BlockTags.IMPERMEABLE) || (state.getBlock() instanceof LeavesBlock && !isNaturalLeaf(state));
+    }
+
+    public static List<BlockPos> obstacleTree(ServerLevel level, BlockPos base) {
+        if (!WorldUtil.loaded(level, base) || !isLog(level.getBlockState(base))) {
+            return List.of();
+        }
+        List<BlockPos> logs = connectedLogs(level, base);
+        int leaves = 0;
+        for (BlockPos log : logs) {
+            for (Direction direction : Direction.values()) {
+                BlockPos side = log.relative(direction);
+                if (!WorldUtil.loaded(level, side)) {
+                    return List.of();
+                }
+                BlockState state = level.getBlockState(side);
+                if (dwelling(state)) {
+                    return List.of();
+                }
+                if (isNaturalLeaf(state)) {
+                    leaves++;
+                }
+            }
+        }
+        return leaves >= 3 ? logs : List.of();
+    }
+
     public static BlockPos baseOf(ServerLevel level, BlockPos log) {
         BlockPos pos = log;
         int guard = 0;

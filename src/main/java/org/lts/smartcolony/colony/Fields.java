@@ -52,7 +52,7 @@ public final class Fields {
         ColonyData d = data();
         int hash = d.buildings.size() * 31 + d.projects.size() * 17 + d.roads.size() * 7 + d.pendingRoad.size() * 5
                 + d.lamps.size() * 3 + d.graves.size() + d.outposts.size() * 11 + (d.pen == null ? 0 : 13)
-                + (d.mine == null ? 0 : 19 + d.mine.generation) + (d.wall == null ? 0 : d.wall.columns.size() * 23);
+                + (d.mine == null ? 0 : 19 + d.mine.generation) + d.mines.size() * 37 + (d.wall == null ? 0 : d.wall.columns.size() * 23);
         return hash;
     }
 
@@ -128,8 +128,7 @@ public final class Fields {
                 zones.addDisc(gate.x(), gate.z(), 4);
             }
         }
-        ColonyData.Mine mine = d.mine;
-        if (mine != null) {
+        for (ColonyData.Mine mine : colony.allMines()) {
             if (mine.quarry()) {
                 zones.addBox(mine.corner.x(), mine.corner.z(), mine.corner.x() + mine.width, mine.corner.z() + mine.width, BUILDING_MARGIN);
             } else if (mine.entrance != null) {

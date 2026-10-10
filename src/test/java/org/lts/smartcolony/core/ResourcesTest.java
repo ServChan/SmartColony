@@ -72,7 +72,7 @@ class ResourcesTest {
         rich.add(Ids.mc("oak_log"), 400);
         rich.add(Ids.mc("cobblestone"), 400);
         rich.add(Ids.mc("glass"), 30);
-        rich.add(Ids.mc("white_wool"), 24);
+        rich.add(Ids.mc("white_wool"), 72);
         rich.add(Ids.mc("coal"), 20);
         rich.add(Ids.mc("iron_ingot"), 64);
         rich.add(Ids.mc("wheat"), 128);

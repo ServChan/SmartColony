@@ -81,15 +81,30 @@ public final class Lamps {
 
     private String baseFor(ServerLevel level, int tier) {
         if (tier <= LampDesign.STONE_POST) {
-            return Ids.mc("cobblestone");
+            return Ids.mc("cobblestone_wall");
         }
         Stock stock = colony.warehouse().stock(level);
-        String bricks = Ids.mc("stone_bricks");
-        return stock.get(bricks) > 0 || CraftPlanner.plan(stock, bricks, 1).isPresent() ? bricks : Ids.mc("cobblestone");
+        String bricks = Ids.mc("stone_brick_wall");
+        return stock.get(bricks) > 0 || CraftPlanner.plan(stock, bricks, 1).isPresent() ? bricks : Ids.mc("cobblestone_wall");
     }
 
     private List<LampDesign.Layer> layers(ColonyData.Lamp lamp) {
         return LampDesign.layers(lamp.tier, lamp.wood, lamp.base, lamp.armX, lamp.armZ);
+    }
+
+    private boolean roomy(ServerLevel level, ColonyData.Lamp lamp) {
+        BlockPos base = WorldUtil.bp(lamp.pos);
+        for (LampDesign.Layer layer : layers(lamp)) {
+            if (layer.dx() == 0 && layer.dz() == 0) {
+                continue;
+            }
+            BlockPos at = base.offset(layer.dx(), layer.dy(), layer.dz());
+            BlockState cell = level.getBlockState(at);
+            if (!WorldUtil.isAirLike(cell) || !cell.getFluidState().isEmpty() || hasOrderAt(WorldUtil.pos(at))) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private boolean feasible(ServerLevel level, List<LampDesign.Layer> layers) {
@@ -192,6 +207,7 @@ public final class Lamps {
             lamp.armZ = arm[1];
         }
         lamp.since = level.getGameTime();
+        lamp.style = LampDesign.STYLE;
         return lamp;
     }
 
@@ -207,6 +223,7 @@ public final class Lamps {
         if (active() < ACTIVE_MAX && started == 0) {
             planUpgrade(level, tier, roads, aprons);
         }
+        restyle(level);
         if (started > 0) {
             colony.markDirty();
         }
@@ -267,6 +284,9 @@ public final class Lamps {
                 continue;
             }
             ColonyData.Lamp lamp = create(level, feet, tier, roads);
+            if (!roomy(level, lamp)) {
+                continue;
+            }
             if (!feasible(level, layers(lamp))) {
                 if (tier > LampDesign.STONE_POST) {
                     break;
@@ -325,6 +345,42 @@ public final class Lamps {
         }
     }
 
+    private void restyle(ServerLevel level) {
+        int queued = 0;
+        for (ColonyData.Lamp lamp : data().lamps) {
+            if (queued >= UPGRADE_BATCH) {
+                return;
+            }
+            if (lamp.style >= LampDesign.STYLE || !lamp.phase.equals("done") || lamp.tier != LampDesign.STONE_POST
+                    || !WorldUtil.loaded(level, WorldUtil.bp(lamp.pos))) {
+                continue;
+            }
+            BlockPos base = WorldUtil.bp(lamp.pos);
+            lamp.style = LampDesign.STYLE;
+            colony.markDirty();
+            if (!level.getBlockState(base.above(3)).is(Blocks.TORCH)) {
+                continue;
+            }
+            List<LampDesign.Layer> cage = LampDesign.cage(lamp.wood);
+            boolean free = true;
+            for (LampDesign.Layer layer : cage) {
+                BlockState cell = level.getBlockState(base.offset(layer.dx(), layer.dy(), layer.dz()));
+                if (!WorldUtil.isAirLike(cell) || !cell.getFluidState().isEmpty()) {
+                    free = false;
+                    break;
+                }
+            }
+            if (!free || !feasible(level, cage)) {
+                continue;
+            }
+            for (LampDesign.Layer layer : cage) {
+                colony.improvements().queueFirst(base.offset(layer.dx(), layer.dy(), layer.dz()), layer.state(), Improvements.DECOR);
+            }
+            data().bump("lamps_restyled", 1);
+            queued++;
+        }
+    }
+
     private boolean legacyStanding(ServerLevel level, Pos old) {
         BlockPos at = WorldUtil.bp(old);
         return level.getBlockState(at).is(Blocks.TORCH) || level.getBlockState(at.above()).is(Blocks.TORCH)
@@ -368,7 +424,7 @@ public final class Lamps {
         }
         lamp.replaces = old;
         lamp.replacesTier = oldTier;
-        if (!feasible(level, layers(lamp))) {
+        if (spot != null && !roomy(level, lamp) || !feasible(level, layers(lamp))) {
             return false;
         }
         d.lamps.add(lamp);

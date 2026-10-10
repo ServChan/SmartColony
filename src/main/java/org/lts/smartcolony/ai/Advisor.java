@@ -114,7 +114,7 @@ public final class Advisor {
                 String message = cause.getMessage() == null ? cause.getClass().getSimpleName() : cause.getMessage();
                 if (!message.equals(error)) {
                     colony.journal(level, "advisor unavailable: " + message);
-                    SmartColony.LOGGER.warn("Smart Colony advisor for {} failed: {}", colony.data().name, message);
+                    SmartColony.LOGGER.warn("Could not get advice for colony {}", colony.data().name, e);
                 }
                 state = "error";
                 error = message;

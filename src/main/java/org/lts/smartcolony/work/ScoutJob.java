@@ -305,7 +305,7 @@ public final class ScoutJob extends Job {
         }
     }
 
-    private static BlockPos standNear(ServerLevel level, BlockPos ore) {
+    static BlockPos standNear(ServerLevel level, BlockPos ore) {
         for (int dy = 0; dy >= -2; dy--) {
             for (Direction direction : Direction.Plane.HORIZONTAL) {
                 BlockPos feet = ore.relative(direction).above(dy);

@@ -138,8 +138,20 @@ public final class BuilderJob extends Job {
                         return true;
                     }
                     colonist.digger().breakNow(level, villager, pos, true);
-                    stash(level, villager, colonist.digger().takeDrops());
+                    stash(level, villager, rubble(level, villager, colonist.digger().takeDrops()));
                     villager.getLookControl().setLookAt(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
+                }
+                BlockPos low = task.partner();
+                if (low != null && low.getX() == pos.getX() && low.getZ() == pos.getZ()) {
+                    for (BlockPos below = pos.below(); below.getY() >= low.getY(); below = below.below()) {
+                        BlockState under = level.getBlockState(below);
+                        if (under.isAir() || !under.getFluidState().isEmpty() || under.getDestroySpeed(level, below) < 0
+                                || level.getBlockEntity(below) != null) {
+                            break;
+                        }
+                        colonist.digger().breakNow(level, villager, below, true);
+                        stash(level, villager, rubble(level, villager, colonist.digger().takeDrops()));
+                    }
                 }
                 return true;
             }
@@ -297,6 +309,27 @@ public final class BuilderJob extends Job {
         }
         depositAll(level, villager);
         phase = "start";
+    }
+
+    private List<ItemStack> rubble(ServerLevel level, Villager villager, List<ItemStack> drops) {
+        List<ItemStack> kept = new java.util.ArrayList<>();
+        for (ItemStack drop : drops) {
+            String id = org.lts.smartcolony.util.ItemIds.id(drop);
+            String path = org.lts.smartcolony.core.Ids.path(id);
+            int cap = switch (path) {
+                case "dirt", "coarse_dirt", "rooted_dirt" -> 320;
+                case "cobblestone", "cobbled_deepslate" -> 1024;
+                case "andesite", "diorite", "granite", "tuff", "gravel", "sand", "red_sand" -> 256;
+                case "red_mushroom", "brown_mushroom" -> 64;
+                default -> Integer.MAX_VALUE;
+            };
+            if (cap != Integer.MAX_VALUE && colony().stockOf(level, found -> found.equals(id)) + Inv.count(villager, id) >= cap) {
+                colony().data().bump("rubble_discarded", drop.getCount());
+                continue;
+            }
+            kept.add(drop);
+        }
+        return kept;
     }
 
     private static boolean isAttachedBlock(BlockState state) {

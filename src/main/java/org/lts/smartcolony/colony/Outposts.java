@@ -109,11 +109,24 @@ public final class Outposts {
         return Math.hypot(a.x() - b.getX(), a.z() - b.getZ());
     }
 
-    private Anchor mineAnchor() {
-        ColonyData.Mine mine = data().mine;
-        if (mine == null) {
-            return null;
+    private List<Anchor> mineAnchors() {
+        List<Anchor> anchors = new ArrayList<>();
+        for (ColonyData.Mine mine : colony.allMines()) {
+            anchors.add(mineAnchor(mine));
         }
+        return anchors;
+    }
+
+    private Anchor nearMine(BlockPos pos) {
+        for (Anchor anchor : mineAnchors()) {
+            if (horizontal(anchor.pos(), pos) <= MINE_NEAR) {
+                return anchor;
+            }
+        }
+        return null;
+    }
+
+    private Anchor mineAnchor(ColonyData.Mine mine) {
         if (mine.quarry()) {
             int half = mine.width / 2;
             BlockPos pos = new BlockPos(mine.corner.x() + half, mine.corner.y(), mine.corner.z() + half);
@@ -158,16 +171,17 @@ public final class Outposts {
             return;
         }
         BlockPos depot = colony.depot();
-        Anchor mine = mineAnchor();
-        if (mine != null && ready(PorterPlan.MINE, now) && !outpostNear(mine.pos(), MINE_NEAR)
-                && PorterPlan.longWalk(horizontal(mine.pos(), depot), mine.pos().getY() - depot.getY(), trouble.getOrDefault(PorterPlan.MINE, 0))
-                && WorldUtil.loaded(level, mine.pos())) {
-            if (colony.construction().planOutpost(level, mine.pos(), mine.minRadius(), mine.maxRadius(), mine.forbidden())) {
-                retryAt.put(PorterPlan.MINE, now + RETRY_TICKS / 2);
-                return;
+        for (Anchor mine : mineAnchors()) {
+            if (ready(PorterPlan.MINE, now) && !outpostNear(mine.pos(), MINE_NEAR)
+                    && PorterPlan.longWalk(horizontal(mine.pos(), depot), mine.pos().getY() - depot.getY(), trouble.getOrDefault(PorterPlan.MINE, 0))
+                    && WorldUtil.loaded(level, mine.pos())) {
+                if (colony.construction().planOutpost(level, mine.pos(), mine.minRadius(), mine.maxRadius(), mine.forbidden())) {
+                    retryAt.put(PorterPlan.MINE, now + RETRY_TICKS / 2);
+                    return;
+                }
+                retryAt.put(PorterPlan.MINE, now + RETRY_TICKS);
+                colony.journal(level, "no site for an outpost near the mine, will retry later");
             }
-            retryAt.put(PorterPlan.MINE, now + RETRY_TICKS);
-            colony.journal(level, "no site for an outpost near the mine, will retry later");
         }
         if (ready(PorterPlan.FOREST, now) && PorterPlan.forestFar(treeSamples, treeAverage())) {
             Pos edge = PorterPlan.forestAnchor(data().depot, treeDx, treeDz, treeSamples);
@@ -193,8 +207,7 @@ public final class Outposts {
         outpost.since = level.getGameTime();
         outpost.lastUse = outpost.since;
         BlockPos center = WorldUtil.bp(outpost.center);
-        Anchor mine = mineAnchor();
-        boolean forMine = mine != null && horizontal(mine.pos(), center) <= MINE_NEAR;
+        boolean forMine = nearMine(center) != null;
         outpost.kind = forMine ? PorterPlan.MINE : PorterPlan.FOREST;
         data().outposts.add(outpost);
         colony.warehouse().invalidate();
@@ -304,7 +317,6 @@ public final class Outposts {
 
     private void validate(ServerLevel level) {
         long now = level.getGameTime();
-        Anchor mine = mineAnchor();
         for (ColonyData.Outpost outpost : new ArrayList<>(data().outposts)) {
             BlockPos door = WorldUtil.bp(outpost.door);
             if (!WorldUtil.loaded(level, door)) {
@@ -322,15 +334,15 @@ public final class Outposts {
                 continue;
             }
             boolean idle = now - outpost.lastUse > STALE_TICKS && colony.warehouse().outpostItems(level, outpost) == 0;
-            if (idle && !stillWanted(outpost, mine)) {
+            if (idle && !stillWanted(outpost)) {
                 drop(level, outpost, "not used for a long time", false);
             }
         }
     }
 
-    private boolean stillWanted(ColonyData.Outpost outpost, Anchor mine) {
+    private boolean stillWanted(ColonyData.Outpost outpost) {
         BlockPos center = WorldUtil.bp(outpost.center);
-        if (mine != null && horizontal(mine.pos(), center) <= MINE_NEAR) {
+        if (nearMine(center) != null) {
             return true;
         }
         if (treeSamples == 0) {

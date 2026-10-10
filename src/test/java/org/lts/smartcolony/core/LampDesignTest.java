@@ -9,12 +9,16 @@ import org.junit.jupiter.api.Test;
 
 class LampDesignTest {
     @Test
-    void stoneAgePostIsBaseFenceFenceTorch() {
-        List<LampDesign.Layer> layers = LampDesign.layers(LampDesign.STONE_POST, "oak", "minecraft:cobblestone", 0, 0);
-        assertEquals(4, layers.size());
-        assertEquals("minecraft:cobblestone", layers.get(0).state());
+    void stoneAgePostCagesTheTorchUnderASlab() {
+        List<LampDesign.Layer> layers = LampDesign.layers(LampDesign.STONE_POST, "oak", "minecraft:cobblestone_wall", 0, 0);
+        assertEquals(9, layers.size());
+        assertEquals("minecraft:cobblestone_wall", layers.get(0).state());
         assertEquals("minecraft:oak_fence", layers.get(1).state());
         assertEquals("minecraft:torch", layers.get(3).state());
+        assertEquals(4, layers.stream().filter(l -> l.state().startsWith("minecraft:oak_trapdoor") && l.state().contains("open=true")
+                && l.dy() == 3).count());
+        assertEquals("minecraft:oak_slab[type=bottom]", layers.getLast().state());
+        assertEquals(4, layers.getLast().dy());
         assertTrue(LampDesign.bottomUp(layers));
     }
 
@@ -66,7 +70,7 @@ class LampDesignTest {
     void spacingIsMeasuredOnTheGround() {
         List<Pos> lamps = List.of(new Pos(0, 64, 0));
         assertFalse(LampDesign.spaced(lamps, new Pos(3, 70, 3), LampDesign.SPACING));
-        assertTrue(LampDesign.spaced(lamps, new Pos(7, 64, 0), LampDesign.SPACING));
+        assertTrue(LampDesign.spaced(lamps, new Pos(LampDesign.SPACING, 64, 0), LampDesign.SPACING));
     }
 
     @Test

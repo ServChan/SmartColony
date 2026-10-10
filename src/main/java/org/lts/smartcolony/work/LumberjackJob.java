@@ -148,7 +148,7 @@ public final class LumberjackJob extends Job {
             return;
         }
         if (result == Mover.Result.ARRIVED) {
-            logs = TreeScan.naturalTree(level, tree);
+            logs = colony().forest().blocking(tree) ? TreeScan.obstacleTree(level, tree) : TreeScan.naturalTree(level, tree);
             if (logs.isEmpty()) {
                 colony().forest().felled(tree);
                 phase = "start";

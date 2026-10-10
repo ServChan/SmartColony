@@ -96,6 +96,28 @@ public final class WorldUtil {
         return naturalGround(below) || below.is(BlockTags.LOGS);
     }
 
+    public static boolean hugeMushroom(BlockState state) {
+        return state.is(Blocks.RED_MUSHROOM_BLOCK) || state.is(Blocks.BROWN_MUSHROOM_BLOCK) || state.is(Blocks.MUSHROOM_STEM);
+    }
+
+    public static boolean overgrowth(BlockState state) {
+        return state.is(BlockTags.LOGS) || state.is(BlockTags.LEAVES) || hugeMushroom(state);
+    }
+
+    public static int soilY(ServerLevel level, int x, int z) {
+        int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z) - 1;
+        int floor = y - 48;
+        while (y > floor) {
+            BlockPos pos = new BlockPos(x, y, z);
+            BlockState state = level.getBlockState(pos);
+            if (!overgrowth(state) && !clearable(state)) {
+                break;
+            }
+            y--;
+        }
+        return y;
+    }
+
     public static boolean removable(ServerLevel level, BlockPos pos) {
         return clearable(level.getBlockState(pos)) || fallenLog(level, pos);
     }

@@ -30,7 +30,6 @@ FIXED = [
 THIN = ("torch", "lantern", "carpet", "pressure_plate", "button", "sign", "ladder", "chain", "flower", "rail")
 PARTIAL = ("slab", "stairs", "fence", "wall", "trapdoor", "door", "pane", "bars")
 
-
 def color_for(state, wood):
     block = state.split("[")[0].replace("minecraft:", "")
     block = block.replace("$wood", wood)
@@ -46,17 +45,14 @@ def color_for(state, wood):
     h = abs(hash(block))
     return (80 + h % 120, 80 + (h // 7) % 120, 80 + (h // 49) % 120)
 
-
 def shade(rgb, factor):
     return tuple(max(0, min(255, int(c * factor))) for c in rgb)
-
 
 def load(path):
     data = json.loads(Path(path).read_text(encoding="utf-8"))
     palette = data["palette"]
     layers = data["layers"]
     return data, palette, layers
-
 
 def voxels(palette, layers, wood):
     cells = []
@@ -77,7 +73,6 @@ def voxels(palette, layers, wood):
                     height = 0.5
                 cells.append((x, y, z, color_for(state, wood), kind, height))
     return cells
-
 
 def render(path, out, wood="oak", scale=10, view=0):
     data, palette, layers = load(path)
@@ -121,7 +116,6 @@ def render(path, out, wood="oak", scale=10, view=0):
     img.save(out)
     return out
 
-
 def sheet(paths, out, wood="oak"):
     tiles = []
     for p in paths:
@@ -139,7 +133,6 @@ def sheet(paths, out, wood="oak"):
         img.paste(t, ((i % cols) * cw, (i // cols) * ch))
     img.save(out)
     return out
-
 
 if __name__ == "__main__":
     args = sys.argv[1:]

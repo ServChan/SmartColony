@@ -8,9 +8,11 @@ import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -33,6 +35,7 @@ public final class ColonyManager {
     private static final Map<String, Colony> COLONIES = new LinkedHashMap<>();
     private static final Map<UUID, Colony> MEMBERS = new HashMap<>();
     private static final Map<BlockPos, Long> FAILED = new HashMap<>();
+    private static final Set<String> REPORTED = new HashSet<>();
     private static MinecraftServer server;
     private static Path file;
     private static long ticks;
@@ -58,6 +61,7 @@ public final class ColonyManager {
         COLONIES.clear();
         MEMBERS.clear();
         FAILED.clear();
+        REPORTED.clear();
         ticks = 0;
         io = Executors.newSingleThreadExecutor(runnable -> {
             Thread thread = new Thread(runnable, "SmartColony-IO");
@@ -68,7 +72,7 @@ public final class ColonyManager {
         for (ColonyData data : load(file)) {
             register(data);
         }
-        SmartColony.LOGGER.info("Smart Colony loaded {} colonies from {}", COLONIES.size(), file);
+        SmartColony.LOGGER.info("Loaded {} colonies from {}", COLONIES.size(), file);
     }
 
     private static List<ColonyData> load(Path path) {
@@ -79,7 +83,7 @@ public final class ColonyManager {
             try {
                 return ColonyCodec.read(Files.readString(candidate, StandardCharsets.UTF_8));
             } catch (IOException | RuntimeException e) {
-                SmartColony.LOGGER.error("Could not read {}: {}", candidate, e.toString());
+                SmartColony.LOGGER.error("Could not read {}", candidate, e);
             }
         }
         return new ArrayList<>();
@@ -134,8 +138,13 @@ public final class ColonyManager {
             }
             Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
         } catch (IOException e) {
-            SmartColony.LOGGER.error("Could not save colonies: {}", e.toString());
+            SmartColony.LOGGER.error("Could not save colonies to {}", file, e);
         }
+    }
+
+    private static boolean firstReport(String scope, RuntimeException e) {
+        StackTraceElement[] trace = e.getStackTrace();
+        return REPORTED.add(scope + " " + e.getClass().getName() + " " + (trace.length > 0 ? trace[0] : ""));
     }
 
     public static void saveAsync() {
@@ -170,7 +179,9 @@ public final class ColonyManager {
             try {
                 colony.tick(level);
             } catch (RuntimeException e) {
-                SmartColony.LOGGER.error("Colony {} tick failed", colony.id(), e);
+                if (firstReport("colony " + colony.id(), e)) {
+                    SmartColony.LOGGER.error("Could not tick colony {}; repeats of this error are not logged", colony.id(), e);
+                }
             }
             dirty |= colony.consumeDirty();
         }
@@ -182,7 +193,9 @@ public final class ColonyManager {
             try {
                 Caravans.tick(current);
             } catch (RuntimeException e) {
-                SmartColony.LOGGER.error("Caravan tick failed", e);
+                if (firstReport("caravans", e)) {
+                    SmartColony.LOGGER.error("Could not tick caravans; repeats of this error are not logged", e);
+                }
             }
         }
         if (ticks % 6000 == 0 || (dirty && ticks % 1200 == 0)) {

@@ -45,6 +45,7 @@ import org.lts.smartcolony.core.PorterPlan;
 import org.lts.smartcolony.core.PreBuildCheck;
 import org.lts.smartcolony.core.Role;
 import org.lts.smartcolony.core.SiteEvaluator;
+import org.lts.smartcolony.core.Terrace;
 import org.lts.smartcolony.core.Stock;
 import org.lts.smartcolony.core.TavernRules;
 import org.lts.smartcolony.core.Tech;
@@ -80,6 +81,9 @@ public final class Construction {
         List<Blueprint.Cell> cells;
         List<Pos> stiltSource;
         Set<Long> stiltColumns;
+        Set<Long> clearSet;
+        List<BlockPos> terraceFill;
+        int terraceIndex;
     }
 
     private static final int LOOKAHEAD = 10;
@@ -205,6 +209,7 @@ public final class Construction {
                 reserve(level, project);
             }
         }
+        migrateInn(level);
         if (now - lastPen >= 2400) {
             lastPen = now;
             unblockBeds(level);
@@ -236,7 +241,7 @@ public final class Construction {
         int adults = colony.adultCount(level);
         int population = colony.colonists().size();
         long beds = level.getPoiManager().getCountInRange(type -> type.is(PoiTypes.HOME), colony.center(), data().radius + 8,
-                PoiManager.Occupancy.ANY);
+                PoiManager.Occupancy.ANY) - colony.hall().guestBeds();
         List<String> order = new ArrayList<>();
         if (fullest >= 0.9) {
             order.add("storage_shed");
@@ -682,7 +687,9 @@ public final class Construction {
             return;
         }
         long waited = level.getGameTime() - project.waitingSince;
-        if (waited > 3000 && data().projects.size() >= maxProjects()) {
+        boolean rebuild = project.upgrade && TownHall.stageOf(project.building.blueprint) > 0
+                && TownHall.stageOf(project.building.blueprint) == TownHall.stage(data());
+        if (waited > 3000 && data().projects.size() >= maxProjects() && !rebuild) {
             String wood = chooseWood(level);
             for (String candidate : decideNeeds(level)) {
                 if (!candidate.equals(project.building.blueprint) && satisfiable(level, candidate, wood)) {
@@ -724,6 +731,9 @@ public final class Construction {
         rt.clearIndex = 0;
         rt.stiltSource = null;
         rt.stiltColumns = null;
+        rt.clearSet = null;
+        rt.terraceFill = null;
+        rt.terraceIndex = 0;
     }
 
     private void dropDuplicates(ServerLevel level) {
@@ -778,11 +788,19 @@ public final class Construction {
         if (TreeFarmPlan.KIND.equals(blueprint.kind())) {
             return findSite(level, blueprint, wood, TreeFarmPlan.MAX_FILL, TreeFarmPlan.MAX_CUT);
         }
-        ColonyData.Project easy = findSite(level, blueprint, wood, SiteEvaluator.MAX_FILL, SiteEvaluator.MAX_CUT);
+        ColonyData.Project easy = findSite(level, blueprint, wood, SiteEvaluator.MAX_FILL, cutLimit(blueprint));
         if (easy != null || !"house".equals(blueprint.kind())) {
             return easy;
         }
-        return findSite(level, blueprint, wood, 4, Math.min(7, blueprint.sizeY() + 1));
+        return findSite(level, blueprint, wood, 4, cutLimit(blueprint));
+    }
+
+    static int cutLimit(Blueprint blueprint) {
+        return Pier.waterKind(blueprint.kind()) ? SiteEvaluator.MAX_CUT : Terrace.MAX_CUT;
+    }
+
+    private static double siteCost(SiteEvaluator.Result result) {
+        return Terrace.cost(result.fill(), result.cut(), result.maxCut());
     }
 
     private record Search(BlockPos origin, int minDistance, int maxDistance, int settle, BlockPos facing, BlockPos pull,
@@ -839,7 +857,7 @@ public final class Construction {
                 if (!result.ok() || !Pier.enoughWater(blueprint.kind(), sample.waterColumns(), sx * sz)) {
                     continue;
                 }
-                double score = result.score() + distance * 0.6 + sample.paths() * 3 + pullScore(search, px, pz) + Pier.platformPenalty(sample.waterColumns());
+                double score = siteCost(result) + distance * 0.6 + sample.paths() * 3 + pullScore(search, px, pz) + Pier.platformPenalty(sample.waterColumns());
                 if (score >= bestScore) {
                     continue;
                 }
@@ -849,7 +867,7 @@ public final class Construction {
                         continue;
                     }
                     result = SiteEvaluator.evaluate(sample.ground(), sample.blocked(), fillLimit, cutLimit, sample.water());
-                    score = result.score() + distance * 0.6 + sample.paths() * 3 + pullScore(search, px, pz) + Pier.platformPenalty(sample.waterColumns());
+                    score = siteCost(result) + distance * 0.6 + sample.paths() * 3 + pullScore(search, px, pz) + Pier.platformPenalty(sample.waterColumns());
                     if (!result.ok() || !Pier.enoughWater(blueprint.kind(), sample.waterColumns(), sx * sz) || score >= bestScore) {
                         continue;
                     }
@@ -938,7 +956,7 @@ public final class Construction {
             return false;
         }
         BlockPos depot = colony.depot();
-        ColonyData.Project project = findSite(level, blueprint, wood, SiteEvaluator.MAX_FILL, SiteEvaluator.MAX_CUT,
+        ColonyData.Project project = findSite(level, blueprint, wood, SiteEvaluator.MAX_FILL, cutLimit(blueprint),
                 new Search(anchor, minRadius, maxRadius, minRadius + 4, depot, depot, forbidden));
         if (project == null) {
             return false;
@@ -990,7 +1008,9 @@ public final class Construction {
             }
             int y = groundY(level, x, z);
             BlockPos top = new BlockPos(x, y, z);
-            if (Math.abs(y - base) > 1 || colony.warehouse().contains(top.above())) {
+            int limit = wet ? 1 : Terrace.DOOR_FILL;
+            if (y - base > (wet ? 1 : Terrace.MAX_CUT) || base - y > limit || colony.warehouse().contains(top.above())
+                    || Math.abs(y - base) > 1 && colony.isProtected(top.above(), true) && !colony.sites().onRoad(top)) {
                 return false;
             }
             if (!level.getFluidState(top).isEmpty() && !(wet && shallowWater(level, top))) {
@@ -1011,12 +1031,7 @@ public final class Construction {
     }
 
     private int groundY(ServerLevel level, int x, int z) {
-        int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z) - 1;
-        int floor = y - 8;
-        while (y > floor && WorldUtil.removable(level, new BlockPos(x, y, z))) {
-            y--;
-        }
-        return y;
+        return WorldUtil.soilY(level, x, z);
     }
 
     ColonyData.Project project(Blueprint blueprint, String wood, int ox, int oz, int rotation,
@@ -1262,6 +1277,24 @@ public final class Construction {
             if (rt.clearList == null) {
                 rt.clearList = clearList(level, project);
                 rt.clearIndex = 0;
+                Earthworks.Work work = Earthworks.plan(level, colony, project);
+                if (!work.clear().isEmpty() || !work.fill().isEmpty()) {
+                    java.util.LinkedHashSet<BlockPos> merged = new java.util.LinkedHashSet<>(work.clear());
+                    merged.addAll(rt.clearList);
+                    List<BlockPos> sorted = new ArrayList<>(merged);
+                    sorted.sort(java.util.Comparator.<BlockPos>comparingInt(BlockPos::getY).reversed());
+                    rt.clearList = sorted;
+                    colony.journal(level, "site prepared for " + project.building.blueprint + ": " + work.cut() + " blocks of earth to cut, "
+                            + work.obstacles() + " blocks of trees and mushrooms, " + work.fill().size() + " to fill on the terraces");
+                    data().bump("terrace_cut_planned", work.cut());
+                    data().bump("overgrowth_planned", work.obstacles());
+                }
+                rt.terraceFill = work.fill();
+                rt.terraceIndex = 0;
+                rt.clearSet = new java.util.HashSet<>();
+                for (BlockPos pos : rt.clearList) {
+                    rt.clearSet.add(pos.asLong());
+                }
             }
             List<BlockPos> list = rt.clearList;
             while (rt.clearIndex < list.size() && level.getBlockState(list.get(rt.clearIndex)).isAir()) {
@@ -1272,7 +1305,12 @@ public final class Construction {
                 if (level.getBlockState(pos).isAir() || claimed(pos, now)) {
                     continue;
                 }
-                return new Task(Kind.CLEAR, pos, null, null, null, groundStand(project, pos), project);
+                BlockPos low = pos;
+                while (low.getY() > pos.getY() - 3 && rt.clearSet != null && rt.clearSet.contains(low.below().asLong())
+                        && !level.getBlockState(low.below()).isAir()) {
+                    low = low.below();
+                }
+                return new Task(Kind.CLEAR, pos, null, low.equals(pos) ? null : low, null, clearStand(level, project, pos), project);
             }
             if (rt.clearIndex < list.size()) {
                 return null;
@@ -1299,6 +1337,10 @@ public final class Construction {
             }
             if (project.cursor < project.fill.size()) {
                 return null;
+            }
+            Task terrace = terraceTask(level, project, rt, now);
+            if (terrace != null || rt.terraceFill != null && rt.terraceIndex < rt.terraceFill.size()) {
+                return terrace;
             }
             project.phase = "build";
             project.cursor = 0;
@@ -1337,6 +1379,39 @@ public final class Construction {
             return null;
         }
         return null;
+    }
+
+    private Task terraceTask(ServerLevel level, ColonyData.Project project, Runtime rt, long now) {
+        if (rt.terraceFill == null) {
+            rt.terraceFill = Earthworks.plan(level, colony, project).fill();
+            rt.terraceIndex = 0;
+        }
+        List<BlockPos> list = rt.terraceFill;
+        while (rt.terraceIndex < list.size() && filled(level, list.get(rt.terraceIndex))) {
+            rt.terraceIndex++;
+        }
+        for (int i = rt.terraceIndex; i < list.size() && i < rt.terraceIndex + LOOKAHEAD; i++) {
+            BlockPos pos = list.get(i);
+            if (filled(level, pos) || claimed(pos, now)) {
+                continue;
+            }
+            BlockState state = Earthworks.takeFill(level, colony);
+            if (state == null) {
+                colony.journal(level, "no dirt or stone left for the terraces of " + project.building.blueprint);
+                rt.terraceFill = List.of();
+                return null;
+            }
+            data().bump("terrace_filled", 1);
+            return new Task(Kind.FILL, pos, state, null, null, pos.above(), project);
+        }
+        return null;
+    }
+
+    private BlockPos clearStand(ServerLevel level, ColonyData.Project project, BlockPos pos) {
+        if (project.building.contains(WorldUtil.pos(pos), 0)) {
+            return groundStand(project, pos);
+        }
+        return WorldUtil.surface(level, pos.getX(), pos.getZ());
     }
 
     private static boolean filled(ServerLevel level, BlockPos pos) {
@@ -1673,6 +1748,51 @@ public final class Construction {
         return data();
     }
 
+    private static final int INN_VERSION = 1;
+
+    private final Set<ColonyData.Project> innRecomputed = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
+    private boolean innAnnounced;
+
+    public boolean innPending() {
+        return data().innVersion < INN_VERSION;
+    }
+
+    private void migrateInn(ServerLevel level) {
+        if (data().innVersion >= INN_VERSION) {
+            return;
+        }
+        for (ColonyData.Project project : data().projects) {
+            if (TownHall.stageOf(project.building.blueprint) > 0 && "reserve".equals(project.phase) && innRecomputed.add(project)) {
+                recomputeRequired(level, project);
+            }
+        }
+        ColonyData.Building standing = TownHallBuilder.standing(data());
+        if (standing == null) {
+            data().innVersion = INN_VERSION;
+            colony.markDirty();
+            return;
+        }
+        if (TownHall.inProgress(data()) || cooldown.getOrDefault(standing.blueprint, Long.MIN_VALUE) > level.getGameTime()) {
+            return;
+        }
+        if (!WorldUtil.loaded(level, WorldUtil.bp(standing.min)) || !WorldUtil.loaded(level, WorldUtil.bp(standing.max))) {
+            return;
+        }
+        ColonyData.Project project = TownHallBuilder.upgrade(standing, standing.blueprint);
+        project.started = level.getGameTime();
+        project.waitingSince = level.getGameTime();
+        data().projects.add(project);
+        recomputeRequired(level, project);
+        innRecomputed.add(project);
+        colony.journal(level, "the town hall at " + standing.origin + " is to be rebuilt as an inn (" + standing.blueprint + ")");
+        if (!innAnnounced) {
+            innAnnounced = true;
+            colony.notify(level, Component.translatable("smartcolony.chat.inn_rebuild"));
+        }
+        colony.markDirty();
+        reserve(level, project);
+    }
+
     public boolean upgrading(ColonyData.Building building) {
         for (ColonyData.Project project : data().projects) {
             if (project.upgrade && project.building.origin.equals(building.origin)) {
@@ -1721,6 +1841,9 @@ public final class Construction {
         ColonyData.Building standing = TownHallBuilder.standing(data(), project.building.blueprint);
         if (standing != null) {
             TownHallBuilder.apply(standing, project);
+            if (TownHall.stageOf(project.building.blueprint) > 0) {
+                data().innVersion = INN_VERSION;
+            }
             data().bump(Hospital.stageOf(project.building.blueprint) > 0 ? "infirmary_upgrades" : "townhall_upgrades", 1);
             TownHallBuilder.finished(level, colony, standing);
         }

@@ -9,16 +9,13 @@ FUNCTIONAL = ('_bed', 'chest', 'barrel', 'crafting_table', 'furnace', 'smoker', 
               'smithing_table', 'fletching_table', 'composter', 'cauldron', 'beehive', 'cartography', 'loom', 'grindstone', 'bell',
               'enchanting_table', 'fence')
 
-
 def path_of(state):
     return state.split('[')[0].split(':')[-1]
-
 
 def props(state):
     if '[' not in state:
         return {}
     return dict(p.split('=') for p in state[state.index('[') + 1:-1].split(','))
-
 
 def passable(state):
     if state is None:
@@ -33,7 +30,6 @@ def passable(state):
         return False
     return any(t in p for t in PASS)
 
-
 def floor(state):
     if state is None:
         return False
@@ -45,7 +41,6 @@ def floor(state):
     if passable(state):
         return False
     return True
-
 
 def analyse(path):
     d = json.load(open(path, encoding='utf-8'))
@@ -122,7 +117,6 @@ def analyse(path):
                 if not ok:
                     missing.append((p, x, y, z))
     return len(seen), missing
-
 
 for f in sorted(os.listdir(DIR)):
     n, miss = analyse(os.path.join(DIR, f))

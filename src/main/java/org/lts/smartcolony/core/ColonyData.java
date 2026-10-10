@@ -46,10 +46,12 @@ public final class ColonyData {
     public boolean forgeUpgraded;
     public boolean aiOff;
     public Wall wall;
+    public List<Mine> mines = new ArrayList<>();
     public boolean villageSurveyed;
     public int surveyVersion;
     public int wallVersion;
     public int penVersion;
+    public int innVersion;
     public boolean terrainSurveyed;
     public long lastMarket;
     public long lastGolem;
@@ -92,6 +94,8 @@ public final class ColonyData {
         public long time;
         public long visited;
         public boolean used;
+        public long worked;
+        public int dry;
     }
 
     public static final class Caravan {
@@ -183,6 +187,7 @@ public final class ColonyData {
         public int replacesTier;
         public boolean inPlace;
         public long since;
+        public int style;
     }
 
     public static final class Wall {
@@ -249,6 +254,7 @@ public final class ColonyData {
         public Pos shed;
         public String wood;
         public boolean headDone;
+        public Pos anchor;
 
         public boolean quarry() {
             return "quarry".equals(type) && corner != null;

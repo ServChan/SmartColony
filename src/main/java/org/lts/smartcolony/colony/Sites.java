@@ -20,6 +20,7 @@ import org.lts.smartcolony.core.Blueprints;
 import org.lts.smartcolony.core.ColonyData;
 import org.lts.smartcolony.core.MinePlan;
 import org.lts.smartcolony.core.Pos;
+import org.lts.smartcolony.core.Prospecting;
 import org.lts.smartcolony.util.WorldUtil;
 import org.lts.smartcolony.work.TreeScan;
 
@@ -77,8 +78,34 @@ public final class Sites {
     }
 
     public ColonyData.Mine mineSite(ServerLevel level, int generation, ColonyData.Mine previous) {
-        ColonyData.Mine quarry = quarrySite(level, generation, previous);
-        return quarry != null ? quarry : stairSite(level, generation, previous);
+        return mineSite(level, generation, previous, colony.allMines(), null);
+    }
+
+    public ColonyData.Mine mineSite(ServerLevel level, int generation, ColonyData.Mine previous, List<ColonyData.Mine> others, Pos anchor) {
+        List<ColonyData.Mine> avoid = new ArrayList<>();
+        for (ColonyData.Mine other : others) {
+            if (other != previous) {
+                avoid.add(other);
+            }
+        }
+        if (anchor != null) {
+            BlockPos origin = new BlockPos(anchor.x(), anchor.y(), anchor.z());
+            ColonyData.Mine quarry = quarrySite(level, generation, previous, avoid, origin, 6, 21, origin);
+            return quarry != null ? quarry : stairSite(level, generation, previous, avoid, origin, 8, 20, origin);
+        }
+        int reach = avoid.isEmpty() ? 0 : Math.min(Prospecting.MINE_REACH, colony.data().radius);
+        ColonyData.Mine quarry = quarrySite(level, generation, previous, avoid, center(), 24, 48 + reach, null);
+        return quarry != null ? quarry : stairSite(level, generation, previous, avoid, center(), 12, 30 + reach, null);
+    }
+
+    private static boolean crowded(List<ColonyData.Mine> avoid, int x, int z, int gap) {
+        for (ColonyData.Mine mine : avoid) {
+            Pos at = mine.quarry() ? mine.corner : mine.entrance;
+            if (at != null && new Pos(x, 0, z).horizontalDistSq(at) < gap * gap) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static final int QUARRY_WIDTH = 7;
@@ -92,18 +119,23 @@ public final class Sites {
         return y;
     }
 
-    private ColonyData.Mine quarrySite(ServerLevel level, int generation, ColonyData.Mine previous) {
+    private ColonyData.Mine quarrySite(ServerLevel level, int generation, ColonyData.Mine previous, List<ColonyData.Mine> avoid,
+                                       BlockPos origin, int minDistance, int maxDistance, BlockPos toward) {
         int targetY = SmartColonyConfig.get().mineTargetY;
         double offset = generation * Math.PI / 5.0;
-        for (int distance = 24; distance <= 48; distance += 3) {
+        for (int distance = minDistance; distance <= maxDistance; distance += 3) {
             ColonyData.Mine best = null;
             int bestScore = Integer.MAX_VALUE;
             for (int i = 0; i < 16; i++) {
                 double angle = offset + i * Math.PI / 8.0;
-                int cx = center().getX() + (int) Math.round(Math.cos(angle) * distance) - QUARRY_WIDTH / 2;
-                int cz = center().getZ() + (int) Math.round(Math.sin(angle) * distance) - QUARRY_WIDTH / 2;
+                int cx = origin.getX() + (int) Math.round(Math.cos(angle) * distance) - QUARRY_WIDTH / 2;
+                int cz = origin.getZ() + (int) Math.round(Math.sin(angle) * distance) - QUARRY_WIDTH / 2;
                 if (previous != null && previous.quarry()
                         && new org.lts.smartcolony.core.Pos(cx, 0, cz).horizontalDistSq(previous.corner) < 20 * 20) {
+                    continue;
+                }
+                if (crowded(avoid, cx, cz, 20) || toward != null && center().distSqr(new BlockPos(cx, center().getY(), cz))
+                        > (double) (colony.data().radius + Prospecting.MINE_REACH) * (colony.data().radius + Prospecting.MINE_REACH)) {
                     continue;
                 }
                 int score = quarryScore(level, cx, cz);
@@ -167,23 +199,24 @@ public final class Sites {
         return score;
     }
 
-    private ColonyData.Mine stairSite(ServerLevel level, int generation, ColonyData.Mine previous) {
+    private ColonyData.Mine stairSite(ServerLevel level, int generation, ColonyData.Mine previous, List<ColonyData.Mine> avoid,
+                                      BlockPos origin, int minDistance, int maxDistance, BlockPos toward) {
         int targetY = SmartColonyConfig.get().mineTargetY;
         double offset = generation * Math.PI / 4.0;
-        for (int distance = 12; distance <= 30; distance += 4) {
+        for (int distance = minDistance; distance <= maxDistance; distance += 4) {
             for (int i = 0; i < 8; i++) {
                 double angle = offset + i * Math.PI / 4.0;
-                int x = center().getX() + (int) Math.round(Math.cos(angle) * distance);
-                int z = center().getZ() + (int) Math.round(Math.sin(angle) * distance);
-                if (!WorldUtil.loaded(level, new BlockPos(x, 0, z))) {
+                int x = origin.getX() + (int) Math.round(Math.cos(angle) * distance);
+                int z = origin.getZ() + (int) Math.round(Math.sin(angle) * distance);
+                if (!WorldUtil.loaded(level, new BlockPos(x, 0, z)) || crowded(avoid, x, z, 24)) {
                     continue;
                 }
                 BlockPos feet = WorldUtil.surface(level, x, z);
                 if (!WorldUtil.standable(level, feet) || !level.getFluidState(feet.below()).isEmpty() || colony.isProtected(feet)) {
                     continue;
                 }
-                int dx = x - center().getX();
-                int dz = z - center().getZ();
+                int dx = toward != null ? toward.getX() - x : x - center().getX();
+                int dz = toward != null ? toward.getZ() - z : z - center().getZ();
                 int dirX = Math.abs(dx) >= Math.abs(dz) ? Integer.signum(dx) : 0;
                 int dirZ = dirX == 0 ? Integer.signum(dz) : 0;
                 if (dirX == 0 && dirZ == 0) {

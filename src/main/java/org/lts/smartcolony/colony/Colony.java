@@ -31,6 +31,7 @@ import org.lts.smartcolony.core.CraftPlanner;
 import org.lts.smartcolony.core.Ids;
 import org.lts.smartcolony.core.Pier;
 import org.lts.smartcolony.core.Pos;
+import org.lts.smartcolony.core.Prospecting;
 import org.lts.smartcolony.core.Reputation;
 import org.lts.smartcolony.core.Role;
 import org.lts.smartcolony.core.RoleAllocator;
@@ -75,6 +76,7 @@ public final class Colony {
     private final Daily daily;
     private final FireWatch fire;
     private final Chores chores;
+    private final Overgrowth overgrowth;
     private final Contracts contracts;
     private final Stable stable;
     private boolean dirty;
@@ -107,6 +109,7 @@ public final class Colony {
         this.daily = new Daily(this);
         this.fire = new FireWatch(this);
         this.chores = new Chores(this);
+        this.overgrowth = new Overgrowth(this);
         this.contracts = new Contracts(this);
         this.stable = new Stable(this);
         for (Map.Entry<String, ColonyData.Member> entry : data.members.entrySet()) {
@@ -495,19 +498,37 @@ public final class Colony {
                 return true;
             }
         }
-        if (data.mine != null && p.horizontalDistSq(data.mine.entrance) < 9) {
-            return true;
-        }
         if (improvements.isWall(p)) {
             return true;
         }
-        if (data.mine != null && data.mine.quarry() && p.x() >= data.mine.corner.x() - 1 && p.z() >= data.mine.corner.z() - 1
-                && p.x() <= data.mine.corner.x() + data.mine.width + 2 && p.z() <= data.mine.corner.z() + data.mine.width) {
-            return true;
+        for (ColonyData.Mine mine : allMines()) {
+            if (p.horizontalDistSq(mine.entrance) < 9) {
+                return true;
+            }
+            if (mine.quarry() && p.x() >= mine.corner.x() - 1 && p.z() >= mine.corner.z() - 1
+                    && p.x() <= mine.corner.x() + mine.width + 2 && p.z() <= mine.corner.z() + mine.width) {
+                return true;
+            }
+            Pos shed = mine.shed;
+            if (shed != null && p.x() >= shed.x() - 1 && p.x() <= shed.x() + Improvements.SHED_LENGTH
+                    && p.z() >= shed.z() - 1 && p.z() <= shed.z() + Improvements.SHED_WIDTH) {
+                return true;
+            }
         }
-        Pos shed = data.mine != null ? data.mine.shed : null;
-        return shed != null && p.x() >= shed.x() - 1 && p.x() <= shed.x() + Improvements.SHED_LENGTH
-                && p.z() >= shed.z() - 1 && p.z() <= shed.z() + Improvements.SHED_WIDTH;
+        return false;
+    }
+
+    public List<ColonyData.Mine> allMines() {
+        if (data.mine == null) {
+            return data.mines;
+        }
+        if (data.mines.isEmpty()) {
+            return List.of(data.mine);
+        }
+        List<ColonyData.Mine> all = new ArrayList<>(data.mines.size() + 1);
+        all.add(data.mine);
+        all.addAll(data.mines);
+        return all;
     }
 
     public boolean isProtectedAnimal(Animal animal) {
@@ -538,7 +559,12 @@ public final class Colony {
         }
         for (ColonyData.Building building : data.buildings) {
             if (building.contains(p, 0)) {
-                return false;
+                return !building.blueprint.contains("garden") && !org.lts.smartcolony.core.TreeFarmPlan.KIND.equals(building.kind);
+            }
+        }
+        for (ColonyData.Project project : data.projects) {
+            if (project.building.contains(p, 2)) {
+                return true;
             }
         }
         return fields.treeBlocked(level, base.getX(), base.getZ());
@@ -580,12 +606,191 @@ public final class Colony {
     }
 
     public void mineExhausted(ServerLevel level) {
+        mineExhausted(level, data.mine);
+    }
+
+    public void mineExhausted(ServerLevel level, ColonyData.Mine old) {
+        int index = old == null ? -1 : data.mines.indexOf(old);
+        if (index >= 0) {
+            ColonyData.Mine next = sites.mineSite(level, old.generation + 1, old, allMines(), null);
+            if (next != null) {
+                next.generation = old.generation + 1;
+                data.mines.set(index, next);
+                journal(level, "side mine worked out, new " + (next.quarry() ? "quarry" : "mine") + " at " + next.entrance);
+            } else {
+                data.mines.remove(index);
+                journal(level, "side mine at " + old.entrance + " worked out, no place for another");
+            }
+            mineClaims.remove(old);
+            minersPlannedAt = -100000;
+            markDirty();
+            return;
+        }
         int generation = data.mine == null ? 1 : data.mine.generation + 1;
-        ColonyData.Mine next = sites.mineSite(level, generation, data.mine);
+        ColonyData.Mine next = sites.mineSite(level, generation, data.mine, allMines(), null);
         if (next != null) {
             next.generation = generation;
             data.mine = next;
             journal(level, "old mine worked out, new " + (next.quarry() ? "quarry" : "mine") + " at " + next.entrance);
+        }
+        if (old != null) {
+            mineClaims.remove(old);
+        }
+        minersPlannedAt = -100000;
+        markDirty();
+    }
+
+    private final Map<UUID, Integer> minerPlan = new HashMap<>();
+    private final Map<UUID, Pos> prospects = new HashMap<>();
+    private long minersPlannedAt = -100000;
+    private long sideMineRetry;
+
+    public ColonyData.Mine mineFor(ServerLevel level, UUID miner) {
+        planMiners(level);
+        Integer slot = minerPlan.get(miner);
+        List<ColonyData.Mine> mines = allMines();
+        if (slot == null || slot < 0 || mines.isEmpty()) {
+            return data.mine;
+        }
+        return mines.get(Math.min(slot, mines.size() - 1));
+    }
+
+    public boolean prospects(ServerLevel level, UUID miner) {
+        planMiners(level);
+        Integer slot = minerPlan.get(miner);
+        return slot != null && slot == Prospecting.PROSPECTOR;
+    }
+
+    public ColonyData.Discovery prospectFor(ServerLevel level, UUID miner) {
+        Pos held = prospects.get(miner);
+        if (held != null) {
+            ColonyData.Discovery discovery = discoveryAt(held);
+            if (discovery != null && Prospecting.rich(discovery.kind, discovery.value, discovery.worked, discovery.dry)) {
+                return discovery;
+            }
+            prospects.remove(miner);
+        }
+        List<Prospecting.Deposit> reachable = new ArrayList<>();
+        for (Prospecting.Deposit deposit : deposits()) {
+            if (level.isPositionEntityTicking(WorldUtil.bp(deposit.pos()))) {
+                reachable.add(deposit);
+            }
+        }
+        List<Pos> taken = new ArrayList<>();
+        for (Map.Entry<UUID, Pos> entry : prospects.entrySet()) {
+            if (!entry.getKey().equals(miner)) {
+                taken.add(entry.getValue());
+            }
+        }
+        Prospecting.Deposit pick = Prospecting.pick(reachable, taken);
+        if (pick == null) {
+            return null;
+        }
+        prospects.put(miner, pick.pos());
+        return discoveryAt(pick.pos());
+    }
+
+    public void releaseProspect(UUID miner) {
+        prospects.remove(miner);
+    }
+
+    private ColonyData.Discovery discoveryAt(Pos pos) {
+        for (ColonyData.Discovery discovery : data.discoveries) {
+            if (discovery.pos.equals(pos)) {
+                return discovery;
+            }
+        }
+        return null;
+    }
+
+    public List<Prospecting.Deposit> deposits() {
+        List<Prospecting.Deposit> deposits = new ArrayList<>();
+        for (ColonyData.Discovery discovery : data.discoveries) {
+            if (!Prospecting.rich(discovery.kind, discovery.value, discovery.worked, discovery.dry)) {
+                continue;
+            }
+            double distance = Math.sqrt(discovery.pos.horizontalDistSq(data.center));
+            if (Prospecting.inRange(distance)) {
+                deposits.add(new Prospecting.Deposit(discovery.pos, discovery.value, distance));
+            }
+        }
+        return deposits;
+    }
+
+    private void planMiners(ServerLevel level) {
+        long now = level.getGameTime();
+        if (now - minersPlannedAt < 200) {
+            return;
+        }
+        minersPlannedAt = now;
+        List<String> miners = new ArrayList<>();
+        for (Map.Entry<UUID, Colonist> entry : colonists.entrySet()) {
+            if (entry.getValue().role() == Role.MINER) {
+                miners.add(entry.getKey().toString());
+            }
+        }
+        List<Prospecting.Deposit> deposits = deposits();
+        int prospectors = Prospecting.prospectors(miners.size(), deposits.size());
+        int wanted = Prospecting.mines(miners.size() - prospectors);
+        if (data.mine != null) {
+            openSideMine(level, wanted, deposits);
+        }
+        int mines = Math.max(1, Math.min(wanted, allMines().size()));
+        minerPlan.clear();
+        for (Map.Entry<String, Integer> entry : Prospecting.assign(miners, mines, prospectors).entrySet()) {
+            minerPlan.put(UUID.fromString(entry.getKey()), entry.getValue());
+        }
+        prospects.keySet().removeIf(uuid -> !Integer.valueOf(Prospecting.PROSPECTOR).equals(minerPlan.get(uuid)));
+    }
+
+    private void openSideMine(ServerLevel level, int wanted, List<Prospecting.Deposit> deposits) {
+        if (allMines().size() >= wanted || level.getGameTime() < sideMineRetry) {
+            return;
+        }
+        List<Pos> existing = new ArrayList<>();
+        for (ColonyData.Mine mine : allMines()) {
+            existing.add(mine.quarry() ? mine.corner : mine.entrance);
+        }
+        Prospecting.Deposit anchor = Prospecting.anchor(deposits, data.radius, existing);
+        int generation = data.mines.size() * 3 + 2;
+        ColonyData.Mine mine = anchor == null ? null : sites.mineSite(level, generation, null, allMines(), anchor.pos());
+        if (mine == null) {
+            anchor = null;
+            mine = sites.mineSite(level, generation, null, allMines(), null);
+        }
+        if (mine == null) {
+            sideMineRetry = level.getGameTime() + 6000;
+            journal(level, "no place found for another mine, will look again later");
+            return;
+        }
+        mine.generation = generation;
+        mine.anchor = anchor == null ? null : anchor.pos();
+        data.mines.add(mine);
+        journal(level, "another shaft for the miners: " + (mine.quarry() ? "quarry" : "mine") + " at " + mine.entrance
+                + (anchor != null ? " by the ore the scouts found at " + anchor.pos() : ""));
+        notify(level, Component.translatable(anchor != null ? "smartcolony.chat.mine_side_ore" : "smartcolony.chat.mine_side",
+                mine.entrance.x(), mine.entrance.z()));
+        markDirty();
+    }
+
+    public enum Prospect {
+        TRIP,
+        EMPTY,
+        UNREACHABLE
+    }
+
+    public void prospectDone(ServerLevel level, ColonyData.Discovery discovery, int mined, Prospect outcome) {
+        if (mined > 0) {
+            discovery.dry = 0;
+            data.bump("prospect_ores", mined);
+            data.bump("prospect_trips", 1);
+        } else if (outcome == Prospect.UNREACHABLE) {
+            discovery.dry++;
+        }
+        if (outcome == Prospect.EMPTY || discovery.dry >= Prospecting.MAX_DRY) {
+            discovery.worked = level.getGameTime();
+            journal(level, "the ore deposit at " + discovery.pos + (outcome == Prospect.EMPTY ? " is worked out" : " cannot be reached"));
+            minersPlannedAt = -100000;
         }
         markDirty();
     }
@@ -623,10 +828,10 @@ public final class Colony {
         sites.rejectFishing(shore);
     }
 
-    private final Map<Integer, Long> mineClaims = new HashMap<>();
+    private final Map<ColonyData.Mine, Map<Integer, Long>> mineClaims = new java.util.IdentityHashMap<>();
 
-    public Map<Integer, Long> mineClaims() {
-        return mineClaims;
+    public Map<Integer, Long> mineClaims(ColonyData.Mine mine) {
+        return mineClaims.computeIfAbsent(mine, key -> new HashMap<>());
     }
 
     private org.lts.smartcolony.work.Fitter fitter;
@@ -639,7 +844,15 @@ public final class Colony {
     }
 
     public boolean inMine(BlockPos pos) {
-        ColonyData.Mine mine = data.mine;
+        for (ColonyData.Mine mine : allMines()) {
+            if (inMine(mine, pos)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean inMine(ColonyData.Mine mine, BlockPos pos) {
         if (mine == null || pos.getY() > mine.entrance.y() + 1) {
             return false;
         }
@@ -663,13 +876,17 @@ public final class Colony {
         return false;
     }
 
-    private java.util.Set<Long> tunnel = java.util.Set.of();
-    private ColonyData.Mine tunnelMine;
-    private int tunnelProgress = -1;
+    private final Map<ColonyData.Mine, java.util.Set<Long>> tunnels = new java.util.IdentityHashMap<>();
+    private final Map<ColonyData.Mine, Integer> tunnelProgress = new java.util.IdentityHashMap<>();
 
     private java.util.Set<Long> tunnelCells(ColonyData.Mine mine) {
-        if (mine == tunnelMine && mine.progress == tunnelProgress) {
-            return tunnel;
+        java.util.Set<Long> cached = tunnels.get(mine);
+        if (cached != null && tunnelProgress.getOrDefault(mine, -1) == mine.progress) {
+            return cached;
+        }
+        if (tunnels.size() > 8) {
+            tunnels.clear();
+            tunnelProgress.clear();
         }
         org.lts.smartcolony.core.DigPlan plan = mine.plan();
         java.util.Set<Long> cells = new java.util.HashSet<>();
@@ -680,26 +897,24 @@ public final class Colony {
                 cells.add(BlockPos.asLong(cell.feet().x(), cell.feet().y() + h, cell.feet().z()));
             }
         }
-        tunnel = cells;
-        tunnelMine = mine;
-        tunnelProgress = mine.progress;
+        tunnels.put(mine, cells);
+        tunnelProgress.put(mine, mine.progress);
         return cells;
     }
 
     private void clearMineOfStrangers(ServerLevel level) {
-        ColonyData.Mine mine = data.mine;
-        if (mine == null) {
-            return;
-        }
-        for (Map.Entry<UUID, Colonist> entry : colonists.entrySet()) {
-            if (entry.getValue().role() == Role.MINER || !(level.getEntity(entry.getKey()) instanceof Villager villager)) {
-                continue;
-            }
-            BlockPos pos = villager.blockPosition();
-            if (pos.getY() < mine.entrance.y() - 2 && inMine(pos) && org.lts.smartcolony.work.Mover.rescue(level, villager, depot().above())) {
-                entry.getValue().mover().reset();
-                entry.getValue().restartJob(level, villager);
-                data.bump("mine_strangers_led_out", 1);
+        for (ColonyData.Mine mine : allMines()) {
+            for (Map.Entry<UUID, Colonist> entry : colonists.entrySet()) {
+                if (entry.getValue().role() == Role.MINER || !(level.getEntity(entry.getKey()) instanceof Villager villager)) {
+                    continue;
+                }
+                BlockPos pos = villager.blockPosition();
+                if (pos.getY() < mine.entrance.y() - 2 && inMine(mine, pos)
+                        && org.lts.smartcolony.work.Mover.rescue(level, villager, depot().above())) {
+                    entry.getValue().mover().reset();
+                    entry.getValue().restartJob(level, villager);
+                    data.bump("mine_strangers_led_out", 1);
+                }
             }
         }
     }
@@ -800,6 +1015,7 @@ public final class Colony {
         daily.tick(level, ticks);
         fire.tick(level, ticks);
         chores.tick(level, ticks);
+        overgrowth.tick(level, ticks);
         contracts.tick(level, ticks);
         stable.tick(level, ticks);
         if (ticks % 200 == 7) {
@@ -985,6 +1201,7 @@ public final class Colony {
                 org.lts.smartcolony.core.Hospital.medicsFor(adults, ward.stage() > 0, SmartColonyConfig.get().adultsPerMedic));
         desired = RoleAllocator.withTargets(baseline, advisor.roleTargets(level.getGameTime()), adults);
         desired = RoleAllocator.withUndertaker(desired, graveyard.undertakersWanted(level), adults);
+        desired = Prospecting.settle(desired, deposits().size(), adults, equippable.contains(Role.MINER));
         desired = org.lts.smartcolony.core.PorterPlan.settle(desired, outposts.porterDemand(level));
         desired = org.lts.smartcolony.core.Specialists.settle(desired, specialistWants(level, adults), adults);
         desired = org.lts.smartcolony.core.Decree.apply(desired, org.lts.smartcolony.core.Decree.Focus.byKey(data.focus), adults);

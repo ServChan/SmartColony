@@ -68,7 +68,7 @@ public final class McpServer {
             }
             send(exchange, 200, response);
         } catch (RuntimeException e) {
-            DevBridge.LOGGER.warn("bridge request failed", e);
+            DevBridge.LOGGER.warn("Could not handle a bridge request", e);
             send(exchange, 400, error(null, -32700, "parse error: " + e.getMessage()));
         }
     }

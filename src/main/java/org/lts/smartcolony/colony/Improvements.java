@@ -29,6 +29,7 @@ public final class Improvements {
     public static final String REPAIR = "repair";
     public static final String SALVAGE = "salvage";
     public static final String SUPPORT = "support";
+    public static final String CLEARING = "clearing";
     private static final int SUPPORT_GAP = 4;
     private static final int WALL_SUPPORT_GAP = 3;
     private static final int SECTORS = 36;
@@ -117,9 +118,10 @@ public final class Improvements {
             colony.journal(level, "tidying the entrances of " + data().buildings.size() + " buildings");
             colony.markDirty();
         }
-        ColonyData.Mine mine = data().mine;
-        if (mine != null && mine.quarry() && mine.decorVersion < QUARRY_DECOR_VERSION && decorateQuarry(level, mine)) {
-            colony.markDirty();
+        for (ColonyData.Mine mine : colony.allMines()) {
+            if (mine.quarry() && mine.decorVersion < QUARRY_DECOR_VERSION && decorateQuarry(level, mine)) {
+                colony.markDirty();
+            }
         }
         if (data().wall == null && level.getGameTime() - lastWallAttempt >= 200 && wallWanted(level)) {
             lastWallAttempt = level.getGameTime();
@@ -290,15 +292,19 @@ public final class Improvements {
         return null;
     }
     public boolean quarryRim(BlockPos pos) {
-        ColonyData.Mine mine = data().mine;
-        if (mine == null || !mine.quarry()) {
-            return false;
+        for (ColonyData.Mine mine : colony.allMines()) {
+            if (!mine.quarry()) {
+                continue;
+            }
+            int cx = mine.corner.x();
+            int cz = mine.corner.z();
+            int w = mine.width;
+            if (pos.getX() >= cx - 1 && pos.getX() <= cx + w && pos.getZ() >= cz - 1 && pos.getZ() <= cz + w
+                    && (pos.getX() == cx - 1 || pos.getX() == cx + w || pos.getZ() == cz - 1 || pos.getZ() == cz + w)) {
+                return true;
+            }
         }
-        int cx = mine.corner.x();
-        int cz = mine.corner.z();
-        int w = mine.width;
-        return pos.getX() >= cx - 1 && pos.getX() <= cx + w && pos.getZ() >= cz - 1 && pos.getZ() <= cz + w
-                && (pos.getX() == cx - 1 || pos.getX() == cx + w || pos.getZ() == cz - 1 || pos.getZ() == cz + w);
+        return false;
     }
 
     private void tidyQuarry(ServerLevel level, ColonyData.Mine mine) {
@@ -466,7 +472,8 @@ public final class Improvements {
         List<ColonyData.Building> buildings = data().buildings;
         if (!buildings.isEmpty()) {
             ColonyData.Building building = buildings.get(Math.floorMod(inspectBuilding++, buildings.size()));
-            for (org.lts.smartcolony.core.Blueprint.Cell cell : colony.construction().upgrading(building)
+            boolean oldHall = colony.construction().innPending() && org.lts.smartcolony.core.TownHall.stageOf(building.blueprint) > 0;
+            for (org.lts.smartcolony.core.Blueprint.Cell cell : colony.construction().upgrading(building) || oldHall
                     ? List.<org.lts.smartcolony.core.Blueprint.Cell>of() : colony.construction().cells(building, building.swaps)) {
                 BlockPos pos = colony.construction().world(building, cell.x(), cell.y(), cell.z());
                 if (!WorldUtil.loaded(level, pos) || !missing(level, pos)) {
@@ -702,7 +709,9 @@ public final class Improvements {
     public static boolean wallMaterial(BlockState state) {
         return state.is(net.minecraft.tags.BlockTags.LOGS) || state.is(net.minecraft.tags.BlockTags.PLANKS)
                 || state.is(net.minecraft.tags.BlockTags.WOODEN_FENCES) || state.is(net.minecraft.tags.BlockTags.FENCE_GATES)
-                || state.is(Blocks.COBBLESTONE) || state.is(Blocks.COBBLESTONE_WALL) || state.is(Blocks.TORCH) || state.is(Blocks.LANTERN);
+                || state.is(Blocks.COBBLESTONE) || state.is(Blocks.COBBLESTONE_WALL) || state.is(Blocks.TORCH) || state.is(Blocks.LANTERN)
+                || state.is(Blocks.STONE_BRICK_WALL) || state.is(net.minecraft.tags.BlockTags.WOODEN_TRAPDOORS)
+                || state.is(net.minecraft.tags.BlockTags.WOODEN_SLABS);
     }
 
     private boolean occupiedByOther(ColonyData.Building building, BlockPos cell) {
@@ -793,14 +802,18 @@ public final class Improvements {
             points.add(WorldUtil.bp(farm));
         }
         points.add(colony.depot());
-        ColonyData.Mine pit = data().mine;
-        if (pit != null && pit.quarry()) {
-            points.add(new BlockPos(pit.corner.x() - QUARRY_MARGIN - 1, pit.corner.y(), pit.corner.z() - QUARRY_MARGIN - 1));
-            points.add(new BlockPos(pit.corner.x() + pit.width + QUARRY_MARGIN, pit.corner.y(), pit.corner.z() + pit.width + QUARRY_MARGIN));
-            points.add(new BlockPos(pit.corner.x() - QUARRY_MARGIN - 1, pit.corner.y(), pit.corner.z() + pit.width + QUARRY_MARGIN));
-            points.add(new BlockPos(pit.corner.x() + pit.width + QUARRY_MARGIN, pit.corner.y(), pit.corner.z() - QUARRY_MARGIN - 1));
-        } else if (pit != null) {
-            points.add(WorldUtil.bp(pit.entrance));
+        for (ColonyData.Mine pit : colony.allMines()) {
+            if (pit != data().mine && pit.entrance.horizontalDistSq(data().center) > (double) (data().radius + 12) * (data().radius + 12)) {
+                continue;
+            }
+            if (pit.quarry()) {
+                points.add(new BlockPos(pit.corner.x() - QUARRY_MARGIN - 1, pit.corner.y(), pit.corner.z() - QUARRY_MARGIN - 1));
+                points.add(new BlockPos(pit.corner.x() + pit.width + QUARRY_MARGIN, pit.corner.y(), pit.corner.z() + pit.width + QUARRY_MARGIN));
+                points.add(new BlockPos(pit.corner.x() - QUARRY_MARGIN - 1, pit.corner.y(), pit.corner.z() + pit.width + QUARRY_MARGIN));
+                points.add(new BlockPos(pit.corner.x() + pit.width + QUARRY_MARGIN, pit.corner.y(), pit.corner.z() - QUARRY_MARGIN - 1));
+            } else {
+                points.add(WorldUtil.bp(pit.entrance));
+            }
         }
         if (data().pen != null) {
             points.add(WorldUtil.bp(data().pen.min));
@@ -927,9 +940,13 @@ public final class Improvements {
     }
 
     private boolean nearQuarry(int x, int z, int margin) {
-        ColonyData.Mine pit = data().mine;
-        return pit != null && pit.quarry() && x >= pit.corner.x() - 1 - margin && x <= pit.corner.x() + pit.width + margin
-                && z >= pit.corner.z() - 1 - margin && z <= pit.corner.z() + pit.width + margin;
+        for (ColonyData.Mine pit : colony.allMines()) {
+            if (pit.quarry() && x >= pit.corner.x() - 1 - margin && x <= pit.corner.x() + pit.width + margin
+                    && z >= pit.corner.z() - 1 - margin && z <= pit.corner.z() + pit.width + margin) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private boolean protectedOffWall(BlockPos pos) {
@@ -1406,7 +1423,8 @@ public final class Improvements {
             BlockState current = level.getBlockState(pos);
             if (target != null && target.isAir()) {
                 boolean salvage = SALVAGE.equals(order.tag);
-                boolean penClear = PEN_CLEAR.equals(order.tag) && penClearable(level, pos, current);
+                boolean penClear = PEN_CLEAR.equals(order.tag) && penClearable(level, pos, current)
+                        || CLEARING.equals(order.tag) && WorldUtil.overgrowth(current) && level.getBlockEntity(pos) == null;
                 if (current.isAir() || !penClear && !diggable(level, pos, current, salvage)) {
                     orders.remove(i);
                     done(order);

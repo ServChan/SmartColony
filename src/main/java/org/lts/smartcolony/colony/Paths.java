@@ -265,15 +265,16 @@ public final class Paths {
         if (pen != null && p.x() >= pen.min.x() - 1 && p.x() <= pen.max.x() + 1 && p.z() >= pen.min.z() - 1 && p.z() <= pen.max.z() + 1) {
             return true;
         }
-        ColonyData.Mine mine = data().mine;
-        if (mine != null && mine.quarry() && p.x() >= mine.corner.x() - 2 && p.z() >= mine.corner.z() - 2
-                && p.x() <= mine.corner.x() + mine.width + 1 && p.z() <= mine.corner.z() + mine.width + 1) {
-            return true;
-        }
-        Pos shed = mine == null ? null : mine.shed;
-        if (shed != null && p.x() >= shed.x() - 1 && p.x() <= shed.x() + Improvements.SHED_LENGTH
-                && p.z() >= shed.z() - 1 && p.z() <= shed.z() + Improvements.SHED_WIDTH) {
-            return true;
+        for (ColonyData.Mine mine : colony.allMines()) {
+            if (mine.quarry() && p.x() >= mine.corner.x() - 2 && p.z() >= mine.corner.z() - 2
+                    && p.x() <= mine.corner.x() + mine.width + 1 && p.z() <= mine.corner.z() + mine.width + 1) {
+                return true;
+            }
+            Pos shed = mine.shed;
+            if (shed != null && p.x() >= shed.x() - 1 && p.x() <= shed.x() + Improvements.SHED_LENGTH
+                    && p.z() >= shed.z() - 1 && p.z() <= shed.z() + Improvements.SHED_WIDTH) {
+                return true;
+            }
         }
         return colony.improvements().isWall(p) || colony.warehouse().contains(feet);
     }
@@ -711,8 +712,8 @@ public final class Paths {
                 addTarget(new Pos(door.getX(), door.getY(), door.getZ()), "door", out.getStepX(), out.getStepZ(), false);
             }
         }
-        if (d.mine != null) {
-            addTarget(d.mine.entrance, "mine", 0, 0, false);
+        for (ColonyData.Mine mine : colony.allMines()) {
+            addTarget(mine.entrance, "mine", 0, 0, false);
         }
         if (d.pen != null) {
             addTarget(d.pen.outside, "pen", 0, 0, false);

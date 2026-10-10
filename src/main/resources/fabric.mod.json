@@ -6,6 +6,7 @@
   "description": "Turns a vanilla village into a self-managing colony: categorized storage, lumberjacks, miners, farmers, fishermen, herders, builders, roads, torches, guards, golems, an internal market and theft detection. Singleplayer.",
   "authors": ["LTS_Server"],
   "license": "MIT",
+  "icon": "assets/smartcolony/icon.png",
   "environment": "*",
   "entrypoints": {
     "main": ["org.lts.smartcolony.SmartColony"],

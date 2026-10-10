@@ -32,6 +32,7 @@ public final class Blueprint {
     private final Map<Character, String> palette;
     private final List<int[]> containers;
     private final List<int[]> fishing;
+    private int[] headBed;
 
     private Blueprint(String id, String kind, int beds, int sizeX, int sizeY, int sizeZ, int doorX, int doorZ,
                       char[][][] grid, Map<Character, String> palette, List<int[]> containers,
@@ -102,8 +103,17 @@ public final class Blueprint {
                         arr.get(3).getAsInt(), arr.get(4).getAsInt(), arr.get(5).getAsInt()});
             }
         }
-        return new Blueprint(id, kind, beds, sizeX, sizeY, sizeZ, door.get(0).getAsInt(), door.get(1).getAsInt(), grid,
+        Blueprint blueprint = new Blueprint(id, kind, beds, sizeX, sizeY, sizeZ, door.get(0).getAsInt(), door.get(1).getAsInt(), grid,
                 palette, containers, fishing);
+        if (root.has("headBed")) {
+            JsonArray head = root.getAsJsonArray("headBed");
+            blueprint.headBed = new int[] {head.get(0).getAsInt(), head.get(1).getAsInt(), head.get(2).getAsInt()};
+        }
+        return blueprint;
+    }
+
+    public int[] headBed() {
+        return headBed;
     }
 
     public String id() {

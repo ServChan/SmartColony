@@ -37,6 +37,8 @@ public final class Hall {
     private List<BlockPos> cells = List.of();
     private List<String> restIds = List.of();
     private BlockPos bed;
+    private List<BlockPos> guestBeds = List.of();
+    private List<String> guestIds = List.of();
     private int tickCount;
 
     Hall(Colony colony) {
@@ -61,7 +63,23 @@ public final class Hall {
     }
 
     public boolean restOpen() {
-        return !cells.isEmpty();
+        return !cells.isEmpty() || !guestBeds.isEmpty();
+    }
+
+    public int guestBeds() {
+        return guestBeds.size();
+    }
+
+    public BlockPos guestBed(UUID uuid) {
+        if (guestBeds.isEmpty()) {
+            return null;
+        }
+        int rank = guestIds.indexOf(uuid.toString());
+        return rank < 0 || rank >= guestBeds.size() ? null : guestBeds.get(rank);
+    }
+
+    public boolean isGuestBed(BlockPos pos) {
+        return guestBeds.contains(pos);
     }
 
     public BlockPos restSpot(UUID uuid) {
@@ -86,12 +104,14 @@ public final class Hall {
         ColonyData.Building building = building();
         if (building == null || colony.construction().upgrading(building)) {
             cells = List.of();
+            guestBeds = List.of();
             return;
         }
-        if (!building.blueprint.equals(scanned) && scan(level, building)) {
+        if ((!building.blueprint.equals(scanned) || tickCount % 12 == 0) && scan(level, building)) {
             scanned = building.blueprint;
         }
         refreshCells(level, building);
+        refreshBeds(level);
         cleanTreasury(level);
         if (tickCount % 6 == 0 && !data().treasury.isEmpty()) {
             colony.warehouse().consolidateValuables(level, 4);
@@ -139,7 +159,7 @@ public final class Hall {
             return false;
         }
         List<Pos> found = new ArrayList<>();
-        BlockPos foundBed = null;
+        List<BlockPos> heads = new ArrayList<>();
         for (BlockPos pos : BlockPos.betweenClosed(min, max.above(1))) {
             BlockState state = level.getBlockState(pos);
             if (state.is(Blocks.CHEST) || state.is(Blocks.BARREL) || state.is(Blocks.TRAPPED_CHEST)) {
@@ -147,11 +167,16 @@ public final class Hall {
                 if (Warehouse.container(level, pos) != null && !inStorage(p)) {
                     found.add(p);
                 }
-            } else if (foundBed == null && state.getBlock() instanceof BedBlock && state.getValue(BedBlock.PART) == BedPart.HEAD) {
-                foundBed = pos.immutable();
+            } else if (state.getBlock() instanceof BedBlock && state.getValue(BedBlock.PART) == BedPart.HEAD) {
+                heads.add(pos.immutable());
             }
         }
-        bed = foundBed;
+        int[] reserved = Blueprints.get(building.blueprint).headBed();
+        BlockPos headBed = reserved == null ? null : colony.construction().world(building, reserved[0], reserved[1], reserved[2]);
+        bed = headBed != null && heads.contains(headBed) ? headBed : null;
+        heads.remove(headBed);
+        heads.sort(java.util.Comparator.<BlockPos>comparingInt(BlockPos::getY).thenComparingInt(BlockPos::getZ).thenComparingInt(BlockPos::getX));
+        guestBeds = heads;
         boolean first = data().treasury.isEmpty() && !found.isEmpty();
         if (!found.equals(data().treasury)) {
             data().treasury = found;
@@ -159,7 +184,7 @@ public final class Hall {
             colony.markDirty();
         }
         if (first) {
-            colony.journal(level, "treasury opened in the town hall: " + found.size() + " containers");
+            colony.journal(level, "treasury opened in the inn: " + found.size() + " containers");
             colony.notify(level, Component.translatable("smartcolony.chat.treasury_ready", found.size()));
         }
         return true;
@@ -225,6 +250,46 @@ public final class Hall {
         return found;
     }
 
+    private void refreshBeds(ServerLevel level) {
+        guestBeds = new ArrayList<>(guestBeds);
+        guestBeds.removeIf(pos -> WorldUtil.loaded(level, pos) && !(level.getBlockState(pos).getBlock() instanceof BedBlock));
+        List<String> ids = new ArrayList<>();
+        for (Map.Entry<UUID, Colonist> entry : colony.colonists().entrySet()) {
+            if (!(level.getEntity(entry.getKey()) instanceof Villager villager) || !villager.isAlive() || villager.isBaby()
+                    || entry.getValue().role() == Role.GUARD) {
+                continue;
+            }
+            GlobalPos home = villager.getBrain().getMemory(MemoryModuleType.HOME).orElse(null);
+            if (home != null && home.dimension() == level.dimension() && guestBeds.contains(home.pos()) && !isHead(entry.getKey())) {
+                villager.releasePoi(MemoryModuleType.HOME);
+                villager.getBrain().eraseMemory(MemoryModuleType.HOME);
+                data().bump("inn_homes_released", 1);
+                home = null;
+            }
+            if (home == null) {
+                ids.add(entry.getKey().toString());
+            }
+        }
+        ids.sort(String::compareTo);
+        List<String> kept = new ArrayList<>();
+        for (String id : guestIds) {
+            if (ids.contains(id) && kept.size() < guestBeds.size()) {
+                kept.add(id);
+            }
+        }
+        for (String id : ids) {
+            if (!kept.contains(id)) {
+                kept.add(id);
+            }
+        }
+        guestIds = kept;
+        for (BlockPos pos : guestBeds) {
+            if (WorldUtil.loaded(level, pos)) {
+                level.getPoiManager().take(type -> type.is(PoiTypes.HOME), (holder, at) -> at.equals(pos), pos, 1);
+            }
+        }
+    }
+
     private void houseHead(ServerLevel level, ColonyData.Building building) {
         String head = data().head;
         if (head.isEmpty() || bed == null || !Mayor.movesIn(TownHall.stageOf(building.blueprint), true)) {
@@ -262,7 +327,7 @@ public final class Hall {
         if (!data().headHoused) {
             data().headHoused = true;
             String name = GraveNames.of(head);
-            colony.journal(level, "the head of the colony " + name + " moved into the town hall");
+            colony.journal(level, "the head of the colony " + name + " moved into the inn");
             colony.notify(level, Component.translatable("smartcolony.chat.head_moved_in", name));
             colony.markDirty();
         }

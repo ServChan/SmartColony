@@ -84,7 +84,7 @@ public final class SmartColonyConfig {
                     loaded = parsed;
                 }
             } catch (IOException | RuntimeException e) {
-                SmartColony.LOGGER.warn("Smart Colony config is unreadable, using defaults: {}", e.toString());
+                SmartColony.LOGGER.warn("Could not read {}; using defaults", file, e);
             }
         }
         loaded.sanitize();
@@ -102,7 +102,7 @@ public final class SmartColonyConfig {
             }
             Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
         } catch (IOException e) {
-            SmartColony.LOGGER.warn("Could not write Smart Colony config: {}", e.toString());
+            SmartColony.LOGGER.warn("Could not save {}", file, e);
         }
     }
 

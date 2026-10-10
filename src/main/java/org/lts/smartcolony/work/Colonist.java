@@ -193,6 +193,7 @@ public final class Colonist {
         }
         if (resting) {
             resting = false;
+            wakeAtInn(villager);
             if (isControlled(villager)) {
                 release(level, villager, "morning");
             }
@@ -282,7 +283,6 @@ public final class Colonist {
             job.tick(level, villager);
         }
     }
-
 
     private boolean gather(ServerLevel level, Villager villager, String kind, BlockPos spot, BlockPos look) {
         if (spot == null) {
@@ -458,6 +458,7 @@ public final class Colonist {
     private boolean fightFire(ServerLevel level, Villager villager, BlockPos fire, long now) {
         if (fightStarted == 0) {
             fightStarted = now;
+            wakeAtInn(villager);
             if (isControlled(villager)) {
                 release(level, villager, "fire");
             }
@@ -514,7 +515,7 @@ public final class Colonist {
         return HallRest.restsHere(hallRestApplies(), bedless(villager), role == Role.GUARD, villager.isBaby(), colony.workTime(level))
                 && villager.isAlive()
                 && !villager.isTrading()
-                && !villager.isSleeping()
+                && (!villager.isSleeping() || innBed != null && resting)
                 && releasedUntil <= now
                 && !colony.festival(level)
                 && !colony.tavern().dinnerOpen(level, uuid);
@@ -529,6 +530,18 @@ public final class Colonist {
             resting = true;
         } else if (!isControlled(villager)) {
             take(level, villager);
+        }
+        if (villager.isSleeping()) {
+            if (now >= nextHeal) {
+                nextHeal = now + HallRest.HEAL_PERIOD;
+                if (villager.getHealth() < villager.getMaxHealth()) {
+                    villager.heal(HallRest.HEAL_AMOUNT);
+                }
+            }
+            return;
+        }
+        if (sleepAtInn(level, villager, now)) {
+            return;
         }
         net.minecraft.core.BlockPos spot = colony.hall().restSpot(uuid);
         if (spot == null) {
@@ -550,6 +563,66 @@ public final class Colonist {
                 }
             }
         }
+    }
+
+    private net.minecraft.core.BlockPos innBed;
+    private long innBedRetry;
+
+    private boolean sleepAtInn(ServerLevel level, Villager villager, long now) {
+        net.minecraft.core.BlockPos bed = now < innBedRetry ? null : colony.hall().guestBed(uuid);
+        if (bed == null) {
+            return false;
+        }
+        net.minecraft.world.level.block.state.BlockState state = level.getBlockState(bed);
+        if (!(state.getBlock() instanceof net.minecraft.world.level.block.BedBlock)
+                || state.getValue(net.minecraft.world.level.block.BedBlock.OCCUPIED)) {
+            innBedRetry = now + 400;
+            return false;
+        }
+        Mover.keepAfloat(villager);
+        if (villager.position().distanceTo(net.minecraft.world.phys.Vec3.atBottomCenterOf(bed)) > 2.4) {
+            net.minecraft.core.BlockPos side = bedside(level, villager, bed, state);
+            Mover.Result result = mover.tick(level, villager, side == null ? bed : side, side == null ? 1.6 : 0.8, 0.5, false);
+            if (result == Mover.Result.FAILED) {
+                innBedRetry = now + 1200;
+                colony.data().bump("inn_bed_unreachable", 1);
+            }
+            return true;
+        }
+        villager.getNavigation().stop();
+        villager.startSleeping(bed);
+        innBed = bed;
+        colony.data().bump("inn_nights", 1);
+        return true;
+    }
+
+    private static net.minecraft.core.BlockPos bedside(ServerLevel level, Villager villager, net.minecraft.core.BlockPos head,
+            net.minecraft.world.level.block.state.BlockState state) {
+        net.minecraft.core.Direction facing = state.getValue(net.minecraft.world.level.block.BedBlock.FACING);
+        net.minecraft.core.BlockPos foot = head.relative(facing.getOpposite());
+        net.minecraft.core.BlockPos best = null;
+        double bestDistance = Double.MAX_VALUE;
+        for (net.minecraft.core.BlockPos part : new net.minecraft.core.BlockPos[] {foot, head}) {
+            for (net.minecraft.core.Direction direction : net.minecraft.core.Direction.Plane.HORIZONTAL) {
+                net.minecraft.core.BlockPos cell = part.relative(direction);
+                if (cell.equals(foot) || cell.equals(head) || !org.lts.smartcolony.util.WorldUtil.standable(level, cell)) {
+                    continue;
+                }
+                double distance = cell.distSqr(villager.blockPosition());
+                if (distance < bestDistance) {
+                    bestDistance = distance;
+                    best = cell;
+                }
+            }
+        }
+        return best;
+    }
+
+    private void wakeAtInn(Villager villager) {
+        if (innBed != null && villager.isSleeping() && villager.getSleepingPos().map(innBed::equals).orElse(false)) {
+            villager.stopSleeping();
+        }
+        innBed = null;
     }
 
     public static boolean bedless(Villager villager) {

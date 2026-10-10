@@ -9,7 +9,8 @@ public final class LampDesign {
     public static final int GROUND_TORCH = 0;
     public static final int STONE_POST = 1;
     public static final int LANTERN_POST = 2;
-    public static final int SPACING = 7;
+    public static final int SPACING = 10;
+    public static final int STYLE = 1;
 
     public record Layer(int dx, int dy, int dz, String state) {
         public String block() {
@@ -29,10 +30,11 @@ public final class LampDesign {
         String fence = Ids.mc(wood + "_fence");
         List<Layer> layers = new ArrayList<>();
         if (tier <= STONE_POST) {
-            layers.add(new Layer(0, 0, 0, Ids.mc("cobblestone")));
+            layers.add(new Layer(0, 0, 0, base));
             layers.add(new Layer(0, 1, 0, fence));
             layers.add(new Layer(0, 2, 0, fence));
             layers.add(new Layer(0, 3, 0, Ids.mc("torch")));
+            layers.addAll(cage(wood));
             return layers;
         }
         layers.add(new Layer(0, 0, 0, base));
@@ -46,6 +48,17 @@ public final class LampDesign {
             layers.add(new Layer(0, 4, 0, Ids.mc("lantern") + "[hanging=false]"));
         }
         return layers;
+    }
+
+    public static List<Layer> cage(String wood) {
+        String trapdoor = Ids.mc(wood + "_trapdoor");
+        List<Layer> cage = new ArrayList<>();
+        cage.add(new Layer(1, 3, 0, trapdoor + "[facing=east,half=bottom,open=true]"));
+        cage.add(new Layer(-1, 3, 0, trapdoor + "[facing=west,half=bottom,open=true]"));
+        cage.add(new Layer(0, 3, 1, trapdoor + "[facing=south,half=bottom,open=true]"));
+        cage.add(new Layer(0, 3, -1, trapdoor + "[facing=north,half=bottom,open=true]"));
+        cage.add(new Layer(0, 4, 0, Ids.mc(wood + "_slab") + "[type=bottom]"));
+        return cage;
     }
 
     public static Map<String, Integer> needs(List<Layer> layers) {

@@ -4,6 +4,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
@@ -168,7 +174,7 @@ class TownHallTest {
     void everyStageIsCraftableFromRawColonyMaterials() {
         Map<String, Integer> raw = Map.ofEntries(
                 Map.entry("minecraft:oak_log", 2000), Map.entry("minecraft:cobblestone", 2000),
-                Map.entry("minecraft:sand", 500), Map.entry("minecraft:string", 200),
+                Map.entry("minecraft:sand", 500), Map.entry("minecraft:string", 400),
                 Map.entry("minecraft:coal", 400), Map.entry("minecraft:iron_ingot", 40));
         for (int stage = 1; stage <= TownHall.STAGES; stage++) {
             Blueprint blueprint = Blueprints.get(TownHall.blueprint(stage));
@@ -192,6 +198,49 @@ class TownHallTest {
             int total = Blueprints.get(TownHall.blueprint(stage)).materials("oak").values().stream().mapToInt(Integer::intValue).sum();
             assertTrue(total > previous, "stage " + stage);
             previous = total;
+        }
+    }
+
+    @Test
+    void firstStageSleepsTwelve() throws IOException {
+        int previous = 0;
+        for (int stage = 1; stage <= TownHall.STAGES; stage++) {
+            Blueprint blueprint = Blueprints.get(TownHall.blueprint(stage));
+            int[] head = headBed(stage);
+            assertEquals(stage >= 3, head != null, "stage " + stage);
+            int guests = 0;
+            int ground = 0;
+            boolean headFound = false;
+            for (Blueprint.Cell cell : blueprint.cells("oak")) {
+                if (!cell.state().contains("_bed") || !cell.state().contains("part=head")) {
+                    continue;
+                }
+                if (head != null && cell.x() == head[0] && cell.y() == head[1] && cell.z() == head[2]) {
+                    headFound = true;
+                    continue;
+                }
+                guests++;
+                if (cell.y() == 1) {
+                    ground++;
+                }
+            }
+            assertEquals(head != null, headFound, "stage " + stage);
+            if (stage == 1) {
+                assertTrue(ground >= 12, "stage 1 ground beds " + ground);
+            }
+            assertTrue(guests >= previous, "stage " + stage);
+            previous = guests;
+        }
+    }
+
+    private static int[] headBed(int stage) throws IOException {
+        try (InputStream in = TownHallTest.class.getResourceAsStream("/smartcolony/blueprints/" + TownHall.blueprint(stage) + ".json")) {
+            JsonObject root = JsonParser.parseString(new String(in.readAllBytes(), StandardCharsets.UTF_8)).getAsJsonObject();
+            if (!root.has("headBed")) {
+                return null;
+            }
+            JsonArray arr = root.getAsJsonArray("headBed");
+            return new int[]{arr.get(0).getAsInt(), arr.get(1).getAsInt(), arr.get(2).getAsInt()};
         }
     }
 }

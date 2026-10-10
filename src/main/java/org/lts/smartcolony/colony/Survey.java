@@ -105,9 +105,13 @@ public final class Survey {
     }
 
     private boolean inQuarry(int x, int z) {
-        ColonyData.Mine mine = colony.data().mine;
-        return mine != null && mine.quarry() && x >= mine.corner.x() - 1 && x <= mine.corner.x() + mine.width
-                && z >= mine.corner.z() - 1 && z <= mine.corner.z() + mine.width;
+        for (ColonyData.Mine mine : colony.allMines()) {
+            if (mine.quarry() && x >= mine.corner.x() - 1 && x <= mine.corner.x() + mine.width
+                    && z >= mine.corner.z() - 1 && z <= mine.corner.z() + mine.width) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public TerrainMap.Column sample(ServerLevel level, int x, int z, ColonyData.Project ignore) {
@@ -140,12 +144,12 @@ public final class Survey {
             return new TerrainMap.Column(y, TerrainMap.Surface.ROAD, 0);
         }
         if (!WorldUtil.naturalGround(state)) {
-            if (state.is(BlockTags.LOGS) || state.is(BlockTags.LEAVES)) {
+            if (WorldUtil.overgrowth(state)) {
                 int ground = y;
                 int floor = y - 40;
                 while (ground > floor) {
                     BlockState below = level.getBlockState(new BlockPos(x, ground, z));
-                    if (!below.is(BlockTags.LOGS) && !below.is(BlockTags.LEAVES) && !WorldUtil.removable(level, new BlockPos(x, ground, z))) {
+                    if (!WorldUtil.overgrowth(below) && !WorldUtil.removable(level, new BlockPos(x, ground, z))) {
                         break;
                     }
                     ground--;

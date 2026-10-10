@@ -115,9 +115,9 @@ final class SiteCheck {
 
     private static int[] limits(Blueprint blueprint, boolean relaxed) {
         if (relaxed) {
-            return new int[] {4, Math.min(7, blueprint.sizeY() + 1)};
+            return new int[] {4, Construction.cutLimit(blueprint)};
         }
-        return new int[] {SiteEvaluator.MAX_FILL, SiteEvaluator.MAX_CUT};
+        return new int[] {SiteEvaluator.MAX_FILL, Construction.cutLimit(blueprint)};
     }
 
     Report assess(ServerLevel level, ColonyData.Project project, boolean lockBase) {
