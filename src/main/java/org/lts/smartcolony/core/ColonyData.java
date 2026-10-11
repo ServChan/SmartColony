@@ -237,6 +237,7 @@ public final class ColonyData {
         public long started;
         public long waitingSince;
         public boolean upgrade;
+        public Map<String, Integer> deferred = new LinkedHashMap<>();
     }
 
     public static final class Mine {
@@ -255,6 +256,7 @@ public final class ColonyData {
         public String wood;
         public boolean headDone;
         public Pos anchor;
+        public List<Integer> ahead = new ArrayList<>();
 
         public boolean quarry() {
             return "quarry".equals(type) && corner != null;

@@ -101,4 +101,18 @@ class PreBuildCheckTest {
         assertNull(ChestCraft.plan(3, 0));
         assertEquals(8, ChestCraft.PLANKS_PER_CHEST);
     }
+
+    @Test
+    void lateItemsAreSplitOffSoTheBuildCanStart() {
+        java.util.Map<String, Integer> need = new java.util.LinkedHashMap<>();
+        need.put("minecraft:oak_planks", 40);
+        need.put("minecraft:white_bed", 12);
+        need.put("minecraft:glass_pane", 6);
+        need.put("minecraft:cobblestone", 20);
+        java.util.Map<String, Integer> late = PreBuildCheck.late(need);
+        org.junit.jupiter.api.Assertions.assertEquals(java.util.Map.of("minecraft:white_bed", 12, "minecraft:glass_pane", 6), late);
+        java.util.Map<String, Integer> early = PreBuildCheck.without(need, late);
+        org.junit.jupiter.api.Assertions.assertEquals(java.util.Map.of("minecraft:oak_planks", 40, "minecraft:cobblestone", 20), early);
+        org.junit.jupiter.api.Assertions.assertFalse(PreBuildCheck.lateItem("minecraft:oak_door"));
+    }
 }

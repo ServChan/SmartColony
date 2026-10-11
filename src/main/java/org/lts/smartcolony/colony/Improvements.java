@@ -1714,7 +1714,7 @@ public final class Improvements {
             return false;
         }
         if (salvage) {
-            return wallMaterial(state);
+            return wallMaterial(state) || state.is(Blocks.STONE_BRICKS);
         }
         return WorldUtil.naturalGround(state) || WorldUtil.removable(level, pos) || state.is(net.minecraft.tags.BlockTags.LEAVES);
     }

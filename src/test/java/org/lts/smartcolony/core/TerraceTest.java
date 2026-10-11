@@ -44,6 +44,13 @@ class TerraceTest {
     }
 
     @Test
+    void cliffsTooTallToStepAreLeftStanding() {
+        assertEquals(80, Terrace.target(80, 2, 64, false));
+        assertEquals(65, Terrace.target(65 + Terrace.MAX_RING_CUT, 2, 64, false));
+        assertEquals(64 + 20, Terrace.target(64 + 20, 1, 64, true));
+    }
+
+    @Test
     void holesNextToTheBuildingAreFilledInSteps() {
         assertEquals(64, Terrace.target(60, 1, 64, false));
         assertEquals(63, Terrace.target(60, 2, 64, false));

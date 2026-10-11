@@ -156,7 +156,7 @@ final class SiteCheck {
         if (result.ok() && !Pier.enoughWater(blueprint.kind(), sample.waterColumns(), sx * sz)) {
             result = new SiteEvaluator.Result(false, 0, 0, 0, 0, 0, Double.MAX_VALUE);
         }
-        boolean feasible = result.ok() && (lockBase || construction.accessible(level, blueprint, building.rotation, ox, oz, result.baseY()));
+        boolean feasible = result.ok() && (lockBase || construction.accessible(level, blueprint, building.rotation, ox, oz, result.baseY(), project));
         ColonyData.Project fresh = result.ok()
                 ? construction.project(blueprint, building.wood, ox, oz, building.rotation, result, sample.ground(), sample.columns()) : null;
         PreBuildCheck.Verdict verdict = PreBuildCheck.decide(feasible, building.origin.y(), project.fill,

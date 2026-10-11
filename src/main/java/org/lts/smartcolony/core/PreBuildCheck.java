@@ -39,6 +39,35 @@ public final class PreBuildCheck {
         return result;
     }
 
+    private static final java.util.List<String> LATE_SUFFIXES = java.util.List.of("_bed", "_carpet", "_banner", "glass_pane", "lantern",
+            "flower_pot", "_candle", "candle");
+
+    public static boolean lateItem(String item) {
+        String path = Ids.path(item);
+        for (String suffix : LATE_SUFFIXES) {
+            if (path.endsWith(suffix)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static Map<String, Integer> late(Map<String, Integer> need) {
+        Map<String, Integer> result = new LinkedHashMap<>();
+        need.forEach((item, count) -> {
+            if (lateItem(item) && count > 0) {
+                result.put(item, count);
+            }
+        });
+        return result;
+    }
+
+    public static Map<String, Integer> without(Map<String, Integer> need, Map<String, Integer> removed) {
+        Map<String, Integer> result = new LinkedHashMap<>(need);
+        removed.keySet().forEach(result::remove);
+        return result;
+    }
+
     public static Map<String, Integer> surplus(Map<String, Integer> required, Map<String, Integer> reserved) {
         Map<String, Integer> result = new LinkedHashMap<>();
         for (Map.Entry<String, Integer> entry : reserved.entrySet()) {

@@ -149,6 +149,14 @@ public final class Lamps {
                 || state.is(BlockTags.ICE) || state.is(BlockTags.LEAVES) || !state.isFaceSturdy(level, ground, Direction.UP)) {
             return null;
         }
+        for (Direction dir : Direction.Plane.HORIZONTAL) {
+            if (Math.abs(paths().ground(level, x + dir.getStepX(), z + dir.getStepZ()) - y) > 1) {
+                return null;
+            }
+        }
+        if (Math.abs(y - paths().hub().getY()) > 16 && !nearRoad(roads, x, z)) {
+            return null;
+        }
         BlockPos feet = ground.above();
         for (int dy = 0; dy < COLUMN_HEIGHT; dy++) {
             BlockState cell = level.getBlockState(feet.above(dy));
@@ -166,6 +174,17 @@ public final class Lamps {
             }
         }
         return feet.immutable();
+    }
+
+    private static boolean nearRoad(Set<Long> roads, int x, int z) {
+        for (int dx = -2; dx <= 2; dx++) {
+            for (int dz = -2; dz <= 2; dz++) {
+                if (roads.contains(BlockPos.asLong(x + dx, 0, z + dz))) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private boolean hasOrderAt(Pos pos) {
@@ -224,6 +243,7 @@ public final class Lamps {
             planUpgrade(level, tier, roads, aprons);
         }
         restyle(level);
+        thin(level, roads);
         if (started > 0) {
             colony.markDirty();
         }
@@ -231,7 +251,7 @@ public final class Lamps {
 
     private List<int[]> candidates(ServerLevel level) {
         ColonyData d = data();
-        BlockPos hub = colony.center();
+        BlockPos hub = paths().hub();
         List<int[]> cells = new ArrayList<>();
         Set<Long> roads = paths().roadColumns();
         for (int i = 0; i < d.roads.size(); i += 2) {
@@ -256,7 +276,7 @@ public final class Lamps {
         for (Direction dir : Direction.Plane.HORIZONTAL) {
             cells.add(new int[] {depot.getX() + dir.getStepX() * 3, depot.getZ() + dir.getStepZ() * 3});
         }
-        int reach = (int) (d.radius * 0.85);
+        int reach = (int) (d.radius * 0.6);
         for (int dx = -reach; dx <= reach; dx += LampDesign.SPACING) {
             for (int dz = -reach; dz <= reach; dz += LampDesign.SPACING) {
                 if (dx * dx + dz * dz <= reach * reach) {
@@ -302,7 +322,7 @@ public final class Lamps {
 
     private void planUpgrade(ServerLevel level, int tier, Set<Long> roads, Set<Long> aprons) {
         ColonyData d = data();
-        BlockPos hub = colony.center();
+        BlockPos hub = paths().hub();
         Set<Pos> replacing = new HashSet<>();
         for (ColonyData.Lamp lamp : d.lamps) {
             if (lamp.replaces != null && !lamp.phase.equals("done")) {
@@ -342,6 +362,71 @@ public final class Lamps {
             if (startUpgrade(level, lamp.pos, lamp.tier, tier, roads, aprons)) {
                 started++;
             }
+        }
+    }
+
+    private static final int THIN_GAP = 9;
+
+    private void thin(ServerLevel level, Set<Long> roads) {
+        List<ColonyData.Lamp> done = new ArrayList<>();
+        for (ColonyData.Lamp lamp : data().lamps) {
+            if (lamp.phase.equals("done")) {
+                done.add(lamp);
+            }
+        }
+        List<BlockPos> doors = new ArrayList<>();
+        for (ColonyData.Building building : data().buildings) {
+            if (building.door != null) {
+                doors.add(WorldUtil.bp(building.door));
+            }
+        }
+        int removed = 0;
+        for (ColonyData.Lamp lamp : done) {
+            if (removed >= 2) {
+                break;
+            }
+            BlockPos base = WorldUtil.bp(lamp.pos);
+            if (!WorldUtil.loaded(level, base) || nearRoad(roads, lamp.pos.x(), lamp.pos.z())) {
+                continue;
+            }
+            boolean byDoor = false;
+            for (BlockPos door : doors) {
+                if (Math.abs(door.getX() - base.getX()) <= 4 && Math.abs(door.getZ() - base.getZ()) <= 4) {
+                    byDoor = true;
+                    break;
+                }
+            }
+            if (byDoor) {
+                continue;
+            }
+            boolean crowded = false;
+            for (ColonyData.Lamp other : done) {
+                if (other != lamp && data().lamps.contains(other) && other.pos.horizontalDistSq(lamp.pos) < THIN_GAP * THIN_GAP) {
+                    crowded = true;
+                    break;
+                }
+            }
+            if (!crowded) {
+                continue;
+            }
+            List<BlockPos> cells = new ArrayList<>();
+            for (LampDesign.Layer layer : layers(lamp)) {
+                cells.add(base.offset(layer.dx(), layer.dy(), layer.dz()));
+            }
+            cells.sort(Comparator.comparingInt((BlockPos p) -> p.getY()).reversed());
+            for (BlockPos cell : cells) {
+                BlockState state = level.getBlockState(cell);
+                if (!state.isAir() && (Improvements.wallMaterial(state) || state.is(Blocks.STONE_BRICKS)) && !hasOrderAt(WorldUtil.pos(cell))) {
+                    data().orders.add(new ColonyData.Order(WorldUtil.pos(cell), "minecraft:air", Improvements.SALVAGE));
+                }
+            }
+            data().lamps.remove(lamp);
+            data().bump("lamps_thinned", 1);
+            removed++;
+            colony.markDirty();
+        }
+        if (removed > 0) {
+            colony.journal(level, "took down " + removed + " lamp posts standing too close to others away from the roads");
         }
     }
 

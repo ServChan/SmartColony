@@ -7,6 +7,7 @@ public final class Terrace {
     public static final int FILL_RINGS = 3;
     public static final int DOOR_DEPTH = 3;
     public static final int DOOR_FILL = 3;
+    public static final int MAX_RING_CUT = 6;
 
     public record Plan(int[][] target, int cut, int fill, int maxCut) {
         public int at(int x, int z) {
@@ -45,14 +46,14 @@ public final class Terrace {
             return Math.min(ground, base);
         }
         if (doorway) {
-            if (ground > base || base - ground <= DOOR_FILL) {
+            if (ground > base && ground - base <= MAX_CUT || ground <= base && base - ground <= DOOR_FILL) {
                 return base;
             }
             return ground;
         }
         int step = Math.max(0, ring - APRON);
         if (ground > base + step) {
-            return base + step;
+            return ground - (base + step) > MAX_RING_CUT ? ground : base + step;
         }
         if (ring <= FILL_RINGS && ground < base - step) {
             return base - step;

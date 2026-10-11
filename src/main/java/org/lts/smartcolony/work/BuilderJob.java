@@ -113,6 +113,13 @@ public final class BuilderJob extends Job {
             cooldown--;
             return;
         }
+        if (task.kind() == Construction.Kind.CLEAR && overColumn(villager, pos) && !stepAside(level, villager, pos)) {
+            colony().data().bump("clear_under_feet_skipped", 1);
+            colony().construction().skip(task);
+            task = null;
+            phase = "start";
+            return;
+        }
         boolean done = perform(level, villager);
         if (done) {
             colony().construction().completed(task);
@@ -309,6 +316,48 @@ public final class BuilderJob extends Job {
         }
         depositAll(level, villager);
         phase = "start";
+    }
+
+    private static boolean overColumn(Villager villager, BlockPos pos) {
+        BlockPos feet = villager.blockPosition();
+        return Math.abs(villager.getX() - (pos.getX() + 0.5)) < 0.9 && Math.abs(villager.getZ() - (pos.getZ() + 0.5)) < 0.9
+                && feet.getY() > pos.getY();
+    }
+
+    private boolean stepAside(ServerLevel level, Villager villager, BlockPos pos) {
+        BlockPos feet = villager.blockPosition();
+        BlockPos best = null;
+        double bestScore = Double.MAX_VALUE;
+        for (int dx = -2; dx <= 2; dx++) {
+            for (int dz = -2; dz <= 2; dz++) {
+                if (Math.abs(dx) <= 0 && Math.abs(dz) <= 0) {
+                    continue;
+                }
+                int x = pos.getX() + dx;
+                int z = pos.getZ() + dz;
+                if (Math.abs(dx) <= 1 && Math.abs(dz) <= 1 && dx * dz != 0) {
+                    continue;
+                }
+                for (int dy = -3; dy <= 1; dy++) {
+                    BlockPos cell = new BlockPos(x, feet.getY() + dy, z);
+                    if (!WorldUtil.standable(level, cell)) {
+                        continue;
+                    }
+                    double score = Math.abs(dy) * 2.0 + dx * dx + dz * dz;
+                    if (score < bestScore) {
+                        bestScore = score;
+                        best = cell;
+                    }
+                }
+            }
+        }
+        if (best == null) {
+            return false;
+        }
+        villager.getNavigation().stop();
+        villager.teleportTo(best.getX() + 0.5, best.getY(), best.getZ() + 0.5);
+        villager.resetFallDistance();
+        return true;
     }
 
     private List<ItemStack> rubble(ServerLevel level, Villager villager, List<ItemStack> drops) {

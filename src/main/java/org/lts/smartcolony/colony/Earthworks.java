@@ -197,6 +197,26 @@ final class Earthworks {
         }
     }
 
+    private static boolean sandy(ServerLevel level, BlockPos pos) {
+        int sand = 0;
+        int other = 0;
+        for (int dx = -3; dx <= 3; dx += 3) {
+            for (int dz = -3; dz <= 3; dz += 3) {
+                if (dx == 0 && dz == 0 || !WorldUtil.loaded(level, pos.offset(dx, 0, dz))) {
+                    continue;
+                }
+                BlockState surface = level.getBlockState(new BlockPos(pos.getX() + dx, WorldUtil.soilY(level, pos.getX() + dx, pos.getZ() + dz),
+                        pos.getZ() + dz));
+                if (surface.is(BlockTags.SAND)) {
+                    sand++;
+                } else if (WorldUtil.naturalGround(surface)) {
+                    other++;
+                }
+            }
+        }
+        return sand > other;
+    }
+
     private static boolean foreign(Colony colony, ColonyData.Project project, BlockPos pos) {
         Pos p = WorldUtil.pos(pos);
         for (ColonyData.Building building : colony.data().buildings) {
@@ -212,7 +232,15 @@ final class Earthworks {
         return false;
     }
 
-    static BlockState takeFill(ServerLevel level, Colony colony) {
+    static BlockState takeFill(ServerLevel level, Colony colony, BlockPos pos, boolean top) {
+        if (top && sandy(level, pos)) {
+            for (String id : List.of("sand", "red_sand")) {
+                String item = "minecraft:" + id;
+                if (colony.warehouse().take(level, item, 1) == 1) {
+                    return Construction.parse(item, 0);
+                }
+            }
+        }
         for (String id : FILL_ITEMS) {
             String item = "minecraft:" + id;
             if (colony.warehouse().take(level, item, 1) == 1) {

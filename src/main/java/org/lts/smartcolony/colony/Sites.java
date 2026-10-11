@@ -98,6 +98,28 @@ public final class Sites {
         return quarry != null ? quarry : stairSite(level, generation, previous, avoid, center(), 12, 30 + reach, null);
     }
 
+    private static final int VILLAGE_GAP = 8;
+    private static final int DEPOT_GAP = 18;
+
+    private boolean awayFromVillage(int x0, int z0, int x1, int z1) {
+        ColonyData data = colony.data();
+        if (Math.max(Math.max(data.depot.x() - x1, x0 - data.depot.x()), Math.max(data.depot.z() - z1, z0 - data.depot.z())) < DEPOT_GAP) {
+            return false;
+        }
+        List<ColonyData.Building> all = new ArrayList<>(data.buildings);
+        for (ColonyData.Project project : data.projects) {
+            all.add(project.building);
+        }
+        for (ColonyData.Building building : all) {
+            if (building.min.x() - VILLAGE_GAP <= x1 && building.max.x() + VILLAGE_GAP >= x0
+                    && building.min.z() - VILLAGE_GAP <= z1 && building.max.z() + VILLAGE_GAP >= z0
+                    && !org.lts.smartcolony.core.PorterPlan.OUTPOST_KIND.equals(building.kind)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     private static boolean crowded(List<ColonyData.Mine> avoid, int x, int z, int gap) {
         for (ColonyData.Mine mine : avoid) {
             Pos at = mine.quarry() ? mine.corner : mine.entrance;
@@ -134,7 +156,8 @@ public final class Sites {
                         && new org.lts.smartcolony.core.Pos(cx, 0, cz).horizontalDistSq(previous.corner) < 20 * 20) {
                     continue;
                 }
-                if (crowded(avoid, cx, cz, 20) || toward != null && center().distSqr(new BlockPos(cx, center().getY(), cz))
+                if (crowded(avoid, cx, cz, 20) || !awayFromVillage(cx - 2, cz - 2, cx + QUARRY_WIDTH + 1, cz + QUARRY_WIDTH + 1)
+                        || toward != null && center().distSqr(new BlockPos(cx, center().getY(), cz))
                         > (double) (colony.data().radius + Prospecting.MINE_REACH) * (colony.data().radius + Prospecting.MINE_REACH)) {
                     continue;
                 }
@@ -208,7 +231,7 @@ public final class Sites {
                 double angle = offset + i * Math.PI / 4.0;
                 int x = origin.getX() + (int) Math.round(Math.cos(angle) * distance);
                 int z = origin.getZ() + (int) Math.round(Math.sin(angle) * distance);
-                if (!WorldUtil.loaded(level, new BlockPos(x, 0, z)) || crowded(avoid, x, z, 24)) {
+                if (!WorldUtil.loaded(level, new BlockPos(x, 0, z)) || crowded(avoid, x, z, 24) || !awayFromVillage(x - 2, z - 2, x + 2, z + 2)) {
                     continue;
                 }
                 BlockPos feet = WorldUtil.surface(level, x, z);

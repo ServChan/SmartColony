@@ -178,6 +178,9 @@ public final class Colonist {
             fightStarted = 0;
             endPause(level, villager, "fire");
         }
+        if (now % 20 == Math.floorMod(uuid.hashCode(), 20) && villager.isInWall() && escapeWall(level, villager)) {
+            colony.data().bump("walls_escaped", 1);
+        }
         if (hazards.tick(level, villager, now)) {
             return;
         }
@@ -623,6 +626,29 @@ public final class Colonist {
             villager.stopSleeping();
         }
         innBed = null;
+    }
+
+    private static boolean escapeWall(ServerLevel level, Villager villager) {
+        BlockPos at = villager.blockPosition();
+        for (int r = 0; r <= 3; r++) {
+            for (int dy = 0; dy <= 3; dy++) {
+                for (int dx = -r; dx <= r; dx++) {
+                    for (int dz = -r; dz <= r; dz++) {
+                        if (Math.max(Math.abs(dx), Math.abs(dz)) != r) {
+                            continue;
+                        }
+                        BlockPos cell = at.offset(dx, dy, dz);
+                        if (org.lts.smartcolony.util.WorldUtil.standable(level, cell)) {
+                            villager.getNavigation().stop();
+                            villager.teleportTo(cell.getX() + 0.5, cell.getY(), cell.getZ() + 0.5);
+                            villager.resetFallDistance();
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     public static boolean bedless(Villager villager) {

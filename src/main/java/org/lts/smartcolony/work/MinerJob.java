@@ -50,6 +50,21 @@ public final class MinerJob extends Job {
     private long fitRetry;
     private Map<String, Integer> fitNeeds;
     private final Set<String> fitItems = new HashSet<>();
+    private final List<BlockPos> veinWalls = new ArrayList<>();
+
+    private void patchWalls(ServerLevel level, Villager villager) {
+        for (BlockPos wall : veinWalls) {
+            if (!WorldUtil.loaded(level, wall) || !level.getBlockState(wall).isAir() || villager.blockPosition().equals(wall)
+                    || villager.blockPosition().above().equals(wall)) {
+                continue;
+            }
+            if (!fillWithCobble(level, villager, wall)) {
+                break;
+            }
+            colony().data().bump("mine_walls_patched", 1);
+        }
+        veinWalls.clear();
+    }
 
     public MinerJob(Colonist colonist) {
         super(colonist);
@@ -623,6 +638,11 @@ public final class MinerJob extends Job {
             }
         }
         BlockPos target = WorldUtil.bp(route.get(waypoint));
+        if ((!level.getFluidState(target).isEmpty() || !level.getFluidState(target.above()).isEmpty()) && drain(level, villager, target)) {
+            status = "plugging water in the tunnel";
+            wait = 10;
+            return;
+        }
         BlockPos blocker = tunnelBlocker(level, target);
         if (blocker != null && villager.blockPosition().distSqr(target) <= 9) {
             status = "reopening the tunnel";
@@ -654,6 +674,39 @@ public final class MinerJob extends Job {
             }
         }
         status = (back ? "climbing out " : "going down ") + waypoint + "/" + route.size() + (back && !lastReturn.isEmpty() ? " (" + lastReturn + ")" : "");
+    }
+
+    private boolean drain(ServerLevel level, Villager villager, BlockPos from) {
+        java.util.ArrayDeque<BlockPos> queue = new java.util.ArrayDeque<>();
+        Set<BlockPos> seen = new HashSet<>();
+        for (BlockPos start : new BlockPos[] {from, from.above()}) {
+            if (!level.getFluidState(start).isEmpty() && seen.add(start)) {
+                queue.add(start);
+            }
+        }
+        int plugged = 0;
+        while (!queue.isEmpty() && seen.size() < 160) {
+            BlockPos pos = queue.poll();
+            FluidState fluid = level.getFluidState(pos);
+            if (fluid.isSource() && !fillWithCobble(level, villager, pos) && !fillFromStorage(level, villager, pos)) {
+                break;
+            }
+            if (fluid.isSource()) {
+                plugged++;
+                continue;
+            }
+            for (Direction direction : Direction.values()) {
+                BlockPos next = pos.relative(direction);
+                if (direction != Direction.DOWN && Math.abs(next.getX() - from.getX()) <= 10 && Math.abs(next.getZ() - from.getZ()) <= 10
+                        && next.getY() - from.getY() <= 12 && WorldUtil.loaded(level, next) && !level.getFluidState(next).isEmpty() && seen.add(next)) {
+                    queue.add(next);
+                }
+            }
+        }
+        if (plugged > 0) {
+            colony().data().bump("tunnel_water_plugged", plugged);
+        }
+        return plugged > 0;
     }
 
     private BlockPos tunnelBlocker(ServerLevel level, BlockPos feet) {
@@ -816,6 +869,15 @@ public final class MinerJob extends Job {
         skippedInRow = 0;
         vein = findOres(level, cellBlocks, villager);
         veinIndex = 0;
+        veinWalls.clear();
+        for (BlockPos ore : vein) {
+            for (Direction direction : Direction.values()) {
+                if (cellBlocks.contains(ore.relative(direction))) {
+                    veinWalls.add(ore);
+                    break;
+                }
+            }
+        }
         finishCell(mine, index);
         cellsThisTrip++;
         if (!mine.quarry() && cellsThisTrip % 3 == 0) {
@@ -828,6 +890,8 @@ public final class MinerJob extends Job {
     }
 
     private int claimed = -1;
+    private int lastCell = -1;
+    private static final int TUNNEL_WINDOW = 40;
 
     private int pickCell(ServerLevel level, ColonyData.Mine mine, DigPlan plan) {
         java.util.Map<Integer, Long> claims = colony().mineClaims(mine);
@@ -837,9 +901,16 @@ public final class MinerJob extends Job {
             claims.put(claimed, now);
             return claimed;
         }
-        int limit = Math.min(plan.size(), mine.progress + 6);
+        int limit = Math.min(plan.size(), mine.progress + (mine.quarry() ? 6 : TUNNEL_WINDOW));
+        List<Integer> order = new ArrayList<>();
+        if (lastCell >= mine.progress && lastCell + 1 < limit) {
+            order.add(lastCell + 1);
+        }
         for (int i = mine.progress; i < limit; i++) {
-            if (claims.containsKey(i)) {
+            order.add(i);
+        }
+        for (int i : order) {
+            if (claims.containsKey(i) || mine.ahead.contains(i)) {
                 continue;
             }
             if (i > mine.progress) {
@@ -859,8 +930,14 @@ public final class MinerJob extends Job {
     private void finishCell(ColonyData.Mine mine, int index) {
         colony().mineClaims(mine).remove(index);
         claimed = -1;
+        lastCell = index;
         if (index == mine.progress) {
             mine.progress++;
+            while (mine.ahead.remove(Integer.valueOf(mine.progress))) {
+                mine.progress++;
+            }
+        } else if (index > mine.progress && !mine.ahead.contains(index)) {
+            mine.ahead.add(index);
         }
         colony().markDirty();
     }
@@ -1037,6 +1114,7 @@ public final class MinerJob extends Job {
 
     private void vein(ServerLevel level, Villager villager) {
         if (veinIndex >= vein.size() || cargoFull(villager)) {
+            patchWalls(level, villager);
             phase = "dig";
             return;
         }

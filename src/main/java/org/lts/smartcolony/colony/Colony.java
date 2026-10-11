@@ -265,6 +265,10 @@ public final class Colony {
         return WorldUtil.bp(data.depot);
     }
 
+    public BlockPos groundCenter() {
+        return Math.abs(data.center.y() - data.depot.y()) > 12 ? depot() : center();
+    }
+
     public void markDirty() {
         dirty = true;
     }

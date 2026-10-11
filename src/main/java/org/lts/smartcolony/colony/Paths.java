@@ -65,7 +65,7 @@ public final class Paths {
                 return WorldUtil.bp(building.door).relative(outward(building), 2).below();
             }
         }
-        return colony.center();
+        return colony.groundCenter();
     }
 
     public void tick(ServerLevel level) {
