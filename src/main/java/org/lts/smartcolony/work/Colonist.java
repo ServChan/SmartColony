@@ -9,9 +9,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.EquipmentSlot;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
-import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.npc.villager.Villager;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -30,8 +28,8 @@ public final class Colonist {
     private Job job;
     private long releasedUntil;
     private String releaseReason = "";
-    private long lastDangerCheck;
     private final Hazards hazards = new Hazards(this);
+    private final Refuge refuge = new Refuge(this);
     private long lastTick;
     private long restBlockedUntil;
     private long nextHeal;
@@ -54,8 +52,7 @@ public final class Colonist {
         if (role == Role.GUARD || role == Role.MEDIC) {
             return;
         }
-        releasedUntil = Math.max(releasedUntil, until);
-        releaseReason = "alarm";
+        refuge.alarm(until);
     }
 
     public Colonist(UUID uuid, Colony colony) {
@@ -143,6 +140,9 @@ public final class Colonist {
         if (job == null) {
             return "idle";
         }
+        if (refuge.active()) {
+            return "refuge: " + refuge.status();
+        }
         if (releasedUntil > level.getGameTime()) {
             return "released: " + releaseReason;
         }
@@ -162,13 +162,6 @@ public final class Colonist {
         if (villager.isUnderWater() && villager.getAirSupply() < villager.getMaxAirSupply() / 3) {
             surface(level, villager);
         }
-        if (role != Role.GUARD && !job.ignoresDanger() && now - lastDangerCheck >= 10) {
-            lastDangerCheck = now;
-            if (inDanger(level, villager) && !trappedUnderground(level, villager)) {
-                releasedUntil = now + 120;
-                releaseReason = "danger";
-            }
-        }
         BlockPos fire = colony.fire().assignment(uuid);
         if (fire != null && !villager.isOnFire() && SmartColonyConfig.get().firefighting) {
             if (fightFire(level, villager, fire, now)) {
@@ -182,6 +175,9 @@ public final class Colonist {
             colony.data().bump("walls_escaped", 1);
         }
         if (hazards.tick(level, villager, now)) {
+            return;
+        }
+        if (refuge.tick(level, villager, now)) {
             return;
         }
         if (raidShelter(level, villager)) {
@@ -711,20 +707,6 @@ public final class Colonist {
                 }
             }
         }
-    }
-
-    private static boolean trappedUnderground(ServerLevel level, Villager villager) {
-        net.minecraft.core.BlockPos feet = villager.blockPosition();
-        return !level.canSeeSky(feet.above()) && feet.getY() < org.lts.smartcolony.util.WorldUtil.surfaceY(level, feet.getX(), feet.getZ()) - 4;
-    }
-
-    private boolean inDanger(ServerLevel level, Villager villager) {
-        LivingEntity attacker = villager.getLastHurtByMob();
-        if (attacker instanceof Enemy && attacker.isAlive() && villager.tickCount - villager.getLastHurtByMobTimestamp() < 100) {
-            return true;
-        }
-        return !level.getEntitiesOfClass(LivingEntity.class, villager.getBoundingBox().inflate(6.0, 3.0, 6.0),
-                entity -> entity instanceof Enemy && entity.isAlive() && villager.hasLineOfSight(entity)).isEmpty();
     }
 
     void seize(ServerLevel level, Villager villager) {

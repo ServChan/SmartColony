@@ -219,6 +219,19 @@ public final class GuardJob extends Job {
         if (attacker != null && attacker.isAlive() && valid(attacker) && villager.tickCount - villager.getLastHurtByMobTimestamp() < 200) {
             return attacker;
         }
+        LivingEntity hunter = null;
+        double hunterDistance = 32;
+        for (LivingEntity enemy : colony().defense().enemies()) {
+            double distance = enemy.distanceTo(villager);
+            if (distance < hunterDistance && colony().defense().hunting(enemy) && valid(enemy) && !ignored.containsKey(enemy.getUUID())
+                    && !outOfBounds(enemy)) {
+                hunter = enemy;
+                hunterDistance = distance;
+            }
+        }
+        if (hunter != null) {
+            return hunter;
+        }
         for (Villager member : colony().loadedVillagers(level)) {
             LivingEntity threat = member.getLastHurtByMob();
             if (threat != null && threat.isAlive() && valid(threat) && member.tickCount - member.getLastHurtByMobTimestamp() < 200

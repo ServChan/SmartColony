@@ -22,6 +22,8 @@ import org.lts.smartcolony.core.ThreatMap;
 import org.lts.smartcolony.util.WorldUtil;
 
 public final class Defense {
+    private static final int BUILDING_REACH = 8;
+    private static final int ALARM_MARGIN = 16;
     private final Colony colony;
     private final List<LivingEntity> enemies = new ArrayList<>();
     private long scannedAt = -1000;
@@ -75,7 +77,7 @@ public final class Defense {
             }
             double dx = enemy.getX() - center.getX();
             double dz = enemy.getZ() - center.getZ();
-            if (dx * dx + dz * dz <= inner * inner && Math.abs(enemy.getY() - center.getY()) < 12) {
+            if (dx * dx + dz * dz <= inner * inner || nearBuilding(enemy)) {
                 intruder = enemy;
                 break;
             }
@@ -90,14 +92,40 @@ public final class Defense {
             bell.attemptToRing(level, center, net.minecraft.core.Direction.NORTH);
             colony.data().bump("alarms_rung", 1);
         }
-        for (java.util.Map.Entry<java.util.UUID, org.lts.smartcolony.work.Colonist> entry : colony.colonists().entrySet()) {
-            entry.getValue().hide(level, now + 400);
-        }
+        hideAll(level, now + 400);
         if (now - lastAnnounce > 12000) {
             lastAnnounce = now;
             colony.journal(level, "alarm: " + intruder.getType().toShortString() + " inside the village");
             colony.notify(level, Component.translatable("smartcolony.chat.alarm", intruder.getDisplayName()));
         }
+    }
+
+    private void hideAll(ServerLevel level, long until) {
+        double reach = colony.data().radius + ALARM_MARGIN;
+        BlockPos center = colony.center();
+        for (java.util.Map.Entry<java.util.UUID, org.lts.smartcolony.work.Colonist> entry : colony.colonists().entrySet()) {
+            if (level.getEntity(entry.getKey()) instanceof Villager villager) {
+                double dx = villager.getX() - center.getX();
+                double dz = villager.getZ() - center.getZ();
+                if (dx * dx + dz * dz <= reach * reach) {
+                    entry.getValue().hide(level, until);
+                }
+            }
+        }
+    }
+
+    private boolean nearBuilding(LivingEntity enemy) {
+        org.lts.smartcolony.core.Pos pos = WorldUtil.pos(enemy.blockPosition());
+        for (ColonyData.Building building : colony.data().buildings) {
+            if (building.contains(pos, BUILDING_REACH)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean hunting(LivingEntity enemy) {
+        return enemy instanceof net.minecraft.world.entity.Mob mob && mob.getTarget() instanceof Villager target && colony.isMember(target);
     }
 
     public boolean raidActive() {
@@ -128,9 +156,7 @@ public final class Defense {
                 lastRing = now;
                 bell.attemptToRing(level, colony.center(), net.minecraft.core.Direction.NORTH);
             }
-            for (java.util.Map.Entry<java.util.UUID, org.lts.smartcolony.work.Colonist> entry : colony.colonists().entrySet()) {
-                entry.getValue().hide(level, now + 400);
-            }
+            hideAll(level, now + 400);
             return;
         }
         if (!raidActive) {
@@ -311,6 +337,10 @@ public final class Defense {
             threat.add(Math.round(value * 100) / 100.0);
         }
         json.add("sectors", threat);
+        json.addProperty("doors", colony.doors().known());
+        json.addProperty("doorsOpen", colony.doors().open(level));
+        json.addProperty("sheltered", colony.safeRooms().sheltered());
+        json.addProperty("rooms", colony.safeRooms().rooms());
         return json;
     }
 }

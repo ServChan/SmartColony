@@ -77,6 +77,8 @@ public final class Colony {
     private final FireWatch fire;
     private final Chores chores;
     private final Overgrowth overgrowth;
+    private final Doors doors;
+    private final SafeRooms safeRooms;
     private final Contracts contracts;
     private final Stable stable;
     private boolean dirty;
@@ -110,6 +112,8 @@ public final class Colony {
         this.fire = new FireWatch(this);
         this.chores = new Chores(this);
         this.overgrowth = new Overgrowth(this);
+        this.doors = new Doors(this);
+        this.safeRooms = new SafeRooms(this);
         this.contracts = new Contracts(this);
         this.stable = new Stable(this);
         for (Map.Entry<String, ColonyData.Member> entry : data.members.entrySet()) {
@@ -153,6 +157,14 @@ public final class Colony {
 
     public Economy economy() {
         return economy;
+    }
+
+    public Doors doors() {
+        return doors;
+    }
+
+    public SafeRooms safeRooms() {
+        return safeRooms;
     }
 
     public Defense defense() {
@@ -1016,6 +1028,8 @@ public final class Colony {
         forest.scan(level);
         theft.tick(level);
         defense.tick(level, ticks);
+        doors.tick(level, ticks);
+        safeRooms.tick(level, ticks);
         daily.tick(level, ticks);
         fire.tick(level, ticks);
         chores.tick(level, ticks);
