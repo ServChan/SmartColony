@@ -355,7 +355,7 @@ public abstract class Job {
         }
         int need = want - have;
         int taken = colony().warehouse().take(level, id, need);
-        if (taken < need && colony().craft(level, id, need - taken)) {
+        if (taken < need && colony().produce(level, id, need - taken)) {
             taken += colony().warehouse().take(level, id, need - taken);
         }
         if (taken > 0) {

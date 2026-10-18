@@ -89,7 +89,7 @@ public final class Contracts {
             if (left > 0) {
                 int have = colony.warehouse().stock(level).get(contract.item);
                 if (have < left) {
-                    colony.craft(level, contract.item, Math.min(64, left - have));
+                    colony.produce(level, contract.item, Math.min(64, left - have));
                     colony.request(contract.item);
                 }
                 int taken = colony.warehouse().take(level, contract.item, left);

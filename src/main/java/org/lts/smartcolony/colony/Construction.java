@@ -1629,7 +1629,7 @@ public final class Construction {
                 continue;
             }
             Stock stock = colony.warehouse().stock(level);
-            if (stock.get(fence) < needed && !colony.craft(level, fence, needed - stock.get(fence))) {
+            if (stock.get(fence) < needed && !colony.craft(level, fence, needed)) {
                 return;
             }
             if (colony.stockOf(level, id -> id.equals(planks)) == 0 && !colony.craft(level, planks, 1)) {

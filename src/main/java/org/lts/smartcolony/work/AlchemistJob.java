@@ -153,7 +153,7 @@ public final class AlchemistJob extends Job {
         boolean fuel = stock.get(Brewing.FUEL) > 0 || stand != null && fuelLeft(level);
         int healing = healingInStorage(level);
         if (healing < target && stock.get(Ids.mc("glistering_melon_slice")) == 0
-                && CraftPlanner.plan(stock, Ids.mc("glistering_melon_slice"), 1).isPresent()) {
+                && CraftPlanner.planMore(stock, Ids.mc("glistering_melon_slice"), 1).isPresent()) {
             startPrepare(Ids.mc("glistering_melon_slice"), 1);
             return;
         }
@@ -177,15 +177,15 @@ public final class AlchemistJob extends Job {
             }
         }
         int adults = colony().adultCount(level);
-        if (stock.get(Hospital.BANDAGE) < Hospital.bandageTarget(adults) && CraftPlanner.plan(stock, Hospital.BANDAGE, 3).isPresent()) {
+        if (stock.get(Hospital.BANDAGE) < Hospital.bandageTarget(adults) && CraftPlanner.planMore(stock, Hospital.BANDAGE, 3).isPresent()) {
             startPrepare(Hospital.BANDAGE, 3);
             return;
         }
-        if (stock.get(Hospital.REMEDY) < Hospital.remedyTarget(adults) && CraftPlanner.plan(stock, Hospital.REMEDY, 1).isPresent()) {
+        if (stock.get(Hospital.REMEDY) < Hospital.remedyTarget(adults) && CraftPlanner.planMore(stock, Hospital.REMEDY, 1).isPresent()) {
             startPrepare(Hospital.REMEDY, 1);
             return;
         }
-        if (stock.get(Ids.mc("glass_bottle")) < 3 && CraftPlanner.plan(stock, Ids.mc("glass_bottle"), 3).isPresent()) {
+        if (stock.get(Ids.mc("glass_bottle")) < 3 && CraftPlanner.planMore(stock, Ids.mc("glass_bottle"), 3).isPresent()) {
             startPrepare(Ids.mc("glass_bottle"), 3);
             return;
         }
@@ -390,7 +390,7 @@ public final class AlchemistJob extends Job {
         if (--progress > 0) {
             return;
         }
-        if (colony().craft(level, craftItem, craftCount)) {
+        if (colony().produce(level, craftItem, craftCount)) {
             gainXp(level, villager, 2);
             colony().data().bump("alchemist_prepared", craftCount);
         }

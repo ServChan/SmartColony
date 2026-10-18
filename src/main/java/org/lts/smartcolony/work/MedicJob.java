@@ -367,11 +367,11 @@ public final class MedicJob extends Job {
         int remedies = stock.get(Hospital.REMEDY);
         if (bandages < Hospital.bandageTarget(adults)) {
             int count = Math.min(6, Hospital.bandageTarget(adults) - bandages);
-            if (CraftPlanner.plan(stock, Hospital.BANDAGE, count).isPresent()) {
+            if (CraftPlanner.planMore(stock, Hospital.BANDAGE, count).isPresent()) {
                 startPrepare(Hospital.BANDAGE, count);
                 return true;
             }
-            if (CraftPlanner.plan(stock, Hospital.BANDAGE, 3).isPresent()) {
+            if (CraftPlanner.planMore(stock, Hospital.BANDAGE, 3).isPresent()) {
                 startPrepare(Hospital.BANDAGE, 3);
                 return true;
             }
@@ -381,11 +381,11 @@ public final class MedicJob extends Job {
         }
         if (remedies < Hospital.remedyTarget(adults)) {
             int count = Math.min(3, Hospital.remedyTarget(adults) - remedies);
-            if (CraftPlanner.plan(stock, Hospital.REMEDY, count).isPresent()) {
+            if (CraftPlanner.planMore(stock, Hospital.REMEDY, count).isPresent()) {
                 startPrepare(Hospital.REMEDY, count);
                 return true;
             }
-            if (CraftPlanner.plan(stock, Hospital.REMEDY, 1).isPresent()) {
+            if (CraftPlanner.planMore(stock, Hospital.REMEDY, 1).isPresent()) {
                 startPrepare(Hospital.REMEDY, 1);
                 return true;
             }
@@ -445,7 +445,7 @@ public final class MedicJob extends Job {
         if (--progress > 0) {
             return;
         }
-        if (colony().craft(level, craftItem, craftCount)) {
+        if (colony().produce(level, craftItem, craftCount)) {
             gainXp(level, villager, 2);
             colony().data().bump("medic_prepared", craftCount);
         } else {

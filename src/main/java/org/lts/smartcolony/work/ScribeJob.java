@@ -150,7 +150,7 @@ public final class ScribeJob extends Job {
             colony().journal(level, "the scribe has enough books: the library gets its real shelves and lectern");
             colony().markDirty();
         }
-        if (stock.get(Ids.mc("book")) < BOOK_TARGET && CraftPlanner.plan(stock, Ids.mc("book"), 1).isPresent()) {
+        if (stock.get(Ids.mc("book")) < BOOK_TARGET && CraftPlanner.planMore(stock, Ids.mc("book"), 1).isPresent()) {
             startWrite(Ids.mc("book"), Math.min(3, BOOK_TARGET - stock.get(Ids.mc("book"))));
             return;
         }
@@ -208,7 +208,7 @@ public final class ScribeJob extends Job {
         if (--progress > 0) {
             return;
         }
-        if (colony().craft(level, craftItem, craftCount)) {
+        if (colony().produce(level, craftItem, craftCount)) {
             gainXp(level, villager, 2);
             if (craftItem.equals(Ids.mc("book"))) {
                 colony().data().knowledge += craftCount;

@@ -33,6 +33,10 @@ public final class CraftPlanner {
         return plan(stock, Map.of(item, count));
     }
 
+    public static Optional<Plan> planMore(Stock stock, String item, int extra) {
+        return plan(stock, item, stock.get(item) + Math.max(0, extra));
+    }
+
     public static Optional<Plan> plan(Stock stock, Map<String, Integer> wanted) {
         CraftPlanner planner = new CraftPlanner(stock);
         for (Map.Entry<String, Integer> entry : wanted.entrySet()) {

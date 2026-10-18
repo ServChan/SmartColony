@@ -427,7 +427,7 @@ public final class Advisor {
         if (have >= 4) {
             return "rejected: the storage already holds " + have + " " + item;
         }
-        return colony.craft(level, Ids.mc(item), count) ? "crafted " + count + " " + item : "rejected: not enough materials for " + item;
+        return colony.produce(level, Ids.mc(item), count) ? "crafted " + count + " " + item : "rejected: not enough materials for " + item;
     }
 
     private static String string(JsonObject object, String key) {

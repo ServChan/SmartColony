@@ -39,7 +39,7 @@ public final class CrafterNeeds {
 
     public static boolean pending(Role role, Context ctx) {
         for (Want want : wants(role, ctx)) {
-            if (CraftPlanner.plan(ctx.stock(), want.item(), 1).isPresent()) {
+            if (CraftPlanner.planMore(ctx.stock(), want.item(), 1).isPresent()) {
                 return true;
             }
         }

@@ -71,6 +71,7 @@ public final class Colony {
     private final Set<String> requests = new LinkedHashSet<>();
     private final Set<UUID> ownedNames = new java.util.HashSet<>();
     private EnumMap<Role, Integer> desired = new EnumMap<>(Role.class);
+    private final org.lts.smartcolony.core.RoleDamper roleDamper = new org.lts.smartcolony.core.RoleDamper();
     private final IronAge ironAge;
     private final Ward ward;
     private final Daily daily;
@@ -85,6 +86,7 @@ public final class Colony {
     private boolean dirty;
     private long ticks;
     private long lastStorageWarning;
+    private static final long ROLE_TENURE = 6000;
 
     public Colony(ColonyData data) {
         this.data = data;
@@ -460,6 +462,13 @@ public final class Colony {
             markDirty();
         }
         return applied;
+    }
+
+    public boolean produce(ServerLevel level, String id, int extra) {
+        if (extra <= 0) {
+            return false;
+        }
+        return craft(level, id, warehouse.stock(level).get(id) + extra);
     }
 
     public boolean craftOrTake(ServerLevel level, Villager villager, String id) {
@@ -1232,6 +1241,7 @@ public final class Colony {
         desired = org.lts.smartcolony.core.PorterPlan.settle(desired, outposts.porterDemand(level));
         desired = org.lts.smartcolony.core.Specialists.settle(desired, specialistWants(level, adults), adults);
         desired = org.lts.smartcolony.core.Decree.apply(desired, org.lts.smartcolony.core.Decree.Focus.byKey(data.focus), adults);
+        desired = roleDamper.settle(desired);
         Map<String, Role> current = new LinkedHashMap<>();
         Map<String, Role> affinity = new HashMap<>();
         Set<String> locked = new java.util.HashSet<>();
@@ -1254,7 +1264,7 @@ public final class Colony {
                     : member != null && member.affinityRole() != null ? member.affinityRole()
                     : Role.affinity(villager.getVillagerData().profession().unwrapKey()
                     .map(k -> k.identifier().getPath()).orElse("none")));
-            if (member != null && (member.locked || (member.role() != Role.IDLE && level.getGameTime() - member.since < 2400))) {
+            if (member != null && (member.locked || (member.role() != Role.IDLE && level.getGameTime() - member.since < ROLE_TENURE))) {
                 locked.add(key);
             }
             loaded.put(key, villager);

@@ -110,10 +110,10 @@ public class CrafterJob extends Job {
     }
 
     private int feasible(org.lts.smartcolony.core.Stock stock, CrafterNeeds.Want want) {
-        if (CraftPlanner.plan(stock, want.item(), want.count()).isPresent()) {
+        if (CraftPlanner.planMore(stock, want.item(), want.count()).isPresent()) {
             return want.count();
         }
-        if (want.count() > 1 && CraftPlanner.plan(stock, want.item(), 1).isPresent()) {
+        if (want.count() > 1 && CraftPlanner.planMore(stock, want.item(), 1).isPresent()) {
             return 1;
         }
         return 0;
@@ -216,7 +216,7 @@ public class CrafterJob extends Job {
         if (--progress > 0) {
             return;
         }
-        boolean done = colony().craft(level, order.item(), amount);
+        boolean done = colony().produce(level, order.item(), amount);
         if (done) {
             gainXp(level, villager, 2 + amount / 4);
         } else {
