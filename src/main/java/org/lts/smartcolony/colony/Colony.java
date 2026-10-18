@@ -81,6 +81,7 @@ public final class Colony {
     private final SafeRooms safeRooms;
     private final Contracts contracts;
     private final Stable stable;
+    private final Embassy embassy;
     private boolean dirty;
     private long ticks;
     private long lastStorageWarning;
@@ -116,6 +117,7 @@ public final class Colony {
         this.safeRooms = new SafeRooms(this);
         this.contracts = new Contracts(this);
         this.stable = new Stable(this);
+        this.embassy = new Embassy(this);
         for (Map.Entry<String, ColonyData.Member> entry : data.members.entrySet()) {
             UUID uuid = UUID.fromString(entry.getKey());
             Colonist colonist = new Colonist(uuid, this);
@@ -233,6 +235,10 @@ public final class Colony {
 
     public Stable stable() {
         return stable;
+    }
+
+    public Embassy embassy() {
+        return embassy;
     }
 
     public boolean builtKind(String kind) {
@@ -1036,6 +1042,7 @@ public final class Colony {
         overgrowth.tick(level, ticks);
         contracts.tick(level, ticks);
         stable.tick(level, ticks);
+        embassy.tick(level, ticks);
         if (ticks % 200 == 7) {
             planRoles(level);
         }
@@ -1101,7 +1108,7 @@ public final class Colony {
             Entity entity = level.getEntity(entry.getKey());
             if (entity instanceof Villager villager && villager.isAlive()) {
                 double distance = villager.position().distanceTo(net.minecraft.world.phys.Vec3.atCenterOf(center()));
-                if (distance > data.radius + 160 && !Colonist.isControlled(villager)) {
+                if (distance > data.radius + 160 && !Colonist.isControlled(villager) && !embassy.onMission(entry.getKey())) {
                     leave(level, villager, entry.getValue());
                     it.remove();
                 }
@@ -1146,6 +1153,7 @@ public final class Colony {
             return;
         }
         data.bump("deaths", 1);
+        embassy.memberLost(level, villager, source);
         graveyard.recordDeath(level, villager, source, colonist);
         removeMember(villager.getUUID());
     }
@@ -1154,6 +1162,7 @@ public final class Colony {
         Colonist colonist = colonists.get(uuid);
         if (colonist != null) {
             data.bump("deaths", 1);
+            embassy.forget(uuid);
             journal(level, colonist.role().key() + " died");
             notify(level, Component.translatable("smartcolony.chat.death", Component.translatable("smartcolony.role." + colonist.role().key())));
             removeMember(uuid);

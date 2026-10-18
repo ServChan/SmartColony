@@ -41,7 +41,11 @@ public final class ColonyEvents {
         if (colonist == null || colonist.role() != Role.GUARD && colonist.role() != Role.HERDER) {
             return true;
         }
-        if (victim instanceof Villager || victim instanceof IronGolem) {
+        if (victim instanceof Villager target) {
+            Colony other = ColonyManager.colonyOf(target);
+            return colonist.role() == Role.GUARD && other != null && Embassy.atWar(colony, other);
+        }
+        if (victim instanceof IronGolem) {
             return false;
         }
         if (victim instanceof ServerPlayer player) {

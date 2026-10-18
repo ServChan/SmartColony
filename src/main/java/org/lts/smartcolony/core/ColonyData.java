@@ -75,6 +75,55 @@ public final class ColonyData {
     public long chronicleDay = -1;
     public long lastRaid;
     public int walkwayVersion;
+    public String temper = "";
+    public String policy = Diplomacy.Policy.AUTO.key();
+    public Map<String, Relation> relations = new LinkedHashMap<>();
+    public List<Mission> missions = new ArrayList<>();
+    public long diplomacyDay = -1;
+
+    public static final class Relation {
+        public int standing;
+        public String treaty = Diplomacy.Treaty.NONE.key();
+        public long since;
+        public long met;
+        public long lastEnvoy;
+        public long lastRaid;
+        public long lastRaided;
+        public long lastAid;
+        public int gifts;
+        public int trades;
+        public int raidsMade;
+        public int raidsSuffered;
+        public int killed;
+        public int lost;
+        public int visits;
+        public int aid;
+        public List<String> history = new ArrayList<>();
+
+        public Diplomacy.Treaty treaty() {
+            return Diplomacy.Treaty.byKey(treaty);
+        }
+
+        public void remember(long day, String event) {
+            history.add(day + " " + event);
+            while (history.size() > 12) {
+                history.removeFirst();
+            }
+        }
+    }
+
+    public static final class Mission {
+        public String member = "";
+        public String kind = "";
+        public String target = "";
+        public String proposal = "";
+        public String phase = "out";
+        public Map<String, Integer> goods = new LinkedHashMap<>();
+        public long started;
+        public long until;
+        public int failures;
+        public boolean done;
+    }
 
     public static final class Contract {
         public String item = "";

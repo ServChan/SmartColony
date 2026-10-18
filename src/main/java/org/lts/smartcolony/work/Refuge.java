@@ -405,7 +405,8 @@ final class Refuge {
         AABB box = villager.getBoundingBox().inflate(SCAN_RADIUS, 6.0, SCAN_RADIUS);
         return level.getEntitiesOfClass(LivingEntity.class, box, entity -> entity.isAlive() && entity != villager
                 && (entity instanceof Enemy && !colony.ward().spares(entity)
-                || entity instanceof ServerPlayer player && colony.defense().isEnemyPlayer(player)));
+                || entity instanceof ServerPlayer player && colony.defense().isEnemyPlayer(player)
+                || colony.embassy().isRaider(entity)));
     }
 
     private static boolean attacked(Villager villager) {

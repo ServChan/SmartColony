@@ -62,6 +62,8 @@ public final class ColonyCommand {
                 .then(Commands.literal("journal").executes(ColonyCommand::journal))
                 .then(Commands.literal("market").executes(ColonyCommand::market))
                 .then(Commands.literal("reputation").executes(ColonyCommand::reputation))
+                .then(Commands.literal("relations").executes(DiplomacyCommand::relations))
+                .then(DiplomacyCommand.diplomacy())
                 .then(DecreeCommand.decree())
                 .then(DecreeCommand.order(context))
                 .then(Commands.literal("build")

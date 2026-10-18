@@ -30,6 +30,7 @@ public final class Colonist {
     private String releaseReason = "";
     private final Hazards hazards = new Hazards(this);
     private final Refuge refuge = new Refuge(this);
+    private final Mission mission = new Mission(this);
     private long lastTick;
     private long restBlockedUntil;
     private long nextHeal;
@@ -140,6 +141,9 @@ public final class Colonist {
         if (job == null) {
             return "idle";
         }
+        if (mission.active()) {
+            return "mission: " + mission.status();
+        }
         if (refuge.active()) {
             return "refuge: " + refuge.status();
         }
@@ -175,6 +179,9 @@ public final class Colonist {
             colony.data().bump("walls_escaped", 1);
         }
         if (hazards.tick(level, villager, now)) {
+            return;
+        }
+        if (mission.tick(level, villager, now)) {
             return;
         }
         if (refuge.tick(level, villager, now)) {

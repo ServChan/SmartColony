@@ -31,7 +31,8 @@ public final class ColonyScreen extends Screen {
     private static final int STATUS_ON = 0xFF55FF55;
     private static final int STATUS_WARN = 0xFFFFC14D;
     private static final int STATUS_OFF = 0xFFFF5555;
-    private static final String[] TABS = {"overview", "storage", "villagers", "journal", "market", "decrees"};
+    private static final String[] TABS = {"overview", "storage", "villagers", "journal", "market", "decrees", "neighbors"};
+    private static final String[] POLICIES = {"auto", "peaceful", "warlike"};
     private static final String[] FOCUSES = {"balanced", "food", "defense", "build", "resources"};
     private static final Map<String, String> ROLE_ICONS = Map.ofEntries(
             Map.entry("idle", "minecraft:bread"), Map.entry("lumberjack", "minecraft:stone_axe"), Map.entry("miner", "minecraft:stone_pickaxe"),
@@ -155,6 +156,7 @@ public final class ColonyScreen extends Screen {
             case "journal" -> journal(graphics, x, y, w);
             case "market" -> market(graphics, x, y, w);
             case "decrees" -> decrees(graphics, x, y, w);
+            case "neighbors" -> neighbors(graphics, x, y, w);
             default -> overview(graphics, x, y, w);
         };
         graphics.disableScissor();
@@ -596,6 +598,125 @@ public final class ColonyScreen extends Screen {
         graphics.text(font, font.plainSubstrByWidth(Component.translatable("smartcolony.ui.decree.workshops",
                 built.isEmpty() ? "-" : built.toString()).getString(), w), x, y, TEXT_DIM, false);
         return y + 14;
+    }
+
+    private int neighbors(GuiGraphicsExtractor graphics, int x, int y, int w) {
+        ColonyView.Relations relations = view.relations();
+        y = heading(graphics, Component.translatable("smartcolony.ui.diplomacy.policy"), x, y);
+        graphics.text(font, Component.translatable("smartcolony.ui.diplomacy.temper",
+                Component.translatable("smartcolony.diplomacy.temper." + relations.temper())), x, y, TEXT_NORMAL, false);
+        y += 13;
+        int cx = x;
+        for (String policy : POLICIES) {
+            cx = chip(graphics, Component.translatable("smartcolony.diplomacy.policy." + policy), cx, y, policy.equals(relations.policy()),
+                    "colony diplomacy policy " + policy);
+        }
+        y += 18;
+        graphics.text(font, font.plainSubstrByWidth(Component.translatable("smartcolony.diplomacy.policy_hint." + relations.policy()).getString(), w),
+                x, y, TEXT_DIM, false);
+        y += 16;
+        if (!relations.missions().isEmpty()) {
+            y = heading(graphics, Component.translatable("smartcolony.ui.diplomacy.missions", relations.missions().size()), x, y);
+            for (String line : relations.missions()) {
+                String[] parts = line.split("\\|");
+                graphics.text(font, font.plainSubstrByWidth(Component.translatable("smartcolony.ui.diplomacy.mission",
+                        Component.translatable("smartcolony.mission.kind." + parts[0]), parts[1],
+                        Component.translatable("smartcolony.mission.phase." + parts[2])).getString(), w), x, y, TEXT_NORMAL, false);
+                y += 12;
+            }
+            y += 4;
+        }
+        y = heading(graphics, Component.translatable("smartcolony.ui.diplomacy.neighbors", relations.neighbors().size()), x, y);
+        if (relations.neighbors().isEmpty()) {
+            graphics.text(font, font.plainSubstrByWidth(Component.translatable("smartcolony.ui.diplomacy.none").getString(), w), x, y,
+                    TEXT_DIM, false);
+            return y + 14;
+        }
+        for (ColonyView.Neighbor neighbor : relations.neighbors()) {
+            graphics.fill(x - 2, y - 2, x + w, y - 1, BORDER_PRIMARY);
+            graphics.text(font, Component.literal(neighbor.name()), x, y + 2, ACCENT_GOLD, false);
+            Component stance = Component.translatable("smartcolony.diplomacy.stance." + neighbor.stance());
+            Component treaty = Component.translatable("smartcolony.diplomacy.treaty_name." + neighbor.treaty());
+            Component right = Component.translatable("smartcolony.ui.diplomacy.state", stance, treaty);
+            graphics.text(font, right, x + w - font.width(right), y + 2, stanceColor(neighbor.stance()), false);
+            y += 14;
+            graphics.text(font, Component.translatable("smartcolony.ui.diplomacy.about", neighbor.distance(),
+                    Component.translatable("smartcolony.diplomacy.temper." + neighbor.temper())), x, y, TEXT_DIM, false);
+            y += 12;
+            graphics.text(font, Component.translatable("smartcolony.ui.diplomacy.opinion", signed(neighbor.standing())), x, y, TEXT_NORMAL, false);
+            int barLeft = x + 150;
+            int barRight = Math.min(x + w - 4, barLeft + 160);
+            standingBar(graphics, barLeft, y + 1, barRight, neighbor.standing());
+            y += 12;
+            graphics.text(font, Component.translatable("smartcolony.ui.diplomacy.their_opinion", signed(neighbor.theirStanding())), x, y,
+                    TEXT_NORMAL, false);
+            standingBar(graphics, barLeft, y + 1, barRight, neighbor.theirStanding());
+            y += 12;
+            graphics.text(font, font.plainSubstrByWidth(Component.translatable("smartcolony.ui.diplomacy.ledger", neighbor.trades(),
+                    neighbor.gifts(), neighbor.visits(), neighbor.aid(), neighbor.raidsMade(), neighbor.raidsSuffered(), neighbor.killed(),
+                    neighbor.lost()).getString(), w), x, y, TEXT_DIM, false);
+            y += 12;
+            if (!neighbor.reasons().isEmpty()) {
+                StringBuilder line = new StringBuilder();
+                for (String reason : neighbor.reasons()) {
+                    String[] parts = reason.split("\\|");
+                    line.append(line.isEmpty() ? "" : ", ").append(Component.translatable("smartcolony.diplomacy.reason." + parts[0]).getString())
+                            .append(' ').append(signed(Integer.parseInt(parts[1])));
+                }
+                graphics.text(font, font.plainSubstrByWidth(Component.translatable("smartcolony.ui.diplomacy.reasons", line.toString()).getString(), w),
+                        x, y, TEXT_DIM, false);
+                y += 12;
+            }
+            int shown = 0;
+            for (String entry : neighbor.history()) {
+                if (shown++ >= 4) {
+                    break;
+                }
+                int space = entry.indexOf(' ');
+                String day = space > 0 ? entry.substring(0, space) : "?";
+                String event = space > 0 ? entry.substring(space + 1) : entry;
+                graphics.text(font, font.plainSubstrByWidth(Component.translatable("smartcolony.ui.diplomacy.event", day,
+                        Component.translatable("smartcolony.diplomacy.event." + event)).getString(), w), x + 6, y, TEXT_NORMAL, false);
+                y += 11;
+            }
+            y += 2;
+            cx = chip(graphics, Component.translatable("smartcolony.ui.diplomacy.send_envoy"), x, y, false,
+                    "colony diplomacy envoy " + neighbor.id());
+            if ("war".equals(neighbor.treaty())) {
+                chip(graphics, Component.translatable("smartcolony.ui.diplomacy.sue_peace"), cx, y, false, "colony diplomacy peace " + neighbor.id());
+            }
+            if (neighbor.away() > 0) {
+                graphics.text(font, Component.translatable("smartcolony.ui.diplomacy.away", neighbor.away()), x + w - 90, y + 3, STATUS_WARN, false);
+            }
+            y += 22;
+        }
+        return y;
+    }
+
+    private void standingBar(GuiGraphicsExtractor graphics, int x0, int y, int x1, int standing) {
+        graphics.fill(x0, y, x1, y + 6, BG_SLOT);
+        int middle = (x0 + x1) / 2;
+        int reach = (int) Math.round((x1 - x0) / 2.0 * Math.max(-100, Math.min(100, standing)) / 100.0);
+        if (reach > 0) {
+            graphics.fill(middle, y, middle + reach, y + 6, STATUS_ON);
+        } else if (reach < 0) {
+            graphics.fill(middle + reach, y, middle, y + 6, STATUS_OFF);
+        }
+        graphics.fill(middle, y - 1, middle + 1, y + 7, TEXT_NORMAL);
+        graphics.outline(x0, y, x1 - x0, 6, BORDER_PRIMARY);
+    }
+
+    private static String signed(int value) {
+        return value > 0 ? "+" + value : Integer.toString(value);
+    }
+
+    private static int stanceColor(String stance) {
+        return switch (stance) {
+            case "war" -> STATUS_OFF;
+            case "hostile" -> STATUS_WARN;
+            case "friendly", "allied" -> STATUS_ON;
+            default -> TEXT_DIM;
+        };
     }
 
     private int heading(GuiGraphicsExtractor graphics, Component text, int x, int y) {

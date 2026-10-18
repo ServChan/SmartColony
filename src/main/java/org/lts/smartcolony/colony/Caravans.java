@@ -64,7 +64,7 @@ final class Caravans {
             return;
         }
         for (Colony to : ColonyManager.all()) {
-            if (to == from || !tradingPost(to) || !to.data().dimension.equals(from.data().dimension)) {
+            if (to == from || !tradingPost(to) || !to.data().dimension.equals(from.data().dimension) || !Embassy.tradeAllowed(from, to)) {
                 continue;
             }
             double distance = Math.sqrt(from.center().distSqr(to.center()));
@@ -90,6 +90,13 @@ final class Caravans {
             }
             from.data().lastCaravan = now;
             if (caravan.goods.isEmpty()) {
+                return;
+            }
+            if (from.embassy().sendCaravan(level, to, caravan.goods)) {
+                from.data().bump("caravans_sent", 1);
+                from.journal(level, "a carrier set out for " + to.data().name + " with " + caravan.goods);
+                Embassy.tell(level, from, to, Component.translatable("smartcolony.diplomacy.caravan_walking", from.data().name, to.data().name));
+                from.markDirty();
                 return;
             }
             to.data().caravans.add(caravan);
@@ -140,11 +147,14 @@ final class Caravans {
             }
             if (delivered > 0) {
                 Colony source = ColonyManager.byId(caravan.from);
-                String name = source == null ? caravan.from : source.data().name;
-                colony.journal(level, "caravan from " + name + " unloaded " + delivered + " items");
-                colony.notify(level, Component.translatable("smartcolony.chat.caravan_arrived", name, delivered));
-                colony.data().bump("caravans_received", 1);
-                colony.markDirty();
+                if (source != null) {
+                    colony.embassy().caravanArrived(level, source, delivered);
+                } else {
+                    colony.journal(level, "caravan from " + caravan.from + " unloaded " + delivered + " items");
+                    colony.notify(level, Component.translatable("smartcolony.chat.caravan_arrived", caravan.from, delivered));
+                    colony.data().bump("caravans_received", 1);
+                    colony.markDirty();
+                }
             }
             if (caravan.goods.isEmpty()) {
                 it.remove();

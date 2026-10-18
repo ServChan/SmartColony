@@ -58,7 +58,16 @@ public record ColonyView(
         String hospital,
         int hospitalNeeds,
         Hall.Summary hall,
-        Society society) {
+        Society society,
+        Relations relations) {
+
+    public record Relations(String temper, String policy, List<Neighbor> neighbors, List<String> missions) {
+    }
+
+    public record Neighbor(String id, String name, int distance, int standing, int theirStanding, String treaty, String stance,
+                           String temper, int trades, int gifts, int raidsMade, int raidsSuffered, int killed, int lost, int visits,
+                           int aid, List<String> reasons, List<String> history, int away) {
+    }
 
     public record Society(String focus, List<String> zones, List<String> orders, String slot, boolean restDay, boolean fed,
                           int ores, int villages, int nests, int recruits, int caravans, int packAnimals, int fires, int raids,
@@ -208,7 +217,39 @@ public record ColonyView(
 
                 colony.ward().summary(), Hospital.stage(data) >= Hospital.STAGES ? 0
                 : Hospital.requiredAdults(Hospital.stage(data) + 1, SmartColonyConfig.get().infirmaryAdults),
-                colony.hall().summary(level), society(level, colony));
+                colony.hall().summary(level), society(level, colony), relations(colony));
+    }
+
+    private static Relations relations(Colony colony) {
+        List<Neighbor> neighbors = new ArrayList<>();
+        for (Map.Entry<String, ColonyData.Relation> entry : colony.data().relations.entrySet()) {
+            Colony other = ColonyManager.byId(entry.getKey());
+            if (other == null) {
+                continue;
+            }
+            ColonyData.Relation relation = entry.getValue();
+            ColonyData.Relation theirs = other.data().relations.get(colony.id());
+            List<String> reasons = new ArrayList<>();
+            for (org.lts.smartcolony.core.Diplomacy.Reason reason : colony.embassy().reasons(other.id())) {
+                reasons.add(reason.key() + "|" + reason.delta());
+            }
+            List<String> history = new ArrayList<>(relation.history);
+            java.util.Collections.reverse(history);
+            neighbors.add(new Neighbor(other.id(), other.data().name, (int) Math.sqrt(colony.center().distSqr(other.center())),
+                    relation.standing, theirs == null ? 0 : theirs.standing, relation.treaty,
+                    org.lts.smartcolony.core.Diplomacy.stance(relation.standing, relation.treaty()).key(), other.embassy().temper().key(),
+                    relation.trades, relation.gifts, relation.raidsMade, relation.raidsSuffered, relation.killed, relation.lost,
+                    relation.visits, relation.aid, reasons, history, colony.embassy().activeMissions(other)));
+        }
+        neighbors.sort((a, b) -> Integer.compare(a.distance(), b.distance()));
+        List<String> missions = new ArrayList<>();
+        for (ColonyData.Mission mission : colony.data().missions) {
+            if (!mission.done) {
+                Colony target = ColonyManager.byId(mission.target);
+                missions.add(mission.kind + "|" + (target == null ? mission.target : target.data().name) + "|" + mission.phase);
+            }
+        }
+        return new Relations(colony.embassy().temper().key(), colony.embassy().policy().key(), neighbors, missions);
     }
 
     private static Society society(ServerLevel level, Colony colony) {

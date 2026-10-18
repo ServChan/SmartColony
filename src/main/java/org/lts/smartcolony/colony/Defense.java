@@ -72,7 +72,7 @@ public final class Defense {
                 continue;
             }
             if (enemy instanceof net.minecraft.world.entity.Mob mob && mob.getTarget() == null
-                    && !(enemy instanceof net.minecraft.world.entity.monster.Creeper)) {
+                    && !(enemy instanceof net.minecraft.world.entity.monster.Creeper) && !colony.embassy().isRaider(enemy)) {
                 continue;
             }
             double dx = enemy.getX() - center.getX();
@@ -212,6 +212,15 @@ public final class Defense {
                         && e.getY() >= WorldUtil.surfaceY(level, e.getBlockX(), e.getBlockZ()) - 6)) {
             enemies.add(entity);
             ThreatMap.add(colony.data().threat, entity.getX() - center.getX(), entity.getZ() - center.getZ(), 0.2);
+        }
+        for (Villager raider : level.getEntitiesOfClass(Villager.class, area(16), colony.embassy()::isRaider)) {
+            enemies.add(raider);
+            ThreatMap.add(colony.data().threat, raider.getX() - center.getX(), raider.getZ() - center.getZ(), 0.4);
+            for (IronGolem golem : level.getEntitiesOfClass(IronGolem.class, area(16), IronGolem::isAlive)) {
+                if (golem.getTarget() == null && golem.distanceTo(raider) < 20) {
+                    golem.setTarget(raider);
+                }
+            }
         }
         if (SmartColonyConfig.get().guardsAttackEnemyPlayers) {
             for (ServerPlayer player : level.players()) {

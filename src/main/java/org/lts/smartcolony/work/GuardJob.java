@@ -211,7 +211,33 @@ public final class GuardJob extends Job {
         if (entity instanceof ServerPlayer player) {
             return colony().defense().isEnemyPlayer(player);
         }
+        if (entity instanceof Villager) {
+            return colony().embassy().isRaider(entity);
+        }
         return entity instanceof Enemy && !colony().ward().spares(entity);
+    }
+
+    public boolean armedFor(Villager villager) {
+        return armed(villager);
+    }
+
+    public void skirmish(ServerLevel level, Villager villager, LivingEntity foe) {
+        if (shotCooldown > 0) {
+            shotCooldown--;
+        }
+        if (meleeCooldown > 0) {
+            meleeCooldown--;
+        }
+        if (eatCooldown > 0) {
+            eatCooldown--;
+        }
+        float health = villager.getHealth() / villager.getMaxHealth();
+        if (health < 0.5F && drinkPotion(level, villager)) {
+            return;
+        }
+        target = foe;
+        fight(level, villager, health);
+        healing = false;
     }
 
     private LivingEntity pickTarget(ServerLevel level, Villager villager) {
