@@ -505,6 +505,9 @@ public final class ColonyScreen extends Screen {
 
     @Override
     public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent event, boolean doubleClick) {
+        if (getChildAt(event.x(), event.y()).isPresent()) {
+            return super.mouseClicked(event, doubleClick);
+        }
         if (event.y() >= contentTop && event.y() < contentBottom) {
             for (Chip chip : chips) {
                 if (chip.contains(event.x(), event.y()) && minecraft != null && minecraft.player != null) {
