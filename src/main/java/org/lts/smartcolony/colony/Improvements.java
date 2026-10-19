@@ -795,6 +795,9 @@ public final class Improvements {
                 .forEach(record -> points.add(record.getPos()));
         int poiCount = points.size();
         for (ColonyData.Building building : data().buildings) {
+            if (Highways.remote(building)) {
+                continue;
+            }
             points.add(WorldUtil.bp(building.min));
             points.add(WorldUtil.bp(building.max));
         }
@@ -849,7 +852,7 @@ public final class Improvements {
         for (int k = 0; k < SECTORS; k++) {
             long hash = (seed * 31 + k) * 0x9E3779B97F4A7C15L;
             double noise = ((hash >>> 40) % 5) - 2;
-            radii[k] = Math.max(14, Math.min(96, Math.max(radii[k], radii[k] + noise)));
+            radii[k] = Math.max(14, Math.min(org.lts.smartcolony.SmartColonyConfig.get().maxColonyRadius + 24, Math.max(radii[k], radii[k] + noise)));
         }
         radii = WallPlanner.optimize(center.getX(), center.getZ(), radii, new WallTerrain(level), SEARCH_WINDOW, 3);
         List<int[]> ring = new ArrayList<>();

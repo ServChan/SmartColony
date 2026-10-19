@@ -66,7 +66,8 @@ public final class Construction {
         FILL,
         PLACE,
         ROAD,
-        ORDER
+        ORDER,
+        HIGHWAY
     }
 
     public record Task(Kind kind, BlockPos pos, BlockState state, BlockPos partner, BlockState partnerState, BlockPos stand,
@@ -185,7 +186,7 @@ public final class Construction {
 
     public boolean hasWork(ServerLevel level) {
         return !active().isEmpty() || !data().pendingRoad.isEmpty() || colony.improvements().hasWork(level)
-                || colony.chores().snowPending();
+                || colony.chores().snowPending() || colony.highways().hasWork(level);
     }
 
     public int backlog(ServerLevel level) {
@@ -269,7 +270,8 @@ public final class Construction {
         }
         if (housingShort) {
             long houses = houseCount + data().projects.stream().filter(p -> "house".equals(p.building.kind)).count();
-            order.add(adults < 6 ? "house_small" : houses % 2 == 0 ? "house_family" : "house_garden");
+            order.add(adults < 6 ? "house_small" : adults >= 20 && houses % 3 == 2 && available("house_row") ? "house_row"
+                    : houses % 2 == 0 ? "house_family" : "house_garden");
         }
         if (wantUpgrade && !order.contains(HouseTier.upgradeOf(toUpgrade.blueprint))) {
             order.add(HouseTier.upgradeOf(toUpgrade.blueprint));
@@ -279,7 +281,7 @@ public final class Construction {
             order.add("pen");
         }
         if (fullest >= 0.75) {
-            order.add("storage_shed");
+            order.add(adults >= 18 && built("granary") < 2 && available("granary") ? "granary" : "storage_shed");
         }
         long posts = data().buildings.stream().filter(b -> "guard_post".equals(b.kind)).count();
         int guards = colony.desired().getOrDefault(Role.GUARD, 0);
@@ -323,6 +325,20 @@ public final class Construction {
         }
         if (adults >= 14 && built("chapel") == 0) {
             order.add("chapel");
+        }
+        if (adults >= 8 && built("well") == 0 && available("well")) {
+            order.add("well");
+        }
+        boolean pact = data().relations.values().stream().anyMatch(r -> r.treaty() == org.lts.smartcolony.core.Diplomacy.Treaty.TRADE
+                || r.treaty() == org.lts.smartcolony.core.Diplomacy.Treaty.ALLIANCE);
+        if (adults >= 6 && pact && built("trading_post") == 0 && available("trading_post")) {
+            order.add("trading_post");
+        }
+        if (adults >= 16 && !data().relations.isEmpty() && built("embassy") == 0 && available("embassy")) {
+            order.add("embassy");
+        }
+        if (adults >= 14 && data().farms.size() >= 4 && built("windmill") == 0 && available("windmill")) {
+            order.add("windmill");
         }
         int sand = stock.get(Ids.mc("sand")) + stock.get(Ids.mc("red_sand"));
         if (adults >= 10 && built(Specialists.MASONRY) == 0
@@ -408,6 +424,10 @@ public final class Construction {
             }
         }
         return wounded;
+    }
+
+    private static boolean available(String blueprint) {
+        return Blueprints.IDS.contains(blueprint);
     }
 
     private long built(String blueprint) {
@@ -917,6 +937,9 @@ public final class Construction {
                 if (!search.forbidden().isEmpty() && PorterPlan.overlaps(ox, oz, ox + sx - 1, oz + sz - 1, search.forbidden())) {
                     continue;
                 }
+                if (!colony.ownsGround(px, pz) || colony.highways().crosses(ox - 1, oz - 1, ox + sx, oz + sz)) {
+                    continue;
+                }
                 if (!clear(blueprint, rotation, ox, oz, sx, sz, doors, obstacles)) {
                     continue;
                 }
@@ -1028,14 +1051,22 @@ public final class Construction {
     }
 
     public boolean planOutpost(ServerLevel level, BlockPos anchor, int minRadius, int maxRadius, List<int[]> forbidden) {
-        Blueprint blueprint = Blueprints.get(PorterPlan.OUTPOST_ID);
+        return planRemote(level, PorterPlan.OUTPOST_ID, anchor, minRadius, maxRadius, forbidden, colony.depot());
+    }
+
+    public boolean planRemote(ServerLevel level, String blueprintId, BlockPos anchor, int minRadius, int maxRadius, List<int[]> forbidden) {
+        return planRemote(level, blueprintId, anchor, minRadius, maxRadius, forbidden, anchor);
+    }
+
+    private boolean planRemote(ServerLevel level, String blueprintId, BlockPos anchor, int minRadius, int maxRadius, List<int[]> forbidden,
+                               BlockPos facing) {
+        Blueprint blueprint = Blueprints.get(blueprintId);
         String wood = chooseWood(level);
-        if (!satisfiable(level, PorterPlan.OUTPOST_ID, wood)) {
+        if (!satisfiable(level, blueprintId, wood)) {
             return false;
         }
-        BlockPos depot = colony.depot();
         ColonyData.Project project = findSite(level, blueprint, wood, SiteEvaluator.MAX_FILL, cutLimit(blueprint),
-                new Search(anchor, minRadius, maxRadius, minRadius + 4, depot, depot, forbidden));
+                new Search(anchor, minRadius, maxRadius, minRadius + 4, facing, facing, forbidden));
         if (project == null) {
             return false;
         }
@@ -1044,8 +1075,7 @@ public final class Construction {
         data().projects.add(project);
         recomputeRequired(level, project);
         markFootprint(level, project);
-        colony.journal(level, "planned an outpost at " + project.building.origin + " for the walk from " + anchor.toShortString()
-                + " to the depot");
+        colony.journal(level, "planned " + blueprintId + " at " + project.building.origin + " near " + anchor.toShortString());
         colony.markDirty();
         reserve(level, project);
         return true;
@@ -1293,8 +1323,19 @@ public final class Construction {
         return null;
     }
 
+    private Task highwayTask(ServerLevel level, long now) {
+        BlockPos ground = colony.highways().nextCell(level, pos -> claimed(pos, now));
+        return ground == null ? null : claim(new Task(Kind.HIGHWAY, ground, null, null, null, ground.above()), now);
+    }
+
     public Task next(ServerLevel level, UUID builder) {
         long now = level.getGameTime();
+        if (Math.floorMod(builder.hashCode(), 5) == 2 && active().size() <= 1) {
+            Task trail = highwayTask(level, now);
+            if (trail != null) {
+                return trail;
+            }
+        }
         if (!data().pendingRoad.isEmpty() && Math.floorMod(builder.hashCode(), 4) == 1) {
             Task road = roadTask(level, now);
             if (road != null) {
@@ -1341,6 +1382,10 @@ public final class Construction {
         Task road = roadTask(level, now);
         if (road != null) {
             return road;
+        }
+        Task trail = highwayTask(level, now);
+        if (trail != null) {
+            return trail;
         }
         Task order = colony.improvements().next(level);
         if (order != null) {
@@ -1588,6 +1633,7 @@ public final class Construction {
                 data().bump("road_blocks", 1);
             }
             case ORDER -> colony.improvements().completed(task);
+            case HIGHWAY -> colony.highways().done(task.pos());
         }
         colony.markDirty();
     }
@@ -1727,8 +1773,8 @@ public final class Construction {
         drop(project);
         data().bump("buildings", 1);
         int reach = (int) Math.ceil(Math.sqrt(Math.max(building.min.horizontalDistSq(data().center), building.max.horizontalDistSq(data().center))));
-        if (!PorterPlan.OUTPOST_KIND.equals(building.kind)) {
-            data().radius = Math.min(SmartColonyConfig.get().maxColonyRadius, Math.max(data().radius, reach + 6));
+        if (!Highways.remote(building)) {
+            data().radius = Math.max(data().radius, Math.min(colony.radiusLimit(), reach + 6));
         }
         if (Staged.isStaged(building.blueprint)) {
             TownHallBuilder.finished(level, colony, building);

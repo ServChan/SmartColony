@@ -1,0 +1,200 @@
+{
+  "id": "windmill",
+  "kind": "windmill",
+  "beds": 0,
+  "door": [
+    4,
+    1
+  ],
+  "palette": {
+    "C": "minecraft:cobblestone",
+    "L": "minecraft:$wood_log",
+    "X": "minecraft:$wood_log[axis=x]",
+    "Z": "minecraft:$wood_log[axis=z]",
+    "P": "minecraft:$wood_planks",
+    "G": "minecraft:glass_pane",
+    "D": "minecraft:$wood_door[facing=south,half=lower,hinge=left,open=false]",
+    "U": "minecraft:$wood_door[facing=south,half=upper,hinge=left,open=false]",
+    "e": "minecraft:$wood_stairs[facing=east,half=bottom]",
+    "w": "minecraft:$wood_stairs[facing=west,half=bottom]",
+    "n": "minecraft:$wood_stairs[facing=north,half=bottom]",
+    "v": "minecraft:$wood_stairs[facing=south,half=bottom]",
+    "1": "minecraft:$wood_stairs[facing=south,half=bottom,shape=outer_left]",
+    "2": "minecraft:$wood_stairs[facing=south,half=bottom,shape=outer_right]",
+    "3": "minecraft:$wood_stairs[facing=north,half=bottom,shape=outer_right]",
+    "4": "minecraft:$wood_stairs[facing=north,half=bottom,shape=outer_left]",
+    "l": "minecraft:$wood_slab[type=bottom]",
+    "F": "minecraft:$wood_fence",
+    "t": "minecraft:wall_torch[facing=south]",
+    "q": "minecraft:wall_torch[facing=east]",
+    "p": "minecraft:wall_torch[facing=west]",
+    "K": "minecraft:crafting_table",
+    "R": "minecraft:barrel[facing=up]",
+    "Y": "minecraft:hay_block",
+    "#": "minecraft:white_wool",
+    "_": "minecraft:dirt_path",
+    "A": "minecraft:ladder[facing=north]"
+  },
+  "layers": [
+    [
+      "   ___   ",
+      " CCCCCCC ",
+      " CPPPPPC ",
+      " CPPPPPC ",
+      " CPPPPPC ",
+      " CPPPPPC ",
+      " CPPPPPC ",
+      " CCCCCCC "
+    ],
+    [
+      ".........",
+      ".CCCDCCC.",
+      ".C....KC.",
+      ".C.....C.",
+      ".C.....C.",
+      ".CY...RC.",
+      ".CYY.ARC.",
+      ".CCCCCCC."
+    ],
+    [
+      ".........",
+      ".CCCUCCC.",
+      ".C.....C.",
+      ".Cq...pC.",
+      ".G.....G.",
+      ".C.....C.",
+      ".CY..A.C.",
+      ".CCCGCCC."
+    ],
+    [
+      ".........",
+      ".CCCCCCC.",
+      ".C.....C.",
+      ".C.....C.",
+      ".C.....C.",
+      ".C.....C.",
+      ".C...A.C.",
+      ".CCCCCCC."
+    ],
+    [
+      ".........",
+      ".XXXXXXX.",
+      ".ZPPPPPZ.",
+      ".ZPPPPPZ.",
+      ".ZPPPPPZ.",
+      ".ZPPPPPZ.",
+      ".ZPPPAPZ.",
+      ".XXXXXXX."
+    ],
+    [
+      ".........",
+      ".LPPPPPL.",
+      ".PR...KP.",
+      ".PR....P.",
+      ".P.....P.",
+      ".P..A..P.",
+      ".P..LA.P.",
+      ".LPPPPPL."
+    ],
+    [
+      "...#F....",
+      ".LGPPPGL.",
+      ".P.....P.",
+      ".Pq...pP.",
+      ".G.....G.",
+      ".P..A..P.",
+      ".P..L..P.",
+      ".LPPGPPL."
+    ],
+    [
+      "...#F....",
+      ".LPPPPPL.",
+      ".P.....P.",
+      ".P.....P.",
+      ".P.....P.",
+      ".P..A..P.",
+      ".P..L..P.",
+      ".LPPPPPL."
+    ],
+    [
+      "...#F....",
+      ".1vvvvv2.",
+      ".ePPPPPw.",
+      ".ePPPPPw.",
+      ".ePPPPPw.",
+      ".ePPAPPw.",
+      ".ePPPPPw.",
+      ".3nnnnn4."
+    ],
+    [
+      "....F.###",
+      ".........",
+      "..LPPPL..",
+      "..P..YP..",
+      "..P...P..",
+      "..PRA.P..",
+      "..LPPPL..",
+      "........."
+    ],
+    [
+      "FFFFZFFFF",
+      "....Z....",
+      "..LPPPL..",
+      "..Pt.tP..",
+      "..G...G..",
+      "..P...P..",
+      "..LPGPL..",
+      "........."
+    ],
+    [
+      "###.F....",
+      ".........",
+      "..LPPPL..",
+      "..P...P..",
+      "..P...P..",
+      "..P...P..",
+      "..LPPPL..",
+      "........."
+    ],
+    [
+      "....F#...",
+      ".1vvvvv2.",
+      ".eXXXXXw.",
+      ".eZ...Zw.",
+      ".eZ...Zw.",
+      ".eZ...Zw.",
+      ".eXXXXXw.",
+      ".3nnnnn4."
+    ],
+    [
+      "....F#...",
+      ".........",
+      "..1vvv2..",
+      "..e...w..",
+      "..e...w..",
+      "..e...w..",
+      "..3nnn4..",
+      "........."
+    ],
+    [
+      "....F#...",
+      ".........",
+      ".........",
+      "...1v2...",
+      "...e.w...",
+      "...3n4...",
+      ".........",
+      "........."
+    ],
+    [
+      ".........",
+      ".........",
+      ".........",
+      ".........",
+      "....l....",
+      ".........",
+      ".........",
+      "........."
+    ]
+  ]
+}

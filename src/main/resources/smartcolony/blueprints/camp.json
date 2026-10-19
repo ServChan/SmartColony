@@ -1,0 +1,64 @@
+{
+  "id": "camp",
+  "kind": "camp",
+  "beds": 0,
+  "door": [
+    3,
+    0
+  ],
+  "palette": {
+    "C": "minecraft:cobblestone",
+    "L": "minecraft:$wood_log",
+    "X": "minecraft:$wood_log[axis=x]",
+    "Z": "minecraft:$wood_log[axis=z]",
+    "P": "minecraft:$wood_planks",
+    "e": "minecraft:$wood_stairs[facing=east,half=bottom]",
+    "v": "minecraft:$wood_stairs[facing=south,half=bottom]",
+    "F": "minecraft:$wood_fence",
+    "M": "minecraft:lantern[hanging=false]",
+    "m": "minecraft:lantern[hanging=true]",
+    "R": "minecraft:barrel[facing=up]",
+    "Y": "minecraft:hay_block",
+    "_": "minecraft:dirt_path",
+    "o": "minecraft:cobblestone_slab[type=bottom]",
+    "*": "minecraft:campfire[facing=south,lit=true,signal_fire=false,waterlogged=false]"
+  },
+  "layers": [
+    [
+      "_C___C_",
+      "_______",
+      "_CCCCC_",
+      "_CCCCC_",
+      "_CCCCC_",
+      "PPPPPPP",
+      "PPPPPPP"
+    ],
+    [
+      ".F...F.",
+      ".......",
+      ".Zo.oe.",
+      ".Zo*oe.",
+      ".Zo.oe.",
+      "LYYRYYL",
+      "LPPPPPL"
+    ],
+    [
+      ".M...M.",
+      ".......",
+      ".......",
+      ".......",
+      ".......",
+      "L..m..L",
+      "LPPPPPL"
+    ],
+    [
+      ".......",
+      ".......",
+      ".......",
+      ".......",
+      ".......",
+      "vvvvvvv",
+      "XXXXXXX"
+    ]
+  ]
+}

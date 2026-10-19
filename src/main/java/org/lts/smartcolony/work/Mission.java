@@ -25,8 +25,16 @@ final class Mission {
     private static final double FOE_RANGE = 10.0;
     private static final double GOLEM_PANIC = 7.0;
 
+    private static final int ROAD_STEP = 12;
+    private static final double ROAD_REACH = 24.0;
+
     private final Colonist colonist;
     private boolean active;
+    private java.util.List<BlockPos> road;
+    private int roadIndex = -1;
+    private boolean roadHome;
+    private String roadTarget = "";
+    private BlockPos camp;
     private String status = "";
     private BlockPos wander;
     private long wanderUntil;
@@ -90,6 +98,9 @@ final class Mission {
     private void finish(ServerLevel level, Villager villager) {
         active = false;
         wander = null;
+        road = null;
+        roadIndex = -1;
+        camp = null;
         status = "";
         if (villager.isAlive()) {
             villager.setCustomNameVisible(false);
@@ -125,6 +136,9 @@ final class Mission {
             colony.embassy().raidEntered(level, target, now);
             return;
         }
+        if (overnight(level, villager, mission, now) || alongRoad(level, villager, mission, target, false)) {
+            return;
+        }
         Mover.Result result = colonist.mover().tick(level, villager, goal, 4.0, speed(mission), true);
         if (result == Mover.Result.ARRIVED) {
             if (Embassy.RAID.equals(mission.kind)) {
@@ -136,6 +150,78 @@ final class Mission {
         } else if (result == Mover.Result.FAILED && ++mission.failures >= MAX_FAILURES) {
             colony.embassy().abandoned(level, mission, "no way through");
         }
+    }
+
+    private boolean alongRoad(ServerLevel level, Villager villager, ColonyData.Mission mission, Colony target, boolean homeward) {
+        if (target == null || Embassy.RAID.equals(mission.kind) && !homeward) {
+            return false;
+        }
+        if (road == null || roadHome != homeward || !roadTarget.equals(target.id())) {
+            road = colonist.colony().highways().road(target, homeward);
+            roadHome = homeward;
+            roadTarget = target.id();
+            roadIndex = -1;
+            if (road == null) {
+                return false;
+            }
+            double best = ROAD_REACH * ROAD_REACH;
+            for (int i = 0; i < road.size(); i++) {
+                double distance = road.get(i).distToCenterSqr(villager.getX(), road.get(i).getY() + 0.5, villager.getZ());
+                if (distance < best) {
+                    best = distance;
+                    roadIndex = i;
+                }
+            }
+            if (roadIndex < 0) {
+                road = null;
+                return false;
+            }
+        }
+        if (road == null || roadIndex < 0 || roadIndex >= road.size() - 1) {
+            return false;
+        }
+        int next = Math.min(road.size() - 1, roadIndex + ROAD_STEP);
+        BlockPos waypoint = road.get(next).above();
+        status = (homeward ? "walking home along the road" : "walking along the road to " + target.data().name);
+        if (Mover.distance(villager, waypoint) <= 3.0) {
+            roadIndex = next;
+            return true;
+        }
+        Mover.Result result = colonist.mover().tick(level, villager, waypoint, 2.5, speed(mission), true);
+        if (result == Mover.Result.ARRIVED) {
+            roadIndex = next;
+        } else if (result == Mover.Result.FAILED) {
+            roadIndex = road.size() - 1;
+        }
+        return true;
+    }
+
+    private boolean overnight(ServerLevel level, Villager villager, ColonyData.Mission mission, long now) {
+        Colony colony = colonist.colony();
+        if (colony.workTime(level) || Embassy.RAID.equals(mission.kind) || Embassy.AID.equals(mission.kind)) {
+            camp = null;
+            return false;
+        }
+        if (camp == null) {
+            camp = org.lts.smartcolony.colony.Highways.campNear(level, villager.blockPosition(), 40);
+            if (camp == null) {
+                return false;
+            }
+        }
+        mission.started = Math.max(mission.started, now - OUT_LIMIT / 2);
+        status = "resting at a roadside camp";
+        if (Mover.distance(villager, camp) > 2.5) {
+            if (colonist.mover().tick(level, villager, camp, 2.0, 0.55, true) == Mover.Result.FAILED) {
+                camp = null;
+                return false;
+            }
+            return true;
+        }
+        villager.getNavigation().stop();
+        if (Math.floorMod(now + colonist.uuid().hashCode(), 200) == 0) {
+            villager.playAmbientSound();
+        }
+        return true;
     }
 
     private static boolean inside(Villager villager, Colony target) {
@@ -275,6 +361,9 @@ final class Mission {
             }
         }
         status = mission.goods.isEmpty() ? "returning home" : "carrying goods home";
+        if (target != null && (overnight(level, villager, mission, now) || alongRoad(level, villager, mission, target, true))) {
+            return;
+        }
         Mover.Result result = colonist.mover().tick(level, villager, colony.depot(), 3.0, speed(mission), true);
         boolean late = now - mission.started > HOME_LIMIT;
         if (result == Mover.Result.FAILED) {

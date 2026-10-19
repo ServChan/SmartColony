@@ -656,6 +656,16 @@ public final class ColonyScreen extends Screen {
                     neighbor.gifts(), neighbor.visits(), neighbor.aid(), neighbor.raidsMade(), neighbor.raidsSuffered(), neighbor.killed(),
                     neighbor.lost()).getString(), w), x, y, TEXT_DIM, false);
             y += 12;
+            if (!neighbor.road().isEmpty()) {
+                String[] road = neighbor.road().split("\\|");
+                Component line = switch (road[0]) {
+                    case "build" -> Component.translatable("smartcolony.ui.diplomacy.road.build", road[1], road[2], road[3], road[4]);
+                    case "blocked" -> Component.translatable("smartcolony.ui.diplomacy.road.blocked");
+                    default -> Component.translatable("smartcolony.ui.diplomacy.road.route");
+                };
+                graphics.text(font, font.plainSubstrByWidth(line.getString(), w), x, y, ACCENT_CYAN, false);
+                y += 12;
+            }
             if (!neighbor.reasons().isEmpty()) {
                 StringBuilder line = new StringBuilder();
                 for (String reason : neighbor.reasons()) {
@@ -684,6 +694,8 @@ public final class ColonyScreen extends Screen {
                     "colony diplomacy envoy " + neighbor.id());
             if ("war".equals(neighbor.treaty())) {
                 chip(graphics, Component.translatable("smartcolony.ui.diplomacy.sue_peace"), cx, y, false, "colony diplomacy peace " + neighbor.id());
+            } else if (neighbor.road().isEmpty() || neighbor.road().startsWith("blocked")) {
+                chip(graphics, Component.translatable("smartcolony.ui.diplomacy.build_road"), cx, y, false, "colony diplomacy road " + neighbor.id());
             }
             if (neighbor.away() > 0) {
                 graphics.text(font, Component.translatable("smartcolony.ui.diplomacy.away", neighbor.away()), x + w - 90, y + 3, STATUS_WARN, false);

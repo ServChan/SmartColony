@@ -1,0 +1,271 @@
+{
+  "id": "granary",
+  "kind": "storage",
+  "beds": 0,
+  "door": [
+    5,
+    2
+  ],
+  "containers": [
+    [
+      2,
+      1,
+      4
+    ],
+    [
+      8,
+      1,
+      4
+    ],
+    [
+      2,
+      1,
+      5
+    ],
+    [
+      8,
+      1,
+      5
+    ],
+    [
+      2,
+      1,
+      6
+    ],
+    [
+      8,
+      1,
+      6
+    ],
+    [
+      2,
+      1,
+      7
+    ],
+    [
+      8,
+      1,
+      7
+    ],
+    [
+      2,
+      1,
+      8
+    ],
+    [
+      8,
+      1,
+      8
+    ],
+    [
+      2,
+      1,
+      9
+    ],
+    [
+      8,
+      1,
+      9
+    ],
+    [
+      2,
+      2,
+      4
+    ],
+    [
+      8,
+      2,
+      4
+    ],
+    [
+      2,
+      2,
+      9
+    ],
+    [
+      8,
+      2,
+      9
+    ]
+  ],
+  "palette": {
+    "C": "minecraft:cobblestone",
+    "L": "minecraft:$wood_log",
+    "X": "minecraft:$wood_log[axis=x]",
+    "Z": "minecraft:$wood_log[axis=z]",
+    "P": "minecraft:$wood_planks",
+    "G": "minecraft:glass_pane",
+    "D": "minecraft:$wood_door[facing=south,half=lower,hinge=left,open=false]",
+    "U": "minecraft:$wood_door[facing=south,half=upper,hinge=left,open=false]",
+    "e": "minecraft:$wood_stairs[facing=east,half=bottom]",
+    "w": "minecraft:$wood_stairs[facing=west,half=bottom]",
+    "v": "minecraft:$wood_stairs[facing=south,half=bottom]",
+    "l": "minecraft:$wood_slab[type=bottom]",
+    "F": "minecraft:$wood_fence",
+    "t": "minecraft:wall_torch[facing=south]",
+    "q": "minecraft:wall_torch[facing=east]",
+    "p": "minecraft:wall_torch[facing=west]",
+    "M": "minecraft:lantern[hanging=false]",
+    "m": "minecraft:lantern[hanging=true]",
+    "R": "minecraft:barrel[facing=up]",
+    "Y": "minecraft:hay_block",
+    "_": "minecraft:dirt_path",
+    "%": "minecraft:composter"
+  },
+  "layers": [
+    [
+      "    ___    ",
+      "   C___C   ",
+      " CCCCCCCCC ",
+      " CPPPPPPPC ",
+      " CPPPPPPPC ",
+      " CPPPPPPPC ",
+      " CPPPPPPPC ",
+      " CPPPPPPPC ",
+      " CPPPPPPPC ",
+      " CPPPPPPPC ",
+      " CPPPPPPPC ",
+      " CCCCCCCCC "
+    ],
+    [
+      "...........",
+      "...F...F...",
+      ".LCCCDCCCL.",
+      ".ClllllllC.",
+      ".CRlllllRC.",
+      ".CRlllllRC.",
+      ".LRlllllRL.",
+      ".CRlllllRC.",
+      ".CRlllllRC.",
+      ".CRlllllRC.",
+      ".CYYl%lYYC.",
+      ".LCCCCCCCL."
+    ],
+    [
+      "...........",
+      "...F...F...",
+      ".LPGPUPGPL.",
+      ".P..t.t..P.",
+      ".PR.....RP.",
+      ".P.......P.",
+      ".Lq.....pL.",
+      ".P.......P.",
+      ".P.......P.",
+      ".PR.....RP.",
+      ".PY.....YP.",
+      ".LPPPPPPPL."
+    ],
+    [
+      "...........",
+      "...MvvvM...",
+      ".LPPPPPPPL.",
+      ".P.......P.",
+      ".G.......G.",
+      ".P.......P.",
+      ".L.......L.",
+      ".P.......P.",
+      ".G.......G.",
+      ".P.......P.",
+      ".P.......P.",
+      ".LPPGGGPPL."
+    ],
+    [
+      "...........",
+      "...........",
+      ".XXXXXXXXX.",
+      ".Z.......Z.",
+      ".Z.......Z.",
+      ".Z...m...Z.",
+      ".Z.......Z.",
+      ".Z.......Z.",
+      ".Z...m...Z.",
+      ".Z.......Z.",
+      ".Z.......Z.",
+      ".XXXXXXXXX."
+    ],
+    [
+      "...........",
+      "...........",
+      "ePPPPPPPPPw",
+      "e.........w",
+      "e.........w",
+      "eXXXXXXXXXw",
+      "e.........w",
+      "e.........w",
+      "eXXXXXXXXXw",
+      "e.........w",
+      "e.........w",
+      "ePPPPPPPPPw"
+    ],
+    [
+      "...........",
+      "...........",
+      ".ePPPPPPPw.",
+      ".e.......w.",
+      ".e.......w.",
+      ".e.......w.",
+      ".e.......w.",
+      ".e.......w.",
+      ".e.......w.",
+      ".e.......w.",
+      ".e.......w.",
+      ".ePPPPPPPw."
+    ],
+    [
+      "...........",
+      "...........",
+      "..ePPGPPw..",
+      "..e.....w..",
+      "..e.....w..",
+      "..e.....w..",
+      "..e.....w..",
+      "..e.....w..",
+      "..e.....w..",
+      "..e.....w..",
+      "..e.....w..",
+      "..ePPPPPw.."
+    ],
+    [
+      "...........",
+      "...........",
+      "...ePPPw...",
+      "...e...w...",
+      "...e...w...",
+      "...e...w...",
+      "...e...w...",
+      "...e...w...",
+      "...e...w...",
+      "...e...w...",
+      "...e...w...",
+      "...ePPPw..."
+    ],
+    [
+      "...........",
+      "...........",
+      "....ePw....",
+      "....ePw....",
+      "....ePw....",
+      "....ePw....",
+      "....ePw....",
+      "....ePw....",
+      "....ePw....",
+      "....ePw....",
+      "....ePw....",
+      "....ePw...."
+    ],
+    [
+      "...........",
+      "...........",
+      ".....l.....",
+      ".....l.....",
+      ".....l.....",
+      ".....l.....",
+      ".....l.....",
+      ".....l.....",
+      ".....l.....",
+      ".....l.....",
+      ".....l.....",
+      ".....l....."
+    ]
+  ]
+}

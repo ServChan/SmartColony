@@ -80,6 +80,25 @@ public final class ColonyData {
     public Map<String, Relation> relations = new LinkedHashMap<>();
     public List<Mission> missions = new ArrayList<>();
     public long diplomacyDay = -1;
+    public List<Highway> highways = new ArrayList<>();
+
+    public static final class Highway {
+        public String partner = "";
+        public String phase = "route";
+        public Pos start = new Pos(0, 0, 0);
+        public Pos goal = new Pos(0, 0, 0);
+        public List<Pos> cells = new ArrayList<>();
+        public int built;
+        public int length;
+        public List<Integer> camps = new ArrayList<>();
+        public int campsPlanned;
+        public int segment;
+        public int failures;
+        public long since;
+        public long retryAt;
+        public boolean lead;
+        public boolean signed;
+    }
 
     public static final class Relation {
         public int standing;

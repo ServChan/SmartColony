@@ -83,6 +83,7 @@ public final class Colony {
     private final Contracts contracts;
     private final Stable stable;
     private final Embassy embassy;
+    private final Highways highways;
     private boolean dirty;
     private long ticks;
     private long lastStorageWarning;
@@ -120,6 +121,7 @@ public final class Colony {
         this.contracts = new Contracts(this);
         this.stable = new Stable(this);
         this.embassy = new Embassy(this);
+        this.highways = new Highways(this);
         for (Map.Entry<String, ColonyData.Member> entry : data.members.entrySet()) {
             UUID uuid = UUID.fromString(entry.getKey());
             Colonist colonist = new Colonist(uuid, this);
@@ -241,6 +243,36 @@ public final class Colony {
 
     public Embassy embassy() {
         return embassy;
+    }
+
+    public Highways highways() {
+        return highways;
+    }
+
+    public int radiusLimit() {
+        int limit = SmartColonyConfig.get().maxColonyRadius;
+        for (Colony other : ColonyManager.all()) {
+            if (other == this || !other.data().dimension.equals(data.dimension)) {
+                continue;
+            }
+            double distance = Math.sqrt(center().distSqr(other.center()));
+            limit = Math.min(limit, (int) Math.floor(distance / 2.0) - 4);
+        }
+        return Math.max(data.radius, limit);
+    }
+
+    public boolean ownsGround(int x, int z) {
+        double mine = Math.hypot(x - data.center.x(), z - data.center.z());
+        for (Colony other : ColonyManager.all()) {
+            if (other == this || !other.data().dimension.equals(data.dimension)) {
+                continue;
+            }
+            double theirs = Math.hypot(x - other.data().center.x(), z - other.data().center.z());
+            if (theirs < mine || theirs <= other.data().radius + 6) {
+                return false;
+            }
+        }
+        return true;
     }
 
     public boolean builtKind(String kind) {
@@ -1052,6 +1084,7 @@ public final class Colony {
         contracts.tick(level, ticks);
         stable.tick(level, ticks);
         embassy.tick(level, ticks);
+        highways.tick(level, ticks);
         if (ticks % 200 == 7) {
             planRoles(level);
         }

@@ -66,7 +66,7 @@ public record ColonyView(
 
     public record Neighbor(String id, String name, int distance, int standing, int theirStanding, String treaty, String stance,
                            String temper, int trades, int gifts, int raidsMade, int raidsSuffered, int killed, int lost, int visits,
-                           int aid, List<String> reasons, List<String> history, int away) {
+                           int aid, List<String> reasons, List<String> history, int away, String road) {
     }
 
     public record Society(String focus, List<String> zones, List<String> orders, String slot, boolean restDay, boolean fed,
@@ -239,7 +239,8 @@ public record ColonyView(
                     relation.standing, theirs == null ? 0 : theirs.standing, relation.treaty,
                     org.lts.smartcolony.core.Diplomacy.stance(relation.standing, relation.treaty()).key(), other.embassy().temper().key(),
                     relation.trades, relation.gifts, relation.raidsMade, relation.raidsSuffered, relation.killed, relation.lost,
-                    relation.visits, relation.aid, reasons, history, colony.embassy().activeMissions(other)));
+                    relation.visits, relation.aid, reasons, history, colony.embassy().activeMissions(other),
+                    colony.highways().summary(other)));
         }
         neighbors.sort((a, b) -> Integer.compare(a.distance(), b.distance()));
         List<String> missions = new ArrayList<>();

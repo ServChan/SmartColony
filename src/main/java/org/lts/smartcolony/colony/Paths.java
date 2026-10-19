@@ -706,7 +706,7 @@ public final class Paths {
         BlockPos hub = hub();
         addTarget(WorldUtil.pos(colony.depot()), "depot", 0, 0, false);
         for (ColonyData.Building building : d.buildings) {
-            if (building.door != null && !building.kind.equals("pen")) {
+            if (building.door != null && !building.kind.equals("pen") && !Highways.remote(building)) {
                 Direction out = outward(building);
                 BlockPos door = WorldUtil.bp(building.door).relative(out);
                 addTarget(new Pos(door.getX(), door.getY(), door.getZ()), "door", out.getStepX(), out.getStepZ(), false);
@@ -777,7 +777,7 @@ public final class Paths {
 
     private void scan(ServerLevel level) {
         ColonyData d = data();
-        int radius = Math.min(80, d.radius + 8);
+        int radius = Math.min(200, d.radius + 8);
         if (d.scanDone && d.scanRadius >= radius) {
             return;
         }

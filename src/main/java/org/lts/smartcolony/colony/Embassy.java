@@ -32,6 +32,7 @@ import org.lts.smartcolony.core.Role;
 import org.lts.smartcolony.core.Schedule;
 import org.lts.smartcolony.core.Stock;
 import org.lts.smartcolony.util.ItemIds;
+import org.lts.smartcolony.util.WorldUtil;
 import org.lts.smartcolony.work.Colonist;
 import org.lts.smartcolony.work.GuardJob;
 
@@ -575,7 +576,22 @@ public final class Embassy {
     }
 
     public BlockPos destination(ColonyData.Mission mission, Colony target) {
-        return RAID.equals(mission.kind) ? target.depot() : target.groundCenter();
+        if (RAID.equals(mission.kind)) {
+            return target.depot();
+        }
+        if (ENVOY.equals(mission.kind)) {
+            ColonyData.Building embassy = target.buildingOfKind("embassy");
+            if (embassy != null && embassy.door != null) {
+                return WorldUtil.bp(embassy.door);
+            }
+        }
+        if (CARAVAN.equals(mission.kind)) {
+            ColonyData.Building post = target.buildingOfKind("trading_post");
+            if (post != null && post.door != null) {
+                return WorldUtil.bp(post.door);
+            }
+        }
+        return target.groundCenter();
     }
 
     public void arrived(ServerLevel level, ColonyData.Mission mission, Villager villager, Colony target) {

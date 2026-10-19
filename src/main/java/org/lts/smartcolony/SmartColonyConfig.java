@@ -12,7 +12,7 @@ import java.nio.file.StandardCopyOption;
 import net.fabricmc.loader.api.FabricLoader;
 
 public final class SmartColonyConfig {
-    public static final int CURRENT_VERSION = 1;
+    public static final int CURRENT_VERSION = 2;
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static volatile SmartColonyConfig instance = new SmartColonyConfig();
 
@@ -20,7 +20,7 @@ public final class SmartColonyConfig {
     public boolean autoFound = true;
     public int minVillagersToFound = 3;
     public int colonyRadius = 32;
-    public int maxColonyRadius = 64;
+    public int maxColonyRadius = 112;
     public int surveyMargin = 32;
     public int surveyColumnsPerTick = 96;
     public int surveyRefreshPerTick = 12;
@@ -54,6 +54,7 @@ public final class SmartColonyConfig {
     public boolean caravans = true;
     public boolean diplomacy = true;
     public boolean colonyWars = true;
+    public boolean highways = true;
     public boolean recruitFromVillages = true;
     public boolean aiEnabled = false;
     public String aiApi = "ollama";
@@ -113,10 +114,13 @@ public final class SmartColonyConfig {
     }
 
     void sanitize() {
+        if (configVersion < 2 && maxColonyRadius == 64) {
+            maxColonyRadius = 112;
+        }
         configVersion = CURRENT_VERSION;
         minVillagersToFound = clamp(minVillagersToFound, 1, 50);
         colonyRadius = clamp(colonyRadius, 16, 96);
-        maxColonyRadius = clamp(maxColonyRadius, colonyRadius, 128);
+        maxColonyRadius = clamp(maxColonyRadius, colonyRadius, 192);
         surveyMargin = clamp(surveyMargin, 0, 64);
         surveyColumnsPerTick = clamp(surveyColumnsPerTick, 8, 512);
         surveyRefreshPerTick = clamp(surveyRefreshPerTick, 0, 128);

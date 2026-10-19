@@ -47,7 +47,7 @@ final class Caravans {
 
     private static boolean tradingPost(Colony colony) {
         for (ColonyData.Building building : colony.data().buildings) {
-            if ("market".equals(building.kind) || "townhall".equals(building.kind)) {
+            if ("market".equals(building.kind) || "townhall".equals(building.kind) || "trading_post".equals(building.kind)) {
                 return true;
             }
         }

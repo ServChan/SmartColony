@@ -113,7 +113,7 @@ public final class Sites {
         for (ColonyData.Building building : all) {
             if (building.min.x() - VILLAGE_GAP <= x1 && building.max.x() + VILLAGE_GAP >= x0
                     && building.min.z() - VILLAGE_GAP <= z1 && building.max.z() + VILLAGE_GAP >= z0
-                    && !org.lts.smartcolony.core.PorterPlan.OUTPOST_KIND.equals(building.kind)) {
+                    && !Highways.remote(building)) {
                 return false;
             }
         }

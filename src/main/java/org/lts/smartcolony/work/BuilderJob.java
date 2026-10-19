@@ -172,6 +172,14 @@ public final class BuilderJob extends Job {
             case PLACE -> {
                 return place(level, villager);
             }
+            case HIGHWAY -> {
+                if (!colony().highways().build(level, villager, pos)) {
+                    task = null;
+                    wait = 100;
+                    return false;
+                }
+                return true;
+            }
             case ROAD -> {
                 if (!road(level, villager, pos)) {
                     task = null;

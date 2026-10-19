@@ -48,6 +48,9 @@ final class DiplomacyCommand {
                 .then(Commands.literal("peace")
                         .then(Commands.argument("colony", StringArgumentType.word()).suggests(COLONIES)
                                 .executes(ctx -> envoy(ctx, true))))
+                .then(Commands.literal("road")
+                        .then(Commands.argument("colony", StringArgumentType.word()).suggests(COLONIES)
+                                .executes(DiplomacyCommand::road)))
                 .then(Commands.literal("raid")
                         .then(Commands.argument("colony", StringArgumentType.word()).suggests(COLONIES)
                                 .executes(DiplomacyCommand::raid)))
@@ -159,6 +162,26 @@ final class DiplomacyCommand {
         source.sendSuccess(() -> Component.translatable("smartcolony.command.diplomacy_sent." + how, other.data().name,
                 Component.translatable("smartcolony.diplomacy.action." + sent.key())), false);
         return 1;
+    }
+
+    private static int road(CommandContext<CommandSourceStack> context) {
+        CommandSourceStack source = context.getSource();
+        Colony colony = colony(source);
+        if (colony == null) {
+            return 0;
+        }
+        Colony other = other(context, colony);
+        if (other == null) {
+            return 0;
+        }
+        String result = colony.highways().order(source.getLevel(), other);
+        Component message = Component.translatable("smartcolony.command.road." + result, other.data().name);
+        if (result.equals("ordered") || result.equals("retry")) {
+            source.sendSuccess(() -> message, false);
+            return 1;
+        }
+        source.sendFailure(message);
+        return 0;
     }
 
     private static int raid(CommandContext<CommandSourceStack> context) {

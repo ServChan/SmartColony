@@ -1,0 +1,74 @@
+{
+  "id": "well",
+  "kind": "well",
+  "beds": 0,
+  "door": [
+    2,
+    0
+  ],
+  "palette": {
+    "C": "minecraft:cobblestone",
+    "S": "minecraft:stone_bricks",
+    "L": "minecraft:$wood_log",
+    "X": "minecraft:$wood_log[axis=x]",
+    "Z": "minecraft:$wood_log[axis=z]",
+    "P": "minecraft:$wood_planks",
+    "n": "minecraft:$wood_stairs[facing=north,half=bottom]",
+    "v": "minecraft:$wood_stairs[facing=south,half=bottom]",
+    "l": "minecraft:$wood_slab[type=bottom]",
+    "F": "minecraft:$wood_fence",
+    "m": "minecraft:lantern[hanging=true]",
+    "=": "minecraft:cauldron"
+  },
+  "layers": [
+    [
+      "CCCCC",
+      "CSSSC",
+      "CS=SC",
+      "CSSSC",
+      "CCCCC"
+    ],
+    [
+      ".....",
+      ".LSL.",
+      ".S.S.",
+      ".LSL.",
+      "....."
+    ],
+    [
+      ".....",
+      ".L.L.",
+      "..m..",
+      ".L.L.",
+      "....."
+    ],
+    [
+      ".....",
+      ".LXL.",
+      ".ZFZ.",
+      ".LXL.",
+      "....."
+    ],
+    [
+      "vvvvv",
+      ".PPP.",
+      ".PPP.",
+      ".PPP.",
+      "nnnnn"
+    ],
+    [
+      ".....",
+      "vvvvv",
+      "XXXXX",
+      "nnnnn",
+      "....."
+    ],
+    [
+      ".....",
+      ".....",
+      "lllll",
+      ".....",
+      "....."
+    ]
+  ]
+}

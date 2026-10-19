@@ -1,0 +1,116 @@
+{
+  "id": "trading_post",
+  "kind": "trading_post",
+  "beds": 0,
+  "door": [
+    4,
+    1
+  ],
+  "palette": {
+    "C": "minecraft:cobblestone",
+    "L": "minecraft:$wood_log",
+    "X": "minecraft:$wood_log[axis=x]",
+    "Z": "minecraft:$wood_log[axis=z]",
+    "P": "minecraft:$wood_planks",
+    "G": "minecraft:glass_pane",
+    "D": "minecraft:$wood_door[facing=south,half=lower,hinge=left,open=false]",
+    "U": "minecraft:$wood_door[facing=south,half=upper,hinge=left,open=false]",
+    "e": "minecraft:$wood_stairs[facing=east,half=bottom]",
+    "w": "minecraft:$wood_stairs[facing=west,half=bottom]",
+    "v": "minecraft:$wood_stairs[facing=south,half=bottom]",
+    "l": "minecraft:$wood_slab[type=bottom]",
+    "u": "minecraft:$wood_slab[type=top]",
+    "F": "minecraft:$wood_fence",
+    "q": "minecraft:wall_torch[facing=east]",
+    "p": "minecraft:wall_torch[facing=west]",
+    "m": "minecraft:lantern[hanging=true]",
+    "K": "minecraft:crafting_table",
+    "R": "minecraft:barrel[facing=up]",
+    "Y": "minecraft:hay_block",
+    "_": "minecraft:dirt_path",
+    "h": "minecraft:chest[facing=east,type=single]"
+  },
+  "layers": [
+    [
+      " C_____C ",
+      " CCCCCCC ",
+      " CPPPPPC ",
+      " CPPPPPC ",
+      " CPPPPPC ",
+      " CPPPPPC ",
+      " CCCCCCC "
+    ],
+    [
+      ".F.....F.",
+      ".LRuDuRL.",
+      ".C.....C.",
+      ".Ch...KC.",
+      ".C.....C.",
+      ".CYY.RYC.",
+      ".LCCCCCL."
+    ],
+    [
+      ".F.....F.",
+      ".L..U..L.",
+      ".P.....P.",
+      ".G.....G.",
+      ".Pq...pP.",
+      ".P.....P.",
+      ".LPPGPPL."
+    ],
+    [
+      ".vvvvvvv.",
+      ".XXXXXXX.",
+      ".Z.....Z.",
+      ".Z.....Z.",
+      ".Z..m..Z.",
+      ".Z.....Z.",
+      ".XXXXXXX."
+    ],
+    [
+      ".........",
+      "ePPPPPPPw",
+      "e.......w",
+      "e.......w",
+      "eXXXXXXXw",
+      "e.......w",
+      "ePPPPPPPw"
+    ],
+    [
+      ".........",
+      ".ePPPPPw.",
+      ".e.....w.",
+      ".e.....w.",
+      ".e.....w.",
+      ".e.....w.",
+      ".ePPPPPw."
+    ],
+    [
+      ".........",
+      "..ePGPw..",
+      "..e...w..",
+      "..e...w..",
+      "..e...w..",
+      "..e...w..",
+      "..ePPPw.."
+    ],
+    [
+      ".........",
+      "...ePw...",
+      "...ePw...",
+      "...ePw...",
+      "...ePw...",
+      "...ePw...",
+      "...ePw..."
+    ],
+    [
+      ".........",
+      "....l....",
+      "....l....",
+      "....l....",
+      "....l....",
+      "....l....",
+      "....l...."
+    ]
+  ]
+}
