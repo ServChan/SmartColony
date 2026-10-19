@@ -1370,10 +1370,23 @@ public final class Construction {
                 return trail;
             }
         }
-        if (crew && builderSeen.size() >= 3 && data().orders.size() > 40 && holdsLane("orders", builder, now)) {
-            Task order = fromLane("orders", builder, now, colony.improvements().next(level));
-            if (order != null) {
-                return order;
+        if (crew && builderSeen.size() >= 3 && colony.improvements().wallPending() && holdsLane("wall", builder, now)) {
+            Task wall = fromLane("wall", builder, now, colony.improvements().nextWall(level));
+            if (wall != null) {
+                return wall;
+            }
+        }
+        if (crew && builderSeen.size() >= 3 && data().orders.size() > 40) {
+            int lanes = Math.max(1, Math.min(3, builderSeen.size() / 5));
+            for (int lane = 0; lane < lanes; lane++) {
+                String name = "orders" + lane;
+                if (holdsLane(name, builder, now)) {
+                    Task order = fromLane(name, builder, now, colony.improvements().next(level));
+                    if (order != null) {
+                        return order;
+                    }
+                    break;
+                }
             }
         }
         if (!data().pendingRoad.isEmpty() && Math.floorMod(builder.hashCode(), 4) == 1) {

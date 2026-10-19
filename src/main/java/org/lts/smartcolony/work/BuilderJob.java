@@ -242,6 +242,7 @@ public final class BuilderJob extends Job {
                 }
                 Placer.place(level, villager, pos, task.state());
                 colony().data().bump("improvements_placed", 1);
+                colony().improvements().wallRun(level, villager, pos);
                 return true;
             }
         }

@@ -176,6 +176,7 @@ public final class Improvements {
     private long lastWallAttempt = -1000000;
     private long lastGrowthCheck = -1000000;
     private int growthFootprint = -1;
+    private final Set<Long> stubbornCorners = new HashSet<>();
 
     private void followGrowth(ServerLevel level) {
         ColonyData.Wall wall = data().wall;
@@ -204,9 +205,37 @@ public final class Improvements {
         if (replanWall(level, material, !trespass)) {
             growthFootprint = footprint;
             lastWallAttempt = now;
+            if (outside != null && data().wall != null && !enclosed(data().wall, outside)) {
+                stubbornCorners.add(BlockPos.asLong(outside.x(), 0, outside.z()));
+            }
             colony.journal(level, trespass ? "the wall stood on " + foreign + " columns of a neighbour's land, so it was drawn back"
                     : "the village grew past its wall near " + outside.x() + " " + outside.z() + ", so the wall moves out");
         }
+    }
+
+    private boolean enclosed(ColonyData.Wall wall, Pos corner) {
+        int[] xs = new int[wall.columns.size()];
+        int[] zs = new int[wall.columns.size()];
+        for (int i = 0; i < xs.length; i++) {
+            xs[i] = wall.columns.get(i).x();
+            zs[i] = wall.columns.get(i).z();
+        }
+        return WallPlanner.encloses(xs, zs, corner.x() + 0.5, corner.z() + 0.5);
+    }
+
+    private boolean wallCanReach(Pos corner) {
+        BlockPos center = colony.center();
+        double dx = corner.x() - center.getX();
+        double dz = corner.z() - center.getZ();
+        double distance = Math.hypot(dx, dz);
+        if (distance + 5 > org.lts.smartcolony.SmartColonyConfig.get().maxColonyRadius + 24) {
+            return false;
+        }
+        if (distance < 1) {
+            return true;
+        }
+        double reach = distance + 5 + BORDER_GAP;
+        return colony.ownsGround(center.getX() + (int) Math.round(dx / distance * reach), center.getZ() + (int) Math.round(dz / distance * reach));
     }
 
     private Pos beyondWall(ColonyData.Wall wall) {
@@ -226,7 +255,8 @@ public final class Improvements {
             }
             for (Pos corner : new Pos[] {building.min, building.max, new Pos(building.min.x(), building.min.y(), building.max.z()),
                     new Pos(building.max.x(), building.min.y(), building.min.z())}) {
-                if (!WallPlanner.encloses(xs, zs, corner.x() + 0.5, corner.z() + 0.5)) {
+                if (!WallPlanner.encloses(xs, zs, corner.x() + 0.5, corner.z() + 0.5)
+                        && !stubbornCorners.contains(BlockPos.asLong(corner.x(), 0, corner.z())) && wallCanReach(corner)) {
                     return corner;
                 }
             }
@@ -1517,7 +1547,19 @@ public final class Improvements {
         return y;
     }
 
+    public boolean wallPending() {
+        return data().wall != null && data().wall.built < data().wall.total && data().orders.stream().anyMatch(order -> WALL.equals(order.tag));
+    }
+
+    public Construction.Task nextWall(ServerLevel level) {
+        return next(level, true);
+    }
+
     public Construction.Task next(ServerLevel level) {
+        return next(level, false);
+    }
+
+    private Construction.Task next(ServerLevel level, boolean wallOnly) {
         long now = level.getGameTime();
         if (now < blockedUntil) {
             return null;
@@ -1527,8 +1569,21 @@ public final class Improvements {
         int checks = 0;
         boolean skipped = false;
         int i = 0;
+        if (wallOnly) {
+            i = orders.size();
+            for (int k = 0; k < orders.size(); k++) {
+                if (WALL.equals(orders.get(k).tag)) {
+                    i = k;
+                    break;
+                }
+            }
+        }
         while (i < orders.size() && checks < limit) {
             ColonyData.Order order = orders.get(i);
+            if (wallOnly && !WALL.equals(order.tag)) {
+                i++;
+                continue;
+            }
             if (claimed(order, now)) {
                 skipped = true;
                 i++;
@@ -1596,7 +1651,7 @@ public final class Improvements {
             waitingFor = "";
             return claim(level, order, pos, target);
         }
-        if (!orders.isEmpty() && !skipped) {
+        if (!orders.isEmpty() && !skipped && !wallOnly) {
             blockedUntil = now + 1200;
         }
         return null;
@@ -1846,6 +1901,57 @@ public final class Improvements {
         }
         String item = BuiltInRegistries.ITEM.getKey(state.getBlock().asItem()).toString();
         return colony.warehouse().take(level, item, 1) == 1;
+    }
+
+    private static final int WALL_RUN = 6;
+
+    public int wallRun(ServerLevel level, net.minecraft.world.entity.npc.villager.Villager villager, BlockPos placed) {
+        if (!wallMaterial(level.getBlockState(placed))) {
+            return 0;
+        }
+        long now = level.getGameTime();
+        int count = 0;
+        List<ColonyData.Order> orders = data().orders;
+        for (int i = 0; i < orders.size() && count < WALL_RUN; i++) {
+            ColonyData.Order order = orders.get(i);
+            if (!WALL.equals(order.tag) || Math.abs(order.pos.x() - placed.getX()) > 2 || Math.abs(order.pos.z() - placed.getZ()) > 2
+                    || Math.abs(order.pos.y() - placed.getY()) > 3) {
+                continue;
+            }
+            BlockPos pos = WorldUtil.bp(order.pos);
+            if (pos.equals(placed) || pos.distToCenterSqr(villager.getX(), villager.getEyeY(), villager.getZ()) > 25.0) {
+                continue;
+            }
+            boolean sameColumn = order.pos.x() == placed.getX() && order.pos.z() == placed.getZ();
+            if (!sameColumn && claimed(order, now)) {
+                continue;
+            }
+            BlockState target = parse(order.state);
+            if (target == null || target.isAir() || !wallMaterial(target)) {
+                continue;
+            }
+            BlockState current = level.getBlockState(pos);
+            if (matches(current, target)) {
+                orders.remove(i--);
+                done(order);
+                continue;
+            }
+            if (!WorldUtil.isAirLike(current) || !hangs(target) && cell(level, pos.below()) != org.lts.smartcolony.core.Support.Cell.SOLID) {
+                continue;
+            }
+            if (!take(level, target)) {
+                break;
+            }
+            org.lts.smartcolony.work.Placer.place(level, villager, pos, target);
+            orders.remove(i--);
+            done(order);
+            count++;
+        }
+        if (count > 0) {
+            data().bump("improvements_placed", count);
+            colony.markDirty();
+        }
+        return count;
     }
 
     public void completed(Construction.Task task) {

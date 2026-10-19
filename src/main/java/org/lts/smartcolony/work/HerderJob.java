@@ -69,6 +69,10 @@ public final class HerderJob extends Job {
     private int pullTicks;
     private long lastCullDay = -1;
     private long captureCooldownUntil;
+    private static final int STRAY_LIMIT = 12;
+    private static final int STRAY_SCAN = 400;
+    private long strayCheckAt;
+    private BlockPos spoilsAt;
     private final Map<java.util.UUID, Long> unreachable = new java.util.HashMap<>();
 
     public HerderJob(Colonist colonist) {
@@ -249,6 +253,12 @@ public final class HerderJob extends Job {
                 return;
             }
         }
+        Animal stray = surplusStray(level, villager, pen);
+        if (stray != null) {
+            action = Action.CULL;
+            target = stray;
+            return;
+        }
         if (level.getGameTime() < captureCooldownUntil) {
             return;
         }
@@ -308,6 +318,53 @@ public final class HerderJob extends Job {
                 .stream()
                 .min(Comparator.comparingDouble(a -> a.distanceToSqr(villager)))
                 .orElse(null);
+    }
+
+    private Animal surplusStray(ServerLevel level, Villager villager, ColonyData.Pen pen) {
+        long now = level.getGameTime();
+        if (now < strayCheckAt) {
+            return null;
+        }
+        strayCheckAt = now + 400;
+        int radius = colony().data().radius;
+        AABB area = new AABB(colony().center()).inflate(radius, 24, radius);
+        List<Animal> nearby = level.getEntitiesOfClass(Animal.class, area, a -> a.isAlive() && !a.isBaby() && Species.of(a) != null
+                && !colony().isProtectedAnimal(a) && !inside(pen, a.getX(), a.getZ()) && !unreachable.containsKey(a.getUUID())
+                && colony().contains(a.blockPosition()));
+        nearby.sort(Comparator.comparingDouble(a -> a.distanceToSqr(villager)));
+        Map<Species, List<Animal>> strays = new EnumMap<>(Species.class);
+        int scanned = 0;
+        for (Animal animal : nearby) {
+            if (scanned++ >= STRAY_SCAN) {
+                break;
+            }
+            if (!fenced(level, animal)) {
+                strays.computeIfAbsent(Species.of(animal), k -> new java.util.ArrayList<>()).add(animal);
+            }
+        }
+        for (List<Animal> list : strays.values()) {
+            if (list.size() > STRAY_LIMIT) {
+                strayCheckAt = now + 40;
+                return list.getFirst();
+            }
+        }
+        return null;
+    }
+
+    private static boolean fenced(ServerLevel level, Animal animal) {
+        BlockPos feet = animal.blockPosition();
+        int sides = 0;
+        for (net.minecraft.core.Direction side : net.minecraft.core.Direction.Plane.HORIZONTAL) {
+            for (int step = 1; step <= 8; step++) {
+                BlockState state = level.getBlockState(feet.relative(side, step));
+                if (state.is(net.minecraft.tags.BlockTags.FENCES) || state.is(net.minecraft.tags.BlockTags.FENCE_GATES)
+                        || state.is(net.minecraft.tags.BlockTags.WALLS)) {
+                    sides++;
+                    break;
+                }
+            }
+        }
+        return sides >= 3;
     }
 
     private static boolean enclosed(ServerLevel level, Animal animal, ColonyData.Pen pen) {
@@ -375,6 +432,7 @@ public final class HerderJob extends Job {
             action = null;
             target = null;
             partner = null;
+            spoilsAt = null;
             phase = "start";
             wait = 20;
         }
@@ -384,7 +442,8 @@ public final class HerderJob extends Job {
         if (!exit(level, villager, pen)) {
             return;
         }
-        List<ItemEntity> items = level.getEntitiesOfClass(ItemEntity.class, penBox(pen), ItemEntity::isAlive);
+        AABB area = spoilsAt == null ? penBox(pen) : new AABB(spoilsAt).inflate(4.0, 2.0, 4.0);
+        List<ItemEntity> items = level.getEntitiesOfClass(ItemEntity.class, area, ItemEntity::isAlive);
         if (items.isEmpty() || Inv.free(villager) == 0) {
             done(level, villager, pen);
             return;
@@ -482,6 +541,10 @@ public final class HerderJob extends Job {
                 done(level, villager, pen);
             }
             return;
+        }
+        if (!inside(pen, target.getX(), target.getZ())) {
+            spoilsAt = target.blockPosition();
+            colony().data().bump("strays_culled", 1);
         }
         target.hurtServer(level, level.damageSources().mobAttack(villager), 1000.0F);
         lastCullDay = level.getDefaultClockTime() / 24000L;
