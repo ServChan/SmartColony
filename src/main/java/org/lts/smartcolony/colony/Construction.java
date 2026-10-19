@@ -1328,12 +1328,52 @@ public final class Construction {
         return ground == null ? null : claim(new Task(Kind.HIGHWAY, ground, null, null, null, ground.above()), now);
     }
 
+    private static final long LANE_IDLE = 600L;
+    private final Map<UUID, Long> builderSeen = new HashMap<>();
+    private final Map<String, UUID> laneHand = new HashMap<>();
+    private final Map<String, Long> laneAt = new HashMap<>();
+
+    private boolean holdsLane(String lane, UUID builder, long now) {
+        UUID hand = laneHand.get(lane);
+        if (builder.equals(hand)) {
+            return true;
+        }
+        if (hand != null && now - laneAt.getOrDefault(lane, 0L) <= LANE_IDLE) {
+            return false;
+        }
+        for (Map.Entry<String, UUID> other : laneHand.entrySet()) {
+            if (!other.getKey().equals(lane) && builder.equals(other.getValue()) && now - laneAt.getOrDefault(other.getKey(), 0L) <= LANE_IDLE) {
+                return false;
+            }
+        }
+        laneHand.put(lane, builder);
+        laneAt.put(lane, now);
+        return true;
+    }
+
+    private Task fromLane(String lane, UUID builder, long now, Task task) {
+        if (task != null) {
+            laneHand.put(lane, builder);
+            laneAt.put(lane, now);
+        }
+        return task;
+    }
+
     public Task next(ServerLevel level, UUID builder) {
         long now = level.getGameTime();
-        if (Math.floorMod(builder.hashCode(), 5) == 2 && active().size() <= 1) {
-            Task trail = highwayTask(level, now);
+        builderSeen.put(builder, now);
+        builderSeen.values().removeIf(seen -> now - seen > LANE_IDLE * 2);
+        boolean crew = builderSeen.size() >= 2;
+        if (crew && colony.highways().hasWork(level) && holdsLane("highway", builder, now)) {
+            Task trail = fromLane("highway", builder, now, highwayTask(level, now));
             if (trail != null) {
                 return trail;
+            }
+        }
+        if (crew && builderSeen.size() >= 3 && data().orders.size() > 40 && holdsLane("orders", builder, now)) {
+            Task order = fromLane("orders", builder, now, colony.improvements().next(level));
+            if (order != null) {
+                return order;
             }
         }
         if (!data().pendingRoad.isEmpty() && Math.floorMod(builder.hashCode(), 4) == 1) {

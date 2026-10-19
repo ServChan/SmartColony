@@ -50,6 +50,10 @@ public final class GuardJob extends Job {
     private double bestGap = Double.MAX_VALUE;
     private final java.util.Map<java.util.UUID, Long> ignored = new java.util.HashMap<>();
     private final GuardTraining training = new GuardTraining(this);
+    private static final long LOOT_PATIENCE = 200L;
+    private final java.util.Set<java.util.UUID> unreachableLoot = new java.util.HashSet<>();
+    private java.util.UUID lootTarget;
+    private long lootSince;
 
     public GuardJob(Colonist colonist) {
         super(colonist);
@@ -178,13 +182,22 @@ public final class GuardJob extends Job {
             depositAll(level, villager);
         }
         if (Inv.free(villager) > 1) {
-            net.minecraft.world.entity.item.ItemEntity loot = nearestLoot(level, villager, 10.0, stack -> !stack.isEmpty());
+            net.minecraft.world.entity.item.ItemEntity loot = lootNearby(level, villager);
             if (loot != null && colony().contains(loot.blockPosition())) {
                 status = "collecting loot";
+                long now = level.getGameTime();
+                if (!loot.getUUID().equals(lootTarget)) {
+                    lootTarget = loot.getUUID();
+                    lootSince = now;
+                }
                 if (loot.distanceTo(villager) < 1.6) {
                     pickUp(villager, loot);
-                } else if (move(level, villager, loot.blockPosition(), 1.0) == Mover.Result.FAILED) {
-                    loot.setPickUpDelay(200);
+                } else if (move(level, villager, loot.blockPosition(), 1.0) == Mover.Result.FAILED || now - lootSince > LOOT_PATIENCE) {
+                    if (unreachableLoot.size() > 64) {
+                        unreachableLoot.clear();
+                    }
+                    unreachableLoot.add(loot.getUUID());
+                    lootTarget = null;
                 }
                 return;
             }
@@ -686,5 +699,36 @@ public final class GuardJob extends Job {
             villager.getLookControl().setLookAt(villager.getX() + level.getRandom().nextGaussian() * 10, villager.getEyeY(),
                     villager.getZ() + level.getRandom().nextGaussian() * 10);
         }
+    }
+
+    private net.minecraft.world.entity.item.ItemEntity lootNearby(ServerLevel level, Villager villager) {
+        org.lts.smartcolony.core.ColonyData.Pen pen = colony().data().pen;
+        AABB box = villager.getBoundingBox().inflate(10.0, 3, 10.0);
+        return level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, box, item -> item.isAlive()
+                        && spoils(item.getItem()) && !unreachableLoot.contains(item.getUUID()) && !inPen(pen, item.blockPosition()))
+                .stream()
+                .min(java.util.Comparator.comparingDouble(item -> item.distanceToSqr(villager)))
+                .orElse(null);
+    }
+
+    private static final java.util.Set<String> SPOILS = java.util.Set.of("arrow", "bone", "rotten_flesh", "gunpowder", "string",
+            "spider_eye", "ender_pearl", "slime_ball", "phantom_membrane", "blaze_rod", "bow", "crossbow", "iron_ingot",
+            "gold_nugget", "iron_nugget", "emerald", "tipped_arrow", "spectral_arrow", "trident", "glass_bottle", "redstone",
+            "glowstone_dust", "sugar", "stick");
+
+    private static boolean spoils(ItemStack stack) {
+        if (stack.isEmpty()) {
+            return false;
+        }
+        if (stack.isDamageableItem()) {
+            return true;
+        }
+        String id = ItemIds.id(stack.getItem());
+        return id.startsWith("minecraft:") && SPOILS.contains(id.substring("minecraft:".length()));
+    }
+
+    private static boolean inPen(org.lts.smartcolony.core.ColonyData.Pen pen, BlockPos pos) {
+        return pen != null && pos.getX() >= pen.min.x() - 1 && pos.getX() <= pen.max.x() + 1
+                && pos.getZ() >= pen.min.z() - 1 && pos.getZ() <= pen.max.z() + 1;
     }
 }

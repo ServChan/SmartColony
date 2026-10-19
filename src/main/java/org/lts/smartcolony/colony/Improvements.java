@@ -33,6 +33,7 @@ public final class Improvements {
     private static final int SUPPORT_GAP = 4;
     private static final int WALL_SUPPORT_GAP = 3;
     private static final int SECTORS = 36;
+    private static final int BORDER_GAP = 5;
     private static final int WALL_HEIGHT = 3;
     private static final int GATE_SPACING = 28;
     private static final int TOWER_SPACING = 40;
@@ -187,16 +188,24 @@ public final class Improvements {
         if (footprint == growthFootprint) {
             return;
         }
-        Pos outside = beyondWall(wall);
-        if (outside == null) {
+        int foreign = 0;
+        for (Pos column : wall.columns) {
+            if (!colony.ownsGround(column.x(), column.z())) {
+                foreign++;
+            }
+        }
+        boolean trespass = foreign * 20 > wall.columns.size();
+        Pos outside = trespass ? null : beyondWall(wall);
+        if (!trespass && outside == null) {
             growthFootprint = footprint;
             return;
         }
         String material = wall.material.equals("stone") ? "stone" : "wood";
-        if (replanWall(level, material)) {
+        if (replanWall(level, material, !trespass)) {
             growthFootprint = footprint;
             lastWallAttempt = now;
-            colony.journal(level, "the village grew past its wall near " + outside.x() + " " + outside.z() + ", so the wall moves out");
+            colony.journal(level, trespass ? "the wall stood on " + foreign + " columns of a neighbour's land, so it was drawn back"
+                    : "the village grew past its wall near " + outside.x() + " " + outside.z() + ", so the wall moves out");
         }
     }
 
@@ -655,8 +664,12 @@ public final class Improvements {
     private String forcedMaterial;
 
     public boolean replanWall(ServerLevel level, String material) {
+        return replanWall(level, material, false);
+    }
+
+    private boolean replanWall(ServerLevel level, String material, boolean keepOld) {
         List<Pos> old = data().wall == null ? List.of() : new ArrayList<>(data().wall.columns);
-        List<int[]> ring = outline(level);
+        List<int[]> ring = outline(level, keepOld ? old : null);
         if (!loaded(level, ring, old)) {
             return false;
         }
@@ -690,6 +703,7 @@ public final class Improvements {
                 planned.add(BlockPos.asLong(order.pos.x(), order.pos.y(), order.pos.z()));
             }
         }
+        data().orders.removeIf(order -> SALVAGE.equals(order.tag) && planned.contains(BlockPos.asLong(order.pos.x(), order.pos.y(), order.pos.z())));
         List<ColonyData.Order> salvageOrders = new ArrayList<>();
         for (java.util.Map.Entry<Long, Integer> entry : previousGround.entrySet()) {
             int x = BlockPos.getX(entry.getKey());
@@ -840,6 +854,10 @@ public final class Improvements {
     }
 
     private List<int[]> outline(ServerLevel level) {
+        return outline(level, null);
+    }
+
+    private List<int[]> outline(ServerLevel level, List<Pos> keep) {
         BlockPos center = colony.center();
         List<BlockPos> points = new ArrayList<>();
         int reach = data().radius + 32;
@@ -890,7 +908,7 @@ public final class Improvements {
             double dx = point.getX() - center.getX();
             double dz = point.getZ() - center.getZ();
             double distance = Math.sqrt(dx * dx + dz * dz);
-            if (p < poiCount && distance > reach) {
+            if (p < poiCount && (distance > reach || !colony.ownsGround(point.getX(), point.getZ()))) {
                 continue;
             }
             double angle = Math.atan2(dz, dx);
@@ -908,23 +926,64 @@ public final class Improvements {
             }
             radii = smooth;
         }
+        double[] need = radii.clone();
         for (int k = 0; k < SECTORS; k++) {
             long hash = (seed * 31 + k) * 0x9E3779B97F4A7C15L;
             double noise = ((hash >>> 40) % 5) - 2;
             radii[k] = Math.max(14, Math.min(org.lts.smartcolony.SmartColonyConfig.get().maxColonyRadius + 24, Math.max(radii[k], radii[k] + noise)));
         }
         radii = WallPlanner.optimize(center.getX(), center.getZ(), radii, new WallTerrain(level), SEARCH_WINDOW, 3);
+        int[][] old = keep == null ? null : oldVertices(center, keep);
+        int[][] vertices = new int[SECTORS][];
+        for (int k = 0; k < SECTORS; k++) {
+            double angle = 2 * Math.PI * k / SECTORS;
+            if (old != null && old[k] != null) {
+                double oldRadius = Math.hypot(old[k][0] - center.getX(), old[k][1] - center.getZ());
+                if (need[k] <= oldRadius) {
+                    vertices[k] = old[k];
+                    continue;
+                }
+            }
+            double radius = radii[k];
+            int x = center.getX() + (int) Math.round(Math.cos(angle) * radius);
+            int z = center.getZ() + (int) Math.round(Math.sin(angle) * radius);
+            while (radius > 14 && !colony.ownsGround(center.getX() + (int) Math.round(Math.cos(angle) * (radius + BORDER_GAP)),
+                    center.getZ() + (int) Math.round(Math.sin(angle) * (radius + BORDER_GAP)))) {
+                radius -= 1;
+                x = center.getX() + (int) Math.round(Math.cos(angle) * radius);
+                z = center.getZ() + (int) Math.round(Math.sin(angle) * radius);
+            }
+            vertices[k] = new int[] {x, z};
+        }
         List<int[]> ring = new ArrayList<>();
         for (int k = 0; k < SECTORS; k++) {
-            double a0 = 2 * Math.PI * k / SECTORS;
-            double a1 = 2 * Math.PI * (k + 1) / SECTORS;
-            int x0 = center.getX() + (int) Math.round(Math.cos(a0) * radii[k]);
-            int z0 = center.getZ() + (int) Math.round(Math.sin(a0) * radii[k]);
-            int x1 = center.getX() + (int) Math.round(Math.cos(a1) * radii[(k + 1) % SECTORS]);
-            int z1 = center.getZ() + (int) Math.round(Math.sin(a1) * radii[(k + 1) % SECTORS]);
-            line(ring, x0, z0, x1, z1);
+            int[] from = vertices[k];
+            int[] to = vertices[(k + 1) % SECTORS];
+            line(ring, from[0], from[1], to[0], to[1]);
         }
         return ring;
+    }
+
+    private static int[][] oldVertices(BlockPos center, List<Pos> columns) {
+        int[][] vertices = new int[SECTORS][];
+        double[] best = new double[SECTORS];
+        java.util.Arrays.fill(best, Math.PI / SECTORS / 2);
+        for (Pos column : columns) {
+            double dx = column.x() - center.getX();
+            double dz = column.z() - center.getZ();
+            if (dx * dx + dz * dz < 1) {
+                continue;
+            }
+            double angle = Math.atan2(dz, dx);
+            int k = Math.floorMod((int) Math.round(angle / (2 * Math.PI) * SECTORS), SECTORS);
+            double gap = Math.abs(angle - 2 * Math.PI * k / SECTORS);
+            gap = Math.min(gap, 2 * Math.PI - gap);
+            if (gap < best[k]) {
+                best[k] = gap;
+                vertices[k] = new int[] {column.x(), column.z()};
+            }
+        }
+        return vertices;
     }
 
     private final class WallTerrain implements WallPlanner.Terrain {
