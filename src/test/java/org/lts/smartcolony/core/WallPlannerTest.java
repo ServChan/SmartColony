@@ -158,4 +158,20 @@ class WallPlannerTest {
         assertEquals(3, heights[1]);
         assertEquals(3, heights[3]);
     }
+
+    @Test
+    void enclosesPointsInsideTheRingOnly() {
+        int n = SECTORS;
+        int[] xs = new int[n];
+        int[] zs = new int[n];
+        for (int k = 0; k < n; k++) {
+            xs[k] = WallPlanner.vx(100, k, n, 30);
+            zs[k] = WallPlanner.vz(-50, k, n, 30);
+        }
+        assertTrue(WallPlanner.encloses(xs, zs, 100, -50));
+        assertTrue(WallPlanner.encloses(xs, zs, 125, -50));
+        assertTrue(!WallPlanner.encloses(xs, zs, 135, -50));
+        assertTrue(!WallPlanner.encloses(xs, zs, 100, -85));
+        assertTrue(!WallPlanner.encloses(new int[] {0, 1}, new int[] {0, 1}, 0, 0));
+    }
 }

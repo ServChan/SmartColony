@@ -120,6 +120,20 @@ public final class WallPlanner {
         return cost + CURVATURE_COST * bend * bend + SHIFT_COST * Math.max(0, r - base[k]);
     }
 
+    public static boolean encloses(int[] xs, int[] zs, double x, double z) {
+        int n = Math.min(xs.length, zs.length);
+        if (n < 3) {
+            return false;
+        }
+        boolean inside = false;
+        for (int i = 0, j = n - 1; i < n; j = i++) {
+            if ((zs[i] > z) != (zs[j] > z) && x < (double) (xs[j] - xs[i]) * (z - zs[i]) / (zs[j] - zs[i]) + xs[i]) {
+                inside = !inside;
+            }
+        }
+        return inside;
+    }
+
     public static int vx(int cx, int k, int n, double r) {
         return cx + (int) Math.round(Math.cos(2 * Math.PI * k / n) * r);
     }

@@ -127,6 +127,7 @@ public final class Improvements {
             lastWallAttempt = level.getGameTime();
             planWall(level);
         }
+        followGrowth(level);
         if (level.getGameTime() % 600 < 100) {
             inspect(level);
         }
@@ -172,6 +173,57 @@ public final class Improvements {
         }
     }
     private long lastWallAttempt = -1000000;
+    private long lastGrowthCheck = -1000000;
+    private int growthFootprint = -1;
+
+    private void followGrowth(ServerLevel level) {
+        ColonyData.Wall wall = data().wall;
+        long now = level.getGameTime();
+        if (wall == null || wall.columns.size() < 3 || data().wallVersion < WALL_VERSION || now - lastGrowthCheck < 1200) {
+            return;
+        }
+        lastGrowthCheck = now;
+        int footprint = data().buildings.size() * 31 + data().projects.size();
+        if (footprint == growthFootprint) {
+            return;
+        }
+        Pos outside = beyondWall(wall);
+        if (outside == null) {
+            growthFootprint = footprint;
+            return;
+        }
+        String material = wall.material.equals("stone") ? "stone" : "wood";
+        if (replanWall(level, material)) {
+            growthFootprint = footprint;
+            lastWallAttempt = now;
+            colony.journal(level, "the village grew past its wall near " + outside.x() + " " + outside.z() + ", so the wall moves out");
+        }
+    }
+
+    private Pos beyondWall(ColonyData.Wall wall) {
+        int[] xs = new int[wall.columns.size()];
+        int[] zs = new int[wall.columns.size()];
+        for (int i = 0; i < xs.length; i++) {
+            xs[i] = wall.columns.get(i).x();
+            zs[i] = wall.columns.get(i).z();
+        }
+        List<ColonyData.Building> footprints = new ArrayList<>(data().buildings);
+        for (ColonyData.Project project : data().projects) {
+            footprints.add(project.building);
+        }
+        for (ColonyData.Building building : footprints) {
+            if (Highways.remote(building)) {
+                continue;
+            }
+            for (Pos corner : new Pos[] {building.min, building.max, new Pos(building.min.x(), building.min.y(), building.max.z()),
+                    new Pos(building.max.x(), building.min.y(), building.min.z())}) {
+                if (!WallPlanner.encloses(xs, zs, corner.x() + 0.5, corner.z() + 0.5)) {
+                    return corner;
+                }
+            }
+        }
+        return null;
+    }
 
     private void decorate(ServerLevel level) {
         int added = 0;
@@ -800,6 +852,13 @@ public final class Improvements {
             }
             points.add(WorldUtil.bp(building.min));
             points.add(WorldUtil.bp(building.max));
+        }
+        for (ColonyData.Project project : data().projects) {
+            if (Highways.remote(project.building)) {
+                continue;
+            }
+            points.add(WorldUtil.bp(project.building.min));
+            points.add(WorldUtil.bp(project.building.max));
         }
         for (Pos farm : data().farms) {
             points.add(WorldUtil.bp(farm));

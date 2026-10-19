@@ -42,6 +42,9 @@ public final class Highways {
     private static final long RETRY = 2400L;
     private static final int MAX_FAILURES = 4;
     private static final int SIGN_OFFSET = 2;
+    private static final long BLOCKED_RETRY = 24000L * 2;
+    private static final int RUN = 4;
+    private static final int LANDING_REACH = 6;
 
     private final Colony colony;
     private final Map<ColonyData.Highway, Set<Integer>> finished = new HashMap<>();
@@ -80,6 +83,7 @@ public final class Highways {
             switch (highway.phase) {
                 case "route" -> route(level, highway, now);
                 case "build" -> progress(level, highway, now);
+                case "blocked" -> resurvey(level, highway, now);
                 default -> {
                 }
             }
@@ -127,11 +131,10 @@ public final class Highways {
             return "far";
         }
         if (to(other) != null || other.highways().to(colony) != null) {
-            ColonyData.Highway lead = colony.id().compareTo(other.id()) < 0 ? to(other) : other.highways().to(colony);
+            Colony leader = colony.id().compareTo(other.id()) < 0 ? colony : other;
+            ColonyData.Highway lead = leader.highways().to(leader == colony ? other : colony);
             if (lead != null && "blocked".equals(lead.phase)) {
-                lead.phase = "route";
-                lead.failures = 0;
-                lead.retryAt = 0;
+                leader.highways().resurvey(level, lead, level.getGameTime());
                 return "retry";
             }
             return "exists";
@@ -159,7 +162,60 @@ public final class Highways {
         colony.markDirty();
     }
 
+    void resurvey(ServerLevel level, ColonyData.Highway highway, long now) {
+        Colony partner = ColonyManager.byId(highway.partner);
+        if (partner == null || !highway.lead) {
+            return;
+        }
+        if (Embassy.atWar(colony, partner) || !WorldUtil.loaded(level, colony.center()) || !WorldUtil.loaded(level, partner.center())) {
+            highway.retryAt = now + RETRY;
+            return;
+        }
+        highway.start = WorldUtil.pos(mouth(level, colony, partner));
+        highway.goal = WorldUtil.pos(mouth(level, partner, colony));
+        highway.cells = new ArrayList<>(List.of(highway.start));
+        highway.segment = 0;
+        highway.failures = 0;
+        highway.retryAt = 0;
+        highway.since = now;
+        highway.phase = "route";
+        colony.journal(level, "surveyors try the road to " + partner.data().name + " again from " + highway.start.x() + " " + highway.start.z());
+        colony.markDirty();
+    }
+
+    private static BlockPos landing(ServerLevel level, Colony from, BlockPos rough) {
+        Ground ground = from.highways().new Ground(level, null);
+        BlockPos best = null;
+        int bestDistance = Integer.MAX_VALUE;
+        for (int dx = -LANDING_REACH; dx <= LANDING_REACH; dx++) {
+            for (int dz = -LANDING_REACH; dz <= LANDING_REACH; dz++) {
+                int x = rough.getX() + dx;
+                int z = rough.getZ() + dz;
+                int distance = dx * dx + dz * dz;
+                if (distance >= bestDistance || ground.cost(x, z) < 0) {
+                    continue;
+                }
+                int height = ground.height(x, z);
+                int flat = 0;
+                for (int[] side : new int[][] {{1, 0}, {-1, 0}, {0, 1}, {0, -1}}) {
+                    if (ground.cost(x + side[0], z + side[1]) >= 0 && Math.abs(ground.height(x + side[0], z + side[1]) - height) <= 1) {
+                        flat++;
+                    }
+                }
+                if (flat >= 2) {
+                    bestDistance = distance;
+                    best = new BlockPos(x, height, z);
+                }
+            }
+        }
+        return best == null ? rough : best;
+    }
+
     private static BlockPos mouth(ServerLevel level, Colony from, Colony toward) {
+        return landing(level, from, roughMouth(level, from, toward));
+    }
+
+    private static BlockPos roughMouth(ServerLevel level, Colony from, Colony toward) {
         BlockPos center = from.center();
         double angle = Math.atan2(toward.center().getZ() - center.getZ(), toward.center().getX() - center.getX());
         ColonyData.Wall wall = from.data().wall;
@@ -302,6 +358,7 @@ public final class Highways {
             highway.retryAt = now + RETRY * highway.failures;
             if (highway.failures >= MAX_FAILURES) {
                 highway.phase = "blocked";
+                highway.retryAt = now + BLOCKED_RETRY;
                 colony.journal(level, "the road to " + partner.data().name + " is blocked near " + target[0] + " " + target[1]);
                 Embassy.tell(level, colony, partner, Component.translatable("smartcolony.highway.blocked", partner.data().name,
                         target[0], target[1]));
@@ -523,6 +580,44 @@ public final class Highways {
     }
 
     public boolean build(ServerLevel level, Villager villager, BlockPos ground) {
+        if (!pave(level, villager, ground)) {
+            return false;
+        }
+        for (ColonyData.Highway highway : data().highways) {
+            if (!"build".equals(highway.phase)) {
+                continue;
+            }
+            int end = Math.min(highway.cells.size(), highway.built + WINDOW);
+            int index = -1;
+            for (int i = highway.built; i < end; i++) {
+                Pos cell = highway.cells.get(i);
+                if (cell.x() == ground.getX() && cell.z() == ground.getZ()) {
+                    index = i;
+                    break;
+                }
+            }
+            if (index < 0) {
+                continue;
+            }
+            Set<Integer> done = finished.computeIfAbsent(highway, h -> new HashSet<>());
+            for (int i = index + 1; i < Math.min(end, index + RUN); i++) {
+                if (done.contains(i)) {
+                    continue;
+                }
+                Pos cell = highway.cells.get(i);
+                BlockPos next = new BlockPos(cell.x(), groundY(level, cell.x(), cell.z(), cell.y()), cell.z());
+                if (!level.isPositionEntityTicking(next) || next.distToCenterSqr(villager.getX(), villager.getY(), villager.getZ()) > 36.0
+                        || !pave(level, villager, next)) {
+                    break;
+                }
+                done(next);
+            }
+            return true;
+        }
+        return true;
+    }
+
+    private boolean pave(ServerLevel level, Villager villager, BlockPos ground) {
         BlockPos feet = ground.above();
         for (BlockPos clear : new BlockPos[] {feet, feet.above()}) {
             BlockState state = level.getBlockState(clear);
