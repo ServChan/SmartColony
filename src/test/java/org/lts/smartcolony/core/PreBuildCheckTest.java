@@ -1,6 +1,7 @@
 package org.lts.smartcolony.core;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -114,5 +115,16 @@ class PreBuildCheckTest {
         java.util.Map<String, Integer> early = PreBuildCheck.without(need, late);
         org.junit.jupiter.api.Assertions.assertEquals(java.util.Map.of("minecraft:oak_planks", 40, "minecraft:cobblestone", 20), early);
         org.junit.jupiter.api.Assertions.assertFalse(PreBuildCheck.lateItem("minecraft:oak_door"));
+    }
+
+    @Test
+    void aHouseWaitingOnlyForWoolGoodsIsHandedOverAfterAWhile() {
+        List<String> beds = List.of("minecraft:white_bed", "minecraft:white_carpet");
+        assertTrue(PreBuildCheck.handOver(beds, PreBuildCheck.HAND_OVER_AFTER));
+        assertFalse(PreBuildCheck.handOver(beds, PreBuildCheck.HAND_OVER_AFTER - 1));
+        assertFalse(PreBuildCheck.handOver(List.of("minecraft:white_bed", "minecraft:furnace"), PreBuildCheck.HAND_OVER_AFTER * 10));
+        assertFalse(PreBuildCheck.handOver(List.of(), PreBuildCheck.HAND_OVER_AFTER * 10));
+        assertTrue(PreBuildCheck.furnishing("minecraft:red_banner"));
+        assertFalse(PreBuildCheck.furnishing("minecraft:lantern"));
     }
 }

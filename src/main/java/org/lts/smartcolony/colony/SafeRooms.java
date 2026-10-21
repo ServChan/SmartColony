@@ -30,8 +30,9 @@ public final class SafeRooms {
     private static final int MAX_DROP = 4;
     private static final int CELLS_PER_GUEST = 3;
     private static final int MAX_CAPACITY = 16;
+    private static final int MAX_PLACES = 24;
 
-    public record Room(long id, BlockPos spot, int capacity) {
+    public record Room(long id, BlockPos spot, int capacity, List<BlockPos> places) {
     }
 
     private record Entry(long computedAt, List<Room> rooms) {
@@ -140,7 +141,7 @@ public final class SafeRooms {
                     BlockPos spot = farthestFromDoors(room);
                     if (spot != null) {
                         int capacity = Math.max(1, Math.min(MAX_CAPACITY, room.cells().size() / CELLS_PER_GUEST));
-                        rooms.add(new Room(room.id(), spot, capacity));
+                        rooms.add(new Room(room.id(), spot, capacity, places(room)));
                     }
                 }
             }
@@ -233,6 +234,54 @@ public final class SafeRooms {
     private static boolean barrier(ServerLevel level, BlockPos pos) {
         Block block = level.getBlockState(pos).getBlock();
         return block instanceof DoorBlock || block instanceof FenceGateBlock || block instanceof TrapDoorBlock;
+    }
+
+    private static List<BlockPos> places(Explored room) {
+        List<BlockPos> sorted = new ArrayList<>(room.floor());
+        sorted.sort(java.util.Comparator.comparingDouble((BlockPos cell) -> {
+            double nearest = Double.MAX_VALUE;
+            for (BlockPos door : room.doors()) {
+                nearest = Math.min(nearest, cell.distSqr(door));
+            }
+            return nearest;
+        }).reversed());
+        List<BlockPos> picked = new ArrayList<>();
+        for (BlockPos cell : sorted) {
+            if (picked.size() >= MAX_PLACES) {
+                break;
+            }
+            boolean nearDoor = false;
+            for (BlockPos door : room.doors()) {
+                if (cell.distSqr(door) <= 2) {
+                    nearDoor = true;
+                    break;
+                }
+            }
+            if (!nearDoor) {
+                picked.add(cell.immutable());
+            }
+        }
+        return picked;
+    }
+
+    public BlockPos placeFor(long room, java.util.UUID uuid, BlockPos spot) {
+        int index = 0;
+        for (Map.Entry<java.util.UUID, Long> claim : claims.entrySet()) {
+            if (claim.getValue() == room && !claim.getKey().equals(uuid)) {
+                index++;
+            }
+        }
+        if (colony.bunker().finished() && room == bunkerRoom(colony.bunker().spot())) {
+            return colony.bunker().place(index, spot);
+        }
+        for (Entry entry : buildings.values()) {
+            for (Room candidate : entry.rooms()) {
+                if (candidate.id() == room && !candidate.places().isEmpty()) {
+                    return candidate.places().get(index % candidate.places().size());
+                }
+            }
+        }
+        return spot;
     }
 
     private static BlockPos farthestFromDoors(Explored room) {

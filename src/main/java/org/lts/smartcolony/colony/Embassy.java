@@ -43,6 +43,8 @@ public final class Embassy {
     public static final String AID = "aid";
     public static final String RAID = "raid";
     private static final long DAY = 24000L;
+    private static final int MISSION_ADULTS = 10;
+    private static final int MISSION_BUILDINGS = 3;
     private static final long ENVOY_STAY = 400L;
     private static final long CARAVAN_STAY = 200L;
     private static final long VISIT_STAY = 2400L;
@@ -302,7 +304,7 @@ public final class Embassy {
                 other.markDirty();
             }
         }
-        if (activeMissions(other) > 0) {
+        if (activeMissions(other) > 0 || !settled(level)) {
             return;
         }
         boolean festivalThere = other.festival(level);
@@ -312,6 +314,10 @@ public final class Embassy {
             action = relation.treaty() == Diplomacy.Treaty.WAR ? Diplomacy.Action.PROPOSE_TRUCE : Diplomacy.Action.NONE;
         }
         act(level, other, relation, action, now);
+    }
+
+    private boolean settled(ServerLevel level) {
+        return colony.adultCount(level) >= MISSION_ADULTS && data().buildings.size() >= MISSION_BUILDINGS;
     }
 
     private static void shift(ColonyData.Relation relation, int delta) {

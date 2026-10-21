@@ -17,7 +17,9 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.npc.villager.Villager;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.BedBlock;
+import net.minecraft.world.level.LightLayer;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.FallingBlock;
 import net.minecraft.world.level.block.Rotation;
@@ -44,6 +46,8 @@ public final class Bunker {
     private static final double REACH_SQR = 30.0;
     private static final double FAR_SQR = 49.0;
     private static final int MIN_ADULTS = 10;
+    private static final int MIN_BUILDINGS = 8;
+    private static final int MIN_HOMES = 4;
     private static final int BUSY_VILLAGE = 16;
     private static final long MIN_AGE = 24000L * 2;
     private static final long PLAN_EVERY = 1200L;
@@ -56,6 +60,8 @@ public final class Bunker {
     private static final String[] FILL = {"cobblestone", "cobbled_deepslate", "stone", "andesite", "diorite", "granite", "tuff", "dirt"};
     private static final String[] STONE = {"stone_bricks", "cobblestone", "cobbled_deepslate", "stone", "andesite", "diorite", "granite", "tuff"};
     private static final int PATIENCE = 6;
+    private static final int WORK_LIGHT = 4;
+    private static final double TORCH_SPACING_SQR = 36.0;
     private static final long MAKESHIFT_FOR = 3000L;
     private static BunkerPlan.Templates templates;
 
@@ -172,7 +178,9 @@ public final class Bunker {
     private boolean wanted(ServerLevel level) {
         ColonyData d = colony.data();
         int adults = colony.adultCount(level);
-        if (level.getGameTime() - d.founded < MIN_AGE || adults < MIN_ADULTS || colony.desired().getOrDefault(Role.BUILDER, 0) < 2) {
+        long homes = d.buildings.stream().filter(b -> "house".equals(b.kind)).count();
+        if (level.getGameTime() - d.founded < MIN_AGE || adults < MIN_ADULTS || colony.desired().getOrDefault(Role.BUILDER, 0) < 2
+                || d.buildings.size() < MIN_BUILDINGS || homes < MIN_HOMES) {
             return false;
         }
         boolean war = d.relations.values().stream().anyMatch(relation -> relation.treaty() == Diplomacy.Treaty.WAR);
@@ -376,7 +384,11 @@ public final class Bunker {
                     colony.data().bump("bunker_dug", 1);
                 }
             }
-            return pos.getY() < layout.y() && !seal(level, villager, layout, pos) ? Step.WAIT : Step.DONE;
+            if (pos.getY() < layout.y() && !seal(level, villager, layout, pos)) {
+                return Step.WAIT;
+            }
+            light(level, villager, layout, pos);
+            return Step.DONE;
         }
         BlockState target = rotated(cell.state(), cell.rotation());
         if (target == null || state.is(target.getBlock())) {
@@ -540,6 +552,46 @@ public final class Bunker {
         return parsed == null ? null : parsed.rotate(Rotation.values()[Math.floorMod(rotation, 4)]);
     }
 
+    private void light(ServerLevel level, Villager villager, BunkerPlan.Layout layout, BlockPos pos) {
+        ColonyData.Bunker bunker = data();
+        BlockPos below = pos.below();
+        if (pos.getY() >= layout.y() - 1 || dug().contains(BunkerPlan.key(below.getX(), below.getY(), below.getZ()))
+                || !level.getBlockState(pos).isAir() || level.getBrightness(LightLayer.BLOCK, pos) >= WORK_LIGHT) {
+            return;
+        }
+        if (bunker.torches == null) {
+            bunker.torches = new ArrayList<>();
+        }
+        for (Pos torch : bunker.torches) {
+            if (WorldUtil.bp(torch).distSqr(pos) < TORCH_SPACING_SQR) {
+                return;
+            }
+        }
+        BlockState torch = Blocks.TORCH.defaultBlockState();
+        String item = Ids.mc("torch");
+        if (!torch.canSurvive(level, pos) || !take(level, item) && !(colony.produce(level, item, 8) && take(level, item))) {
+            return;
+        }
+        Placer.place(level, villager, pos, torch);
+        bunker.torches.add(WorldUtil.pos(pos));
+        colony.data().bump("bunker_work_torches", 1);
+    }
+
+    private void clearWorkTorches(ServerLevel level) {
+        ColonyData.Bunker bunker = data();
+        if (bunker.torches == null) {
+            return;
+        }
+        for (Pos torch : bunker.torches) {
+            BlockPos at = WorldUtil.bp(torch);
+            if (WorldUtil.loaded(level, at) && level.getBlockState(at).is(Blocks.TORCH)) {
+                level.setBlock(at, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+                colony.warehouse().insert(level, ItemIds.stack(Ids.mc("torch"), 1));
+            }
+        }
+        bunker.torches.clear();
+    }
+
     private boolean seal(ServerLevel level, Villager villager, BunkerPlan.Layout layout, BlockPos pos) {
         Set<Long> dug = dug();
         for (Direction direction : Direction.values()) {
@@ -588,6 +640,7 @@ public final class Bunker {
             return;
         }
         bunker.finished = true;
+        clearWorkTorches(level);
         colony.data().bump("bunkers_built", 1);
         int capacity = BunkerPlan.capacity(templates());
         colony.journal(level, "the bunker is ready: room for " + capacity + " under " + bunker.depth + " blocks of ground");
@@ -611,6 +664,19 @@ public final class Bunker {
 
     public int capacity() {
         return BunkerPlan.capacity(templates());
+    }
+
+    public BlockPos place(int index, BlockPos fallback) {
+        ColonyData.Bunker bunker = data();
+        if (bunker == null) {
+            return fallback;
+        }
+        List<int[]> cells = BunkerPlan.shelterCells(bunker.layout(), templates());
+        if (cells.isEmpty()) {
+            return fallback;
+        }
+        int[] cell = cells.get(Math.floorMod(index, cells.size()));
+        return new BlockPos(cell[0], cell[1], cell[2]);
     }
 
     public boolean inside(BlockPos pos) {

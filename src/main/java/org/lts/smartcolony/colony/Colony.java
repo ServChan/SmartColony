@@ -77,6 +77,7 @@ public final class Colony {
     private final Daily daily;
     private final FireWatch fire;
     private final Chores chores;
+    private final Gifts gifts;
     private final Overgrowth overgrowth;
     private final Doors doors;
     private final SafeRooms safeRooms;
@@ -116,6 +117,7 @@ public final class Colony {
         this.daily = new Daily(this);
         this.fire = new FireWatch(this);
         this.chores = new Chores(this);
+        this.gifts = new Gifts(this);
         this.overgrowth = new Overgrowth(this);
         this.doors = new Doors(this);
         this.safeRooms = new SafeRooms(this);
@@ -1089,6 +1091,7 @@ public final class Colony {
         daily.tick(level, ticks);
         fire.tick(level, ticks);
         chores.tick(level, ticks);
+        gifts.tick(level, ticks);
         overgrowth.tick(level, ticks);
         contracts.tick(level, ticks);
         stable.tick(level, ticks);
@@ -1354,7 +1357,12 @@ public final class Colony {
                 org.lts.smartcolony.core.Specialists.beekeepers(builtKind(org.lts.smartcolony.core.Specialists.APIARY), nests, adults),
                 org.lts.smartcolony.core.Specialists.alchemists(builtKind(org.lts.smartcolony.core.Specialists.APOTHECARY), adults),
                 org.lts.smartcolony.core.Specialists.scribes(builtKind(org.lts.smartcolony.core.Specialists.LIBRARY), adults),
-                org.lts.smartcolony.core.Specialists.scouts(adults, true));
+                org.lts.smartcolony.core.Specialists.scouts(adults, !basicsShort()));
+    }
+
+    private boolean basicsShort() {
+        return construction.missing().keySet().stream().anyMatch(id -> Ids.isLog(id) || Ids.isPlanks(id) || id.contains("cobble")
+                || id.equals(Ids.mc("stone")));
     }
 
     public int unarmedGuards(ServerLevel level) {
@@ -1382,6 +1390,23 @@ public final class Colony {
             roles.put(Role.GUARD, Math.max(1, adultCount(level) / 5));
         }
         return new org.lts.smartcolony.core.CrafterNeeds.Context(warehouse.stock(level), roles, adultCount(level), unarmedGuards(level));
+    }
+
+    public boolean toolInReach(ServerLevel level, java.util.function.Predicate<ItemStack> fits, List<String> tools) {
+        Stock stock = warehouse.stock(level);
+        for (String tool : tools) {
+            if (CraftPlanner.plan(stock, tool, 1).isPresent()) {
+                return true;
+            }
+        }
+        for (var container : warehouse.all(level)) {
+            for (int slot = 0; slot < container.getContainerSize(); slot++) {
+                if (fits.test(container.getItem(slot))) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private boolean canEquip(ServerLevel level, Stock stock, List<String> tools) {

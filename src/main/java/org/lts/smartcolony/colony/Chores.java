@@ -38,6 +38,7 @@ public final class Chores {
     private static final int ROADS_PER_SCAN = 220;
     private static final long CLAIM_TICKS = 600;
     private static final int LOOT_MIN_AGE = 400;
+    private static final int GIFT_MIN_AGE = 60;
 
     private final Colony colony;
     private final Deque<Chore> queue = new ArrayDeque<>();
@@ -124,11 +125,12 @@ public final class Chores {
             }
         }
         for (ItemEntity item : level.getEntitiesOfClass(ItemEntity.class, new AABB(colony.center()).inflate(colony.data().radius, 16, colony.data().radius),
-                item -> item.isAlive() && item.getAge() >= LOOT_MIN_AGE && !item.hasPickUpDelay())) {
+                item -> item.isAlive() && !item.hasPickUpDelay() && item.getAge() >= (item.getOwner() instanceof Player ? GIFT_MIN_AGE : LOOT_MIN_AGE))) {
             if (queue.size() >= MAX_QUEUE) {
                 break;
             }
-            if (level.getNearestPlayer(item, 6.0) instanceof Player || nearGrave(item.blockPosition()) || !onGround(level, item.blockPosition())) {
+            boolean gift = item.getOwner() instanceof Player;
+            if (!gift && level.getNearestPlayer(item, 6.0) instanceof Player || nearGrave(item.blockPosition()) || !onGround(level, item.blockPosition())) {
                 continue;
             }
             offer(new Chore(Kind.LOOT, item.blockPosition()));

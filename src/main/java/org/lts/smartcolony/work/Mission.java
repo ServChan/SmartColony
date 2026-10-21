@@ -22,6 +22,7 @@ final class Mission {
     private static final long RAID_LIMIT = 9000L;
     private static final long HOME_LIMIT = 36000L;
     private static final int MAX_FAILURES = 5;
+    private static final int CHUNK_PATIENCE = 600;
     private static final double FOE_RANGE = 10.0;
     private static final double GOLEM_PANIC = 7.0;
 
@@ -32,6 +33,7 @@ final class Mission {
     private boolean active;
     private java.util.List<BlockPos> road;
     private int roadIndex = -1;
+    private int chunkWait;
     private boolean roadHome;
     private String roadTarget = "";
     private BlockPos camp;
@@ -140,6 +142,15 @@ final class Mission {
             return;
         }
         Mover.Result result = colonist.mover().tick(level, villager, goal, 4.0, speed(mission), true);
+        if (result == Mover.Result.MOVING && "waiting for chunk".equals(colonist.mover().note())) {
+            if (++chunkWait > CHUNK_PATIENCE) {
+                chunkWait = 0;
+                colony.embassy().abandoned(level, mission, "the road runs through land nobody walks");
+                return;
+            }
+        } else {
+            chunkWait = 0;
+        }
         if (result == Mover.Result.ARRIVED) {
             if (Embassy.RAID.equals(mission.kind)) {
                 mission.phase = "raid";

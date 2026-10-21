@@ -39,7 +39,8 @@
     "m": "minecraft:dirt",
     "6": "minecraft:barrel[facing=west]",
     "9": "minecraft:chest[facing=west,type=single]",
-    "0": "minecraft:chest[facing=east,type=single]"
+    "0": "minecraft:chest[facing=east,type=single]",
+    "&": "minecraft:campfire[lit=true,signal_fire=false]"
   },
   "layers": [
     [
@@ -189,7 +190,7 @@
       "...........",
       "...........",
       "...........",
-      "..........c",
+      "..........&",
       "...........",
       "...........",
       "...........",

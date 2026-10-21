@@ -31,7 +31,7 @@ public final class AdvisorPrompt {
                 there are free beds.
 
                 Answer with ONE JSON object and nothing else:
-                {"thoughts": "<one or two short sentences in %s for the player: what you see and why you act>",
+                {"thoughts": "<one or two short sentences for the player, written only in %s and never in any other language: what you see and why you act>",
                  "actions": [ ... at most 6 ... ]}
 
                 Allowed actions:

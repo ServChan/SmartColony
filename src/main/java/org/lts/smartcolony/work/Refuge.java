@@ -332,6 +332,7 @@ final class Refuge {
         spotBudget = (long) (Math.sqrt((approach == null ? spot : approach).distToCenterSqr(villager.position())) * BUDGET_PER_BLOCK)
                 + BUDGET_BASE * (bunkerSpot ? 2 : 1);
         stuckTicks = 0;
+        spot = colony.safeRooms().placeFor(room, colonist.uuid(), spot);
         colony.safeRooms().claim(colonist.uuid(), room);
         colonist.mover().reset();
         return true;

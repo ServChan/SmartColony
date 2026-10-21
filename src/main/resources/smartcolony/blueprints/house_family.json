@@ -34,7 +34,8 @@
     "B": "minecraft:white_bed[facing=south,part=foot]",
     "H": "minecraft:white_bed[facing=south,part=head]",
     "S": "minecraft:furnace[facing=north,lit=false]",
-    "h": "minecraft:chest[facing=north,type=single]"
+    "h": "minecraft:chest[facing=north,type=single]",
+    "&": "minecraft:campfire[lit=true,signal_fire=false]"
   },
   "layers": [
     [
@@ -217,7 +218,7 @@
       "...........",
       "...........",
       "...........",
-      ".....c....."
+      ".....&....."
     ]
   ]
 }

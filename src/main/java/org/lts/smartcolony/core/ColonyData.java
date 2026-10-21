@@ -269,6 +269,7 @@ public final class ColonyData {
         public long planned;
         public String wood = "oak";
         public int version;
+        public List<Pos> torches = new ArrayList<>();
 
         public BunkerPlan.Layout layout() {
             return BunkerPlan.Layout.standard(entrance.x(), entrance.y(), entrance.z(), dirX, dirZ, depth);
@@ -323,6 +324,8 @@ public final class ColonyData {
         public long waitingSince;
         public boolean upgrade;
         public Map<String, Integer> deferred = new LinkedHashMap<>();
+        public boolean progressive;
+        public long stalledSince;
     }
 
     public static final class Mine {

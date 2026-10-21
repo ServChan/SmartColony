@@ -19,12 +19,19 @@ public final class RoleAllocator {
         }
     }
 
+    static final int STONE_SHORT = 32;
+
     private RoleAllocator() {
     }
 
     static double pressure(int stock, int target) {
         double value = target / (stock + target * 0.1);
         return Math.max(0.3, Math.min(3.0, value));
+    }
+
+    static double miningPressure(int stone, int iron) {
+        double mixed = pressure(stone + iron * 8, 192);
+        return stone < STONE_SHORT ? Math.max(mixed, pressure(stone, 192)) : mixed;
     }
 
     public static EnumMap<Role, Integer> desired(Needs needs) {
@@ -76,7 +83,7 @@ public final class RoleAllocator {
         EnumMap<Role, Double> scores = new EnumMap<>(Role.class);
         scores.put(Role.LUMBERJACK, pressure(needs.wood(), 128));
         scores.put(Role.FARMER, pressure(needs.foodPoints(), 300));
-        scores.put(Role.MINER, needs.equippable().contains(Role.MINER) ? 0.9 * pressure(needs.stone() + needs.iron() * 8, 192) : 0.0);
+        scores.put(Role.MINER, needs.equippable().contains(Role.MINER) ? 0.9 * miningPressure(needs.stone(), needs.iron()) : 0.0);
         scores.put(Role.FISHERMAN, needs.equippable().contains(Role.FISHERMAN) ? 0.6 * pressure(needs.foodPoints(), 300) : 0.0);
         scores.put(Role.HERDER, needs.penReady() ? 0.5 * pressure(needs.animal(), 64) : 0.0);
         EnumMap<Role, Integer> caps = new EnumMap<>(Role.class);

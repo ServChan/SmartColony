@@ -5,6 +5,7 @@ import java.util.EnumMap;
 import java.util.List;
 
 public final class PorterPlan {
+    public static final int MAX_BACKOFF_SHIFT = 4;
     public static final String OUTPOST_ID = "outpost";
     public static final String OUTPOST_KIND = "outpost";
     public static final String MINE = "mine";
@@ -164,5 +165,9 @@ public final class PorterPlan {
         result.add(new int[] {Math.min(entrance.x(), endX) - 3, Math.min(entrance.z(), endZ) - 3,
                 Math.max(entrance.x(), endX) + 3, Math.max(entrance.z(), endZ) + 3});
         return result;
+    }
+
+    public static long retryDelay(long base, int misses) {
+        return base * (1L << Math.max(0, Math.min(misses - 1, MAX_BACKOFF_SHIFT)));
     }
 }

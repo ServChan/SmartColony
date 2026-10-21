@@ -382,7 +382,7 @@ public final class Construction {
         int hallStage = TownHall.next(TownHall.stage(data()), TownHall.inProgress(data()), adults, storageBuilt,
                 Tech.ironAge(data().age), SmartColonyConfig.get().townHallAdults);
         if (hallStage > 0) {
-            if (TownHall.prioritised(TownHall.stage(data()), TownHall.inProgress(data()))) {
+            if (TownHall.prioritised(TownHall.stage(data()), TownHall.inProgress(data())) && (adults >= HALL_FIRST_ADULTS || houseCount >= 2)) {
                 order.addFirst(TownHall.blueprint(hallStage));
             } else {
                 order.add(TownHall.blueprint(hallStage));
@@ -495,6 +495,15 @@ public final class Construction {
             Blueprint.Material replacement = Blueprint.material(MaterialSwaps.resolve(swap.getValue(), wood));
             if (replacement != null) {
                 materials.merge(replacement.item(), replacement.count() * count, Integer::sum);
+            }
+        }
+        if (CraftPlanner.plan(stock, materials).isPresent()) {
+            return true;
+        }
+        for (Map.Entry<String, String> mix : MaterialSwaps.mixWood(materials, wood, stock::get).entrySet()) {
+            Integer count = materials.remove(mix.getKey());
+            if (count != null) {
+                materials.merge(mix.getValue(), count, Integer::sum);
             }
         }
         return CraftPlanner.plan(stock, materials).isPresent();
@@ -617,14 +626,22 @@ public final class Construction {
         if (stilt(project, pos)) {
             return Ids.mc(project.building.wood + "_log");
         }
-        return TreeFarmPlan.KIND.equals(project.building.kind) ? Ids.mc("dirt") : Ids.mc("cobblestone");
+        if (TreeFarmPlan.KIND.equals(project.building.kind)) {
+            return Ids.mc("dirt");
+        }
+        String stone = project.swaps.get(Ids.mc("cobblestone"));
+        return stone != null && !stone.contains("$") ? stone : Ids.mc("cobblestone");
     }
 
     private BlockState fillState(ColonyData.Project project, Pos pos) {
         if (stilt(project, pos)) {
             return parse(fillItem(project, pos), 0);
         }
-        return TreeFarmPlan.KIND.equals(project.building.kind) ? Blocks.DIRT.defaultBlockState() : Blocks.COBBLESTONE.defaultBlockState();
+        if (TreeFarmPlan.KIND.equals(project.building.kind)) {
+            return Blocks.DIRT.defaultBlockState();
+        }
+        BlockState stone = parse(fillItem(project, pos), 0);
+        return stone.isAir() ? Blocks.COBBLESTONE.defaultBlockState() : stone;
     }
 
     private boolean alreadyPlaced(ServerLevel level, ColonyData.Project project, Blueprint.Cell cell) {
@@ -661,7 +678,7 @@ public final class Construction {
         if (!data().projects.contains(project)) {
             return;
         }
-        Stock stock = colony.warehouse().stock(level);
+        Stock stock = planningStock(level);
         Map<String, Integer> need = PreBuildCheck.deficit(project.required, project.reserved);
         var plan = CraftPlanner.plan(stock, need);
         if (plan.isEmpty() && applySwaps(level, project, stock)) {
@@ -669,6 +686,26 @@ public final class Construction {
             rt(project).cells = null;
             need = PreBuildCheck.deficit(project.required, project.reserved);
             plan = CraftPlanner.plan(stock, need);
+        }
+        if (plan.isEmpty() && !project.upgrade) {
+            Map<String, String> mixed = MaterialSwaps.mixWood(need, project.building.wood, stock::get);
+            if (!mixed.isEmpty()) {
+                Map<String, String> before = new LinkedHashMap<>(project.swaps);
+                project.swaps.putAll(mixed);
+                recomputeRequired(level, project);
+                Map<String, Integer> mixedNeed = PreBuildCheck.deficit(project.required, project.reserved);
+                var mixedPlan = CraftPlanner.plan(stock, mixedNeed);
+                if (mixedPlan.isPresent()) {
+                    rt(project).cells = null;
+                    need = mixedNeed;
+                    plan = mixedPlan;
+                    data().bump("mixed_wood", 1);
+                    colony.journal(level, project.building.blueprint + " mixes wood: " + mixed.values());
+                } else {
+                    project.swaps = before;
+                    recomputeRequired(level, project);
+                }
+            }
         }
         if (plan.isPresent()) {
             if (check.enforce(level, project, false) != SiteCheck.Outcome.PROCEED) {
@@ -689,7 +726,7 @@ public final class Construction {
             }
             return;
         }
-        if (startWithoutLate(level, project, stock, need)) {
+        if (startWithoutLate(level, project, stock, need) || startProgressive(level, project, stock, need)) {
             return;
         }
         Map<String, Integer> lack = new TreeMap<>();
@@ -706,6 +743,7 @@ public final class Construction {
         if (!project.upgrade && !richer.equals(project.building.wood) && woodStock(stock, richer) > woodStock(stock, project.building.wood) * 3 / 2 + 16) {
             colony.journal(level, project.building.blueprint + " switched from " + project.building.wood + " to " + richer);
             project.building.wood = richer;
+            project.swaps.keySet().removeIf(MaterialSwaps::isWoodItem);
             recomputeRequired(level, project);
             rt(project).cells = null;
             colony.markDirty();
@@ -738,6 +776,84 @@ public final class Construction {
     }
 
     private static final long LATE_START_AFTER = 600;
+    private static final int HALL_FIRST_ADULTS = 10;
+    private static final int TOOL_LOGS = 2;
+
+    private Stock planningStock(ServerLevel level) {
+        Stock stock = colony.warehouse().stock(level).copy();
+        int keep = (stock.sum(id -> Ids.path(id).endsWith("_pickaxe")) > 0 ? 0 : TOOL_LOGS)
+                + (stock.sum(id -> Ids.path(id).endsWith("_axe")) > 0 ? 0 : TOOL_LOGS);
+        while (keep > 0) {
+            String richest = null;
+            for (Map.Entry<String, Integer> entry : stock.view().entrySet()) {
+                if (Ids.path(entry.getKey()).endsWith("_log") && !Ids.path(entry.getKey()).startsWith("stripped_")
+                        && (richest == null || entry.getValue() > stock.get(richest))) {
+                    richest = entry.getKey();
+                }
+            }
+            if (richest == null) {
+                break;
+            }
+            keep -= stock.remove(richest, keep);
+        }
+        return stock;
+    }
+    private static final long PROGRESSIVE_AFTER = 1200;
+    private static final int PROGRESSIVE_SHARE = 4;
+    private static final int PROGRESSIVE_LOOKAHEAD = 24;
+
+    private boolean startProgressive(ServerLevel level, ColonyData.Project project, Stock stock, Map<String, Integer> need) {
+        if (project.upgrade || level.getGameTime() - project.waitingSince < PROGRESSIVE_AFTER || active().size() >= maxProjects()) {
+            return false;
+        }
+        java.util.Set<String> fillItems = new java.util.HashSet<>();
+        for (Pos pos : project.fill) {
+            fillItems.add(fillItem(project, pos));
+        }
+        List<String> order = new ArrayList<>(need.keySet());
+        order.sort(java.util.Comparator.comparing((String id) -> !fillItems.contains(id)).thenComparing(id -> -need.get(id)));
+        Map<String, Integer> early = new LinkedHashMap<>();
+        for (String item : order) {
+            Map<String, Integer> candidate = new LinkedHashMap<>(early);
+            candidate.put(item, need.get(item));
+            if (CraftPlanner.plan(stock, candidate).isPresent()) {
+                early = candidate;
+            } else if (fillItems.contains(item)) {
+                return false;
+            }
+        }
+        int held = project.reserved.values().stream().mapToInt(Integer::intValue).sum();
+        int total = need.values().stream().mapToInt(Integer::intValue).sum() + held;
+        int ready = early.values().stream().mapToInt(Integer::intValue).sum() + held;
+        if (ready == 0 || ready * PROGRESSIVE_SHARE < total) {
+            return false;
+        }
+        var plan = CraftPlanner.plan(stock, early);
+        if (plan.isEmpty() || check.enforce(level, project, false) != SiteCheck.Outcome.PROCEED) {
+            return false;
+        }
+        if (!colony.warehouse().applyPlan(level, plan.get()) || !colony.warehouse().takeAll(level, early)) {
+            return false;
+        }
+        Map<String, Integer> reserved = new LinkedHashMap<>(project.reserved);
+        early.forEach((item, count) -> reserved.merge(item, count, Integer::sum));
+        project.reserved = reserved;
+        project.deferred = new LinkedHashMap<>(PreBuildCheck.without(need, early));
+        project.progressive = true;
+        project.phase = "clear";
+        project.cursor = 0;
+        resetPlan(project);
+        missing = new TreeMap<>(project.deferred);
+        project.deferred.keySet().forEach(colony::request);
+        status = "building " + project.building.blueprint;
+        colony.journal(level, "started " + project.building.blueprint + " with " + ready + " of " + total
+                + " blocks in hand, the rest is fetched as the walls go up");
+        colony.notify(level, Component.translatable("smartcolony.chat.build_start",
+                Component.translatable("smartcolony.building." + project.building.blueprint)));
+        data().bump("progressive_starts", 1);
+        colony.markDirty();
+        return true;
+    }
 
     private boolean startWithoutLate(ServerLevel level, ColonyData.Project project, Stock stock, Map<String, Integer> need) {
         if (level.getGameTime() - project.waitingSince < LATE_START_AFTER) {
@@ -809,6 +925,76 @@ public final class Construction {
         }
         colony.markDirty();
         return true;
+    }
+
+    private Blueprint.Cell otherBed(ServerLevel level, ColonyData.Project project, Blueprint.Cell cell) {
+        String id = Blueprint.blockId(cell.state());
+        Blueprint.Material material = Blueprint.material(cell.state());
+        if (!Ids.path(id).endsWith("_bed") || material == null) {
+            return null;
+        }
+        for (String color : Ids.COLORS) {
+            String bed = Ids.mc(color + "_bed");
+            if (bed.equals(id)) {
+                continue;
+            }
+            if (colony.stockOf(level, found -> found.equals(bed)) < 1 && !colony.craft(level, bed, 1)) {
+                continue;
+            }
+            if (colony.warehouse().take(level, bed, 1) < 1) {
+                continue;
+            }
+            int left = project.deferred.getOrDefault(material.item(), 0) - material.count();
+            if (left > 0) {
+                project.deferred.put(material.item(), left);
+            } else {
+                project.deferred.remove(material.item());
+            }
+            colony.markDirty();
+            return new Blueprint.Cell(cell.x(), cell.y(), cell.z(), cell.state().replace(id, bed));
+        }
+        return null;
+    }
+
+    private String lateItemOf(Blueprint.Cell cell) {
+        Blueprint.Material material = Blueprint.material(cell.state());
+        return material == null ? Blueprint.blockId(cell.state()) : material.item();
+    }
+
+    private Blueprint.Cell otherWood(ServerLevel level, ColonyData.Project project, Blueprint.Cell cell) {
+        String id = Blueprint.blockId(cell.state());
+        MaterialSwaps.WoodItem wood = MaterialSwaps.woodItem(id);
+        Blueprint.Material material = Blueprint.material(cell.state());
+        if (wood == null || material == null) {
+            return null;
+        }
+        for (String species : MaterialSwaps.WOODS) {
+            if (species.equals(wood.wood())) {
+                continue;
+            }
+            String state = cell.state().replace(id, wood.id(species));
+            Blueprint.Material other = Blueprint.material(state);
+            if (other == null) {
+                continue;
+            }
+            String item = other.item();
+            if (colony.stockOf(level, found -> found.equals(item)) < other.count() && !colony.craft(level, item, other.count())) {
+                continue;
+            }
+            if (colony.warehouse().take(level, item, other.count()) < other.count()) {
+                continue;
+            }
+            int left = project.deferred.getOrDefault(material.item(), 0) - material.count();
+            if (left > 0) {
+                project.deferred.put(material.item(), left);
+            } else {
+                project.deferred.remove(material.item());
+            }
+            data().bump("mixed_wood_cells", 1);
+            colony.markDirty();
+            return new Blueprint.Cell(cell.x(), cell.y(), cell.z(), state);
+        }
+        return null;
     }
 
     private void drop(ColonyData.Project project) {
@@ -1333,6 +1519,7 @@ public final class Construction {
     private final Map<UUID, Long> builderSeen = new HashMap<>();
     private final Map<String, UUID> laneHand = new HashMap<>();
     private final Map<String, Long> laneAt = new HashMap<>();
+    private int laneBudget = Integer.MAX_VALUE;
 
     private boolean holdsLane(String lane, UUID builder, long now) {
         UUID hand = laneHand.get(lane);
@@ -1342,10 +1529,18 @@ public final class Construction {
         if (hand != null && now - laneAt.getOrDefault(lane, 0L) <= LANE_IDLE) {
             return false;
         }
+        int held = 0;
         for (Map.Entry<String, UUID> other : laneHand.entrySet()) {
-            if (!other.getKey().equals(lane) && builder.equals(other.getValue()) && now - laneAt.getOrDefault(other.getKey(), 0L) <= LANE_IDLE) {
+            if (other.getKey().equals(lane) || now - laneAt.getOrDefault(other.getKey(), 0L) > LANE_IDLE) {
+                continue;
+            }
+            if (builder.equals(other.getValue())) {
                 return false;
             }
+            held++;
+        }
+        if (held >= laneBudget) {
+            return false;
         }
         laneHand.put(lane, builder);
         laneAt.put(lane, now);
@@ -1365,6 +1560,7 @@ public final class Construction {
         builderSeen.put(builder, now);
         builderSeen.values().removeIf(seen -> now - seen > LANE_IDLE * 2);
         boolean crew = builderSeen.size() >= 2;
+        laneBudget = active().isEmpty() ? Integer.MAX_VALUE : Math.max(1, builderSeen.size() / 3);
         if (crew && colony.highways().hasWork(level) && holdsLane("highway", builder, now)) {
             Task trail = fromLane("highway", builder, now, highwayTask(level, now));
             if (trail != null) {
@@ -1550,7 +1746,8 @@ public final class Construction {
                 List<Blueprint.Cell> ordered = new ArrayList<>(cells(project));
                 if (!project.deferred.isEmpty()) {
                     List<Blueprint.Cell> last = new ArrayList<>();
-                    ordered.removeIf(cell -> lateCell(project, cell) && last.add(cell));
+                    ordered.removeIf(cell -> lateCell(project, cell) && (!project.progressive || PreBuildCheck.lateItem(lateItemOf(cell)))
+                            && last.add(cell));
                     ordered.addAll(last);
                 }
                 rt.cells = ordered;
@@ -1559,7 +1756,8 @@ public final class Construction {
             while (project.cursor < cells.size() && placed(level, project, cells.get(project.cursor))) {
                 project.cursor++;
             }
-            for (int i = project.cursor; i < cells.size() && i < project.cursor + LOOKAHEAD; i++) {
+            int window = project.progressive ? PROGRESSIVE_LOOKAHEAD : LOOKAHEAD;
+            for (int i = project.cursor; i < cells.size() && i < project.cursor + window; i++) {
                 Blueprint.Cell cell = cells.get(i);
                 BlockPos pos = world(project.building, cell.x(), cell.y(), cell.z());
                 if (placed(level, project, cell) || claimed(pos, now)) {
@@ -1570,7 +1768,17 @@ public final class Construction {
                         continue;
                     }
                     if (!takeLate(level, project, cell)) {
-                        return null;
+                        Blueprint.Cell other = otherBed(level, project, cell);
+                        if (other == null && project.progressive) {
+                            other = otherWood(level, project, cell);
+                        }
+                        if (other == null) {
+                            if (project.progressive) {
+                                continue;
+                            }
+                            return null;
+                        }
+                        cell = other;
                     }
                 }
                 BlockState target = parse(cell.state(), project.building.rotation);
@@ -1586,12 +1794,61 @@ public final class Construction {
                 return new Task(Kind.PLACE, pos, target, partner, partnerState, groundStand(project, pos), project);
             }
             if (project.cursor < cells.size()) {
+                handOver(level, project, cells, now);
                 return null;
             }
             finish(level, project);
             return null;
         }
         return null;
+    }
+
+    private void handOver(ServerLevel level, ColonyData.Project project, List<Blueprint.Cell> cells, long now) {
+        if (project.upgrade || project.deferred.isEmpty()) {
+            project.stalledSince = 0;
+            return;
+        }
+        List<Blueprint.Cell> rest = new ArrayList<>();
+        java.util.Set<String> waiting = new java.util.TreeSet<>();
+        for (int i = project.cursor; i < cells.size(); i++) {
+            Blueprint.Cell cell = cells.get(i);
+            if (bedHead(cell) || placed(level, project, cell)) {
+                continue;
+            }
+            String item = lateItemOf(cell);
+            if (!lateCell(project, cell) || !PreBuildCheck.furnishing(item)) {
+                project.stalledSince = 0;
+                return;
+            }
+            rest.add(cell);
+            waiting.add(item);
+        }
+        if (rest.isEmpty()) {
+            return;
+        }
+        if (project.stalledSince == 0) {
+            project.stalledSince = now;
+            colony.markDirty();
+        }
+        if (!PreBuildCheck.handOver(waiting, now - project.stalledSince)) {
+            return;
+        }
+        List<ColonyData.Order> furnish = new ArrayList<>();
+        for (Blueprint.Cell cell : rest) {
+            BlockPos pos = world(project.building, cell.x(), cell.y(), cell.z());
+            BlockState target = parse(cell.state(), project.building.rotation);
+            furnish.add(new ColonyData.Order(WorldUtil.pos(pos), BlockStateParser.serialize(target), Improvements.FURNISH));
+        }
+        data().orders.addAll(0, furnish);
+        waiting.forEach(colony::request);
+        colony.journal(level, "handed over " + project.building.blueprint + " without " + waiting
+                + ": they are placed as soon as the storage has them");
+        colony.notify(level, Component.translatable("smartcolony.chat.furnish_later",
+                Component.translatable("smartcolony.building." + project.building.blueprint)));
+        data().bump("handed_over_unfurnished", 1);
+        project.deferred.clear();
+        project.cursor = cells.size();
+        finish(level, project);
     }
 
     private Task terraceTask(ServerLevel level, ColonyData.Project project, Runtime rt, long now) {
@@ -1653,7 +1910,12 @@ public final class Construction {
         if (TreeFarmPlan.KIND.equals(project.building.kind) && TreeFarm.soilFor(current, target)) {
             return true;
         }
-        return current.getBlock() == target.getBlock() && sameShape(current, target);
+        return (current.getBlock() == target.getBlock() || kin(current, target)) && sameShape(current, target);
+    }
+
+    private static boolean kin(BlockState current, BlockState target) {
+        return MaterialSwaps.sameKin(BuiltInRegistries.BLOCK.getKey(current.getBlock()).toString(),
+                BuiltInRegistries.BLOCK.getKey(target.getBlock()).toString());
     }
 
     private static boolean sameShape(BlockState current, BlockState target) {

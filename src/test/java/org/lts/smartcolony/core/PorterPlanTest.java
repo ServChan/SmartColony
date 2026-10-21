@@ -193,4 +193,13 @@ class PorterPlanTest {
                     .findFirst().orElseThrow().state()).equals("minecraft:barrel"));
         }
     }
+
+    @org.junit.jupiter.api.Test
+    void failedOutpostSearchesWaitLongerEachTimeUpToACap() {
+        org.junit.jupiter.api.Assertions.assertEquals(600, PorterPlan.retryDelay(600, 1));
+        org.junit.jupiter.api.Assertions.assertEquals(1200, PorterPlan.retryDelay(600, 2));
+        org.junit.jupiter.api.Assertions.assertEquals(4800, PorterPlan.retryDelay(600, 4));
+        org.junit.jupiter.api.Assertions.assertEquals(9600, PorterPlan.retryDelay(600, 5));
+        org.junit.jupiter.api.Assertions.assertEquals(9600, PorterPlan.retryDelay(600, 40));
+    }
 }

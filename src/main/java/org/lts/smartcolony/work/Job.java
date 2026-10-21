@@ -288,6 +288,10 @@ public abstract class Job {
             return Equip.READY;
         }
         if (!atDepot(level, villager)) {
+            if (!colony().toolInReach(level, fits, craftOrder)) {
+                status = "no tool in storage";
+                return Equip.MISSING;
+            }
             Mover.Result result = goDepot(level, villager);
             if (result == Mover.Result.FAILED) {
                 status = "cannot reach storage";

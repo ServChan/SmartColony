@@ -32,7 +32,8 @@
     "R": "minecraft:barrel[facing=up]",
     "B": "minecraft:white_bed[facing=south,part=foot]",
     "H": "minecraft:white_bed[facing=south,part=head]",
-    "S": "minecraft:furnace[facing=north,lit=false]"
+    "S": "minecraft:furnace[facing=north,lit=false]",
+    "&": "minecraft:campfire[lit=true,signal_fire=false]"
   },
   "layers": [
     [
@@ -154,7 +155,7 @@
       ".........",
       ".........",
       ".........",
-      "....c...."
+      "....&...."
     ]
   ]
 }

@@ -468,6 +468,8 @@
   "smartcolony.ui.diplomacy.road.route": "Дорога: землемеры выбирают путь",
   "smartcolony.ui.diplomacy.road.blocked": "Дорога: путь преграждают вода или обрывы",
   "smartcolony.ui.diplomacy.road.build": "Дорога: уложено %s из %s блоков, лагерей %s из %s",
+  "smartcolony.chat.gift": "Склад принял от тебя: %s",
+  "smartcolony.chat.furnish_later": "%s достроен, но кроватей пока нет: нет шерсти. Принеси к складу шерсть, нити или кровати, и жители их поставят.",
   "smartcolony.chat.bunker_planned": "Колония копает бункер: подземный зал на %s человек, чтобы пережидать набеги и осады.",
   "smartcolony.chat.bunker_done": "Бункер готов. В нём могут укрыться %s человек.",
   "smartcolony.chat.war_alarm": "Сюда идут налётчики из %s! Все прячутся.",

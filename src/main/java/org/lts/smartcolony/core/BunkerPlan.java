@@ -465,6 +465,21 @@ public final class BunkerPlan {
         return roomCell(layout, templates.room(), spot[0], spot[1], spot[2]);
     }
 
+    public static List<int[]> shelterCells(Layout layout, Templates templates) {
+        RoomPlan plan = plan(templates.room());
+        int[] spot = plan.spot();
+        List<int[]> free = new ArrayList<>(plan.free());
+        free.sort((a, b) -> Double.compare(sq(a[0] - spot[0]) + sq((a[1] - spot[1]) * 3) + sq(a[2] - spot[2]),
+                sq(b[0] - spot[0]) + sq((b[1] - spot[1]) * 3) + sq(b[2] - spot[2])));
+        List<int[]> out = new ArrayList<>();
+        for (int[] cell : free) {
+            if (cell[2] > 1) {
+                out.add(roomCell(layout, templates.room(), cell[0], cell[1], cell[2]));
+            }
+        }
+        return out;
+    }
+
     public static int capacity(Templates templates) {
         return plan(templates.room()).free().size() / PEOPLE_PER_FREE_CELL;
     }

@@ -287,7 +287,7 @@ public final class Advisor {
         if (thoughts.length() > 400) {
             thoughts = thoughts.substring(0, 400);
         }
-        if (!thoughts.isEmpty()) {
+        if (!thoughts.isEmpty() && speaksLanguage(thoughts, SmartColonyConfig.get().aiLanguage)) {
             colony.journal(level, "advisor: " + thoughts);
         }
         feedback.clear();
@@ -432,5 +432,23 @@ public final class Advisor {
 
     private static String string(JsonObject object, String key) {
         return object.has(key) && object.get(key).isJsonPrimitive() ? object.get(key).getAsString() : "";
+    }
+
+    static boolean speaksLanguage(String text, String language) {
+        if (!"ru".equals(language)) {
+            return true;
+        }
+        int cyrillic = 0;
+        int foreign = 0;
+        for (int i = 0; i < text.length(); i++) {
+            Character.UnicodeScript script = Character.UnicodeScript.of(text.codePointAt(i));
+            if (script == Character.UnicodeScript.CYRILLIC) {
+                cyrillic++;
+            } else if (script == Character.UnicodeScript.HAN || script == Character.UnicodeScript.HIRAGANA
+                    || script == Character.UnicodeScript.KATAKANA || script == Character.UnicodeScript.HANGUL) {
+                foreign++;
+            }
+        }
+        return cyrillic > 0 && foreign == 0;
     }
 }

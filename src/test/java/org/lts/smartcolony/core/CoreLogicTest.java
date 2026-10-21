@@ -254,6 +254,15 @@ class CoreLogicTest {
     }
 
     @Test
+    void stoneShortageGetsAMinerEvenWithIronInStock() {
+        Set<Role> gear = Set.of(Role.MINER, Role.GUARD);
+        RoleAllocator.Needs starved = new RoleAllocator.Needs(8, 10, 0, 26, 50, 0, 100, true, gear, 0, false, false, false);
+        assertTrue(RoleAllocator.desired(starved).get(Role.MINER) >= 1);
+        assertEquals(RoleAllocator.pressure(400, 192), RoleAllocator.miningPressure(400, 0));
+        assertTrue(RoleAllocator.miningPressure(0, 26) > RoleAllocator.miningPressure(200, 26));
+    }
+
+    @Test
     void craftersAreAllocatedOnlyWhenReadyAndLargeEnough() {
         Set<Role> gear = Set.of(Role.MINER, Role.FISHERMAN, Role.GUARD);
         RoleAllocator.Needs none = new RoleAllocator.Needs(30, 300, 300, 10, 500, 0, 0, true, gear, 0, false, false, false);

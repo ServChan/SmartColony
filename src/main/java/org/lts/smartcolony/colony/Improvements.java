@@ -30,6 +30,7 @@ public final class Improvements {
     public static final String SALVAGE = "salvage";
     public static final String SUPPORT = "support";
     public static final String CLEARING = "clearing";
+    public static final String FURNISH = "furnish";
     private static final int SUPPORT_GAP = 4;
     private static final int WALL_SUPPORT_GAP = 3;
     private static final int SECTORS = 36;
@@ -131,6 +132,9 @@ public final class Improvements {
         followGrowth(level);
         if (level.getGameTime() % 600 < 100) {
             inspect(level);
+        }
+        if (level.getGameTime() % 1200 < 100) {
+            furnishingFirst();
         }
         if (level.getGameTime() % 1200 < 100 && data().orders.removeIf(order -> DECOR.equals(order.tag) && Ids.isSapling(order.state)
                 && !colony.treeAllowed(level, WorldUtil.bp(order.pos)))) {
@@ -554,6 +558,25 @@ public final class Improvements {
         }
     }
 
+    private void furnishingFirst() {
+        List<ColonyData.Order> orders = data().orders;
+        List<ColonyData.Order> furnish = new ArrayList<>();
+        for (int i = 0; i < orders.size(); i++) {
+            if (FURNISH.equals(orders.get(i).tag)) {
+                if (furnish.size() == i) {
+                    furnish.add(orders.get(i));
+                    continue;
+                }
+                furnish.clear();
+                orders.stream().filter(order -> FURNISH.equals(order.tag)).forEach(furnish::add);
+                orders.removeIf(order -> FURNISH.equals(order.tag));
+                orders.addAll(0, furnish);
+                colony.markDirty();
+                return;
+            }
+        }
+    }
+
     private void inspect(ServerLevel level) {
         long repairs = data().orders.stream().filter(order -> REPAIR.equals(order.tag)).count();
         if (repairs >= 64) {
@@ -607,13 +630,18 @@ public final class Improvements {
         if (found.isEmpty()) {
             return;
         }
+        int added = 0;
         for (ColonyData.Order order : found) {
             if (data().orders.stream().noneMatch(existing -> existing.pos.equals(order.pos))) {
                 data().orders.addFirst(order);
+                added++;
             }
         }
+        if (added == 0) {
+            return;
+        }
         blockedUntil = 0;
-        colony.journal(level, "found " + found.size() + " damaged blocks to repair");
+        colony.journal(level, "found " + added + " damaged blocks to repair");
         colony.data().bump("repairs_planned", found.size());
         colony.markDirty();
     }
@@ -1648,6 +1676,10 @@ public final class Improvements {
                 }
                 colony.request(item);
                 waitingFor = item;
+                if (FURNISH.equals(order.tag)) {
+                    i++;
+                    continue;
+                }
                 orders.add(orders.remove(i));
                 continue;
             }

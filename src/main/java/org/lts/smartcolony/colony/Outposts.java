@@ -160,6 +160,16 @@ public final class Outposts {
         return false;
     }
 
+    private final java.util.Map<String, Integer> misses = new java.util.HashMap<>();
+
+    private void missed(ServerLevel level, String kind, long now, String note) {
+        int count = misses.merge(kind, 1, Integer::sum);
+        retryAt.put(kind, now + PorterPlan.retryDelay(RETRY_TICKS, count));
+        if (count == 1) {
+            colony.journal(level, note);
+        }
+    }
+
     private boolean ready(String kind, long now) {
         return retryAt.getOrDefault(kind, Long.MIN_VALUE) <= now;
     }
@@ -177,10 +187,10 @@ public final class Outposts {
                     && WorldUtil.loaded(level, mine.pos())) {
                 if (colony.construction().planOutpost(level, mine.pos(), mine.minRadius(), mine.maxRadius(), mine.forbidden())) {
                     retryAt.put(PorterPlan.MINE, now + RETRY_TICKS / 2);
+                    misses.remove(PorterPlan.MINE);
                     return;
                 }
-                retryAt.put(PorterPlan.MINE, now + RETRY_TICKS);
-                colony.journal(level, "no site for an outpost near the mine, will retry later");
+                missed(level, PorterPlan.MINE, now, "no site for an outpost near the mine, will retry later");
             }
         }
         if (ready(PorterPlan.FOREST, now) && PorterPlan.forestFar(treeSamples, treeAverage())) {
@@ -192,10 +202,10 @@ public final class Outposts {
             BlockPos ground = WorldUtil.surface(level, edge.x(), edge.z());
             if (colony.construction().planOutpost(level, ground, 3, 14, List.of())) {
                 retryAt.put(PorterPlan.FOREST, now + RETRY_TICKS / 2);
+                misses.remove(PorterPlan.FOREST);
                 return;
             }
-            retryAt.put(PorterPlan.FOREST, now + RETRY_TICKS);
-            colony.journal(level, "no site for an outpost at the forest edge, will retry later");
+            missed(level, PorterPlan.FOREST, now, "no site for an outpost at the forest edge, will retry later");
         }
     }
 

@@ -468,6 +468,8 @@
   "smartcolony.ui.diplomacy.road.route": "Camino: los agrimensores eligen el trazado",
   "smartcolony.ui.diplomacy.road.blocked": "Camino: bloqueado por agua o acantilados",
   "smartcolony.ui.diplomacy.road.build": "Camino: %s de %s bloques, campamentos %s de %s",
+  "smartcolony.chat.gift": "El almacén recibió tu regalo: %s",
+  "smartcolony.chat.furnish_later": "%s está terminado, pero aún no tiene camas: no hay lana. Trae lana, hilo o camas al almacén y los aldeanos las colocarán.",
   "smartcolony.chat.bunker_planned": "La colonia está cavando un búnker: una sala subterránea para %s personas donde esperar asaltos y asedios.",
   "smartcolony.chat.bunker_done": "El búnker está listo. %s personas pueden refugiarse allí.",
   "smartcolony.chat.war_alarm": "¡Vienen asaltantes de %s! Todos a esconderse.",

@@ -40,7 +40,24 @@ public final class PreBuildCheck {
     }
 
     private static final java.util.List<String> LATE_SUFFIXES = java.util.List.of("_bed", "_carpet", "_banner", "glass_pane", "lantern",
-            "flower_pot", "_candle", "candle");
+            "flower_pot", "_candle", "candle", "campfire");
+
+    public static final long HAND_OVER_AFTER = 6000;
+    private static final java.util.List<String> WOOL_GOODS = java.util.List.of("_bed", "_carpet", "_banner", "_wool");
+
+    public static boolean furnishing(String item) {
+        String path = Ids.path(item);
+        for (String suffix : WOOL_GOODS) {
+            if (path.endsWith(suffix)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static boolean handOver(java.util.Collection<String> waitingFor, long waited) {
+        return !waitingFor.isEmpty() && waited >= HAND_OVER_AFTER && waitingFor.stream().allMatch(PreBuildCheck::furnishing);
+    }
 
     public static boolean lateItem(String item) {
         String path = Ids.path(item);

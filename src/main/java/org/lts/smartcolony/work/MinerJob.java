@@ -506,9 +506,13 @@ public final class MinerJob extends Job {
         }
         if (equip == Equip.MISSING) {
             status = "no pickaxe in storage";
-            idle(level, 600);
+            idle(level, NO_PICKAXE_WAIT);
             phase = "start";
             return;
+        }
+        if (atDepot(level, villager)) {
+            upgradePickaxe(level, villager);
+            packSpare(level, villager);
         }
         ColonyData.Mine current = mine();
         int ladderGap = ladderGap(level, villager, current);
@@ -600,6 +604,47 @@ public final class MinerJob extends Job {
     }
 
     private String lastReturn = "";
+    private static final int NO_PICKAXE_WAIT = 200;
+
+    private void upgradePickaxe(ServerLevel level, Villager villager) {
+        int held = Tools.tier(villager.getMainHandItem());
+        java.util.function.Predicate<ItemStack> better = stack -> Tools.PICKAXE.test(stack) && Tools.tier(stack) > held;
+        ItemStack found = takeBest(level, better);
+        if (found.isEmpty() && held < 2 && colony().craft(level, Ids.mc("stone_pickaxe"), 1)) {
+            found = takeBest(level, better);
+        }
+        if (!found.isEmpty()) {
+            holdInHand(villager, found);
+            colony().data().bump("pickaxes_upgraded", 1);
+        }
+    }
+
+    private void packSpare(ServerLevel level, Villager villager) {
+        if (Inv.count(villager, Tools.PICKAXE) > 0) {
+            return;
+        }
+        ItemStack spare = takeBest(level, Tools.PICKAXE);
+        if (spare.isEmpty() && colony().produce(level, Ids.mc("wooden_pickaxe"), 1)) {
+            spare = takeBest(level, Tools.PICKAXE);
+        }
+        if (spare.isEmpty()) {
+            return;
+        }
+        ItemStack rest = Inv.add(villager, spare);
+        if (!rest.isEmpty()) {
+            colony().warehouse().insert(level, rest);
+        }
+    }
+
+    private boolean takeSpare(Villager villager) {
+        ItemStack spare = Inv.takeFirst(villager, Tools.PICKAXE);
+        if (spare.isEmpty()) {
+            return false;
+        }
+        holdInHand(villager, spare);
+        colony().data().bump("spare_pickaxes_used", 1);
+        return true;
+    }
 
     private void beginReturn() {
         if (status != null && !status.startsWith("climbing") && !status.startsWith("going")) {
@@ -625,6 +670,8 @@ public final class MinerJob extends Job {
         if (waypoint >= route.size()) {
             if (back) {
                 phase = "deposit";
+                status = "out of the mine" + (lastReturn.isEmpty() ? "" : " (" + lastReturn + ")");
+                lastReturn = "";
             } else {
                 fitHere(level, villager);
                 phase = "dig";
@@ -746,7 +793,7 @@ public final class MinerJob extends Job {
             lastReturn = "mine worked out";
             return;
         }
-        if (!Tools.PICKAXE.test(villager.getMainHandItem())) {
+        if (!Tools.PICKAXE.test(villager.getMainHandItem()) && !takeSpare(villager)) {
             beginReturn();
             lastReturn = "no pickaxe in hand";
             return;
@@ -1188,6 +1235,10 @@ public final class MinerJob extends Job {
         if (extraCobble > 0) {
             Inv.remove(villager, stack -> stack.is(Items.COBBLESTONE), extraCobble);
             colony().warehouse().give(level, Ids.mc("cobblestone"), extraCobble);
+        }
+        if (atDepot(level, villager)) {
+            upgradePickaxe(level, villager);
+            packSpare(level, villager);
         }
         phase = "start";
     }

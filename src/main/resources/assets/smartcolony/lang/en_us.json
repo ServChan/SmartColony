@@ -468,6 +468,8 @@
   "smartcolony.ui.diplomacy.road.route": "Road: surveyors are choosing the way",
   "smartcolony.ui.diplomacy.road.blocked": "Road: blocked by water or cliffs",
   "smartcolony.ui.diplomacy.road.build": "Road: %s of %s blocks laid, camps %s of %s",
+  "smartcolony.chat.gift": "The storage took your gift: %s",
+  "smartcolony.chat.furnish_later": "%s is finished but has no beds yet: there is no wool. Bring wool, string or beds to the storage and the villagers will put them in.",
   "smartcolony.chat.bunker_planned": "The colony is digging a bunker: an underground room for %s people to wait out raids and sieges.",
   "smartcolony.chat.bunker_done": "The bunker is ready. %s people can hide there when danger comes.",
   "smartcolony.chat.war_alarm": "Raiders from %s are coming! Everyone into hiding.",
