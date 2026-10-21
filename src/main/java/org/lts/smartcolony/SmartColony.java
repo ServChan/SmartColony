@@ -11,6 +11,7 @@ import net.fabricmc.fabric.api.event.player.UseEntityCallback;
 import org.lts.smartcolony.colony.ColonyManager;
 import org.lts.smartcolony.colony.ColonyEvents;
 import org.lts.smartcolony.command.ColonyCommand;
+import org.lts.smartcolony.compat.airdefense.ColonyAirDefense;
 
 public final class SmartColony implements ModInitializer {
     public static final String MOD_ID = "smartcolony";
@@ -31,6 +32,7 @@ public final class SmartColony implements ModInitializer {
         PlayerBlockBreakEvents.BEFORE.register(ColonyEvents::beforeBreak);
         AttackEntityCallback.EVENT.register(ColonyEvents::attackEntity);
         UseEntityCallback.EVENT.register(ColonyEvents::useEntity);
+        ColonyAirDefense.init();
         LOGGER.ready();
     }
 }

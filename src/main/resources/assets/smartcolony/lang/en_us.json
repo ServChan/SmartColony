@@ -478,5 +478,6 @@
   "smartcolony.command.bunker.planned": "The colony will dig a bunker for %s people. The entrance is at %s.",
   "smartcolony.command.bunker.no_site": "No place for a bunker: the ground near the storehouse is too wet, hollow or built up.",
   "smartcolony.bunker.sign.title": "Bunker",
-  "smartcolony.bunker.sign.places": "%s places"
+  "smartcolony.bunker.sign.places": "%s places",
+  "smartcolony.chat.air_alarm": "Air raid! Radar tracks %s targets over the village, everyone takes cover."
 }

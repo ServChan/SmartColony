@@ -478,5 +478,6 @@
   "smartcolony.command.bunker.planned": "Колония выкопает бункер на %s человек. Вход у %s.",
   "smartcolony.command.bunker.no_site": "Бункер негде выкопать: земля у склада слишком сырая, полая или застроена.",
   "smartcolony.bunker.sign.title": "Бункер",
-  "smartcolony.bunker.sign.places": "Мест: %s"
+  "smartcolony.bunker.sign.places": "Мест: %s",
+  "smartcolony.chat.air_alarm": "Воздушная тревога! Радар видит над деревней целей: %s, все в укрытие."
 }

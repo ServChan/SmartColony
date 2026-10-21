@@ -478,5 +478,6 @@
   "smartcolony.command.bunker.planned": "La colonia cavará un búnker para %s personas. La entrada está en %s.",
   "smartcolony.command.bunker.no_site": "No hay sitio para un búnker: el suelo cerca del almacén está demasiado húmedo, hueco o edificado.",
   "smartcolony.bunker.sign.title": "Búnker",
-  "smartcolony.bunker.sign.places": "%s plazas"
+  "smartcolony.bunker.sign.places": "%s plazas",
+  "smartcolony.chat.air_alarm": "¡Ataque aéreo! El radar sigue %s blancos sobre la aldea, todos a cubierto."
 }

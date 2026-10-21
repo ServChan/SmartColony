@@ -27,6 +27,7 @@ import net.minecraft.world.entity.npc.villager.Villager;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.storage.LevelResource;
 import org.lts.smartcolony.SmartColony;
+import org.lts.smartcolony.compat.airdefense.ColonyAirDefense;
 import org.lts.smartcolony.core.ColonyCodec;
 import org.lts.smartcolony.core.ColonyData;
 import org.lts.smartcolony.work.Colonist;
@@ -91,6 +92,7 @@ public final class ColonyManager {
 
     public static void stop(MinecraftServer stopping) {
         Caravans.forget();
+        ColonyAirDefense.clear();
         for (Colony colony : COLONIES.values()) {
             ServerLevel level = levelOf(colony);
             if (level != null) {
@@ -178,6 +180,7 @@ public final class ColonyManager {
             }
             try {
                 colony.tick(level);
+                ColonyAirDefense.tick(colony, level, ticks);
             } catch (RuntimeException e) {
                 if (firstReport("colony " + colony.id(), e)) {
                     SmartColony.LOGGER.error("Could not tick colony {}; repeats of this error are not logged", colony.id(), e);
@@ -216,6 +219,7 @@ public final class ColonyManager {
     public static void disband(ServerLevel level, Colony colony) {
         colony.disband(level);
         COLONIES.remove(colony.id());
+        ColonyAirDefense.forget(colony.id());
         MEMBERS.values().removeIf(c -> c == colony);
         saveAsync();
     }

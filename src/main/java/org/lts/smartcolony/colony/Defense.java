@@ -16,6 +16,7 @@ import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.npc.villager.Villager;
 import net.minecraft.world.phys.AABB;
 import org.lts.smartcolony.SmartColonyConfig;
+import org.lts.smartcolony.compat.airdefense.ColonyAirDefense;
 import org.lts.smartcolony.core.ColonyData;
 import org.lts.smartcolony.core.Reputation;
 import org.lts.smartcolony.core.ThreatMap;
@@ -127,6 +128,12 @@ public final class Defense {
                 colony.journal(level, "raiders from " + enemy.data().name + " are on their way, everyone goes into hiding");
                 colony.notify(level, Component.translatable("smartcolony.chat.war_alarm", enemy.data().name));
             }
+            return;
+        }
+        if (ColonyAirDefense.airRaid(colony, level)) {
+            severeUntil = now + SEVERE_HOLD;
+            alarmUntil = now + SEVERE_HOLD;
+            hideAll(level, now + SEVERE_HOLD);
             return;
         }
         BlockPos center = colony.center();

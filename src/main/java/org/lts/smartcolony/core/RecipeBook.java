@@ -174,6 +174,13 @@ public final class RecipeBook {
         BY_OUTPUT.computeIfAbsent(output, key -> new ArrayList<>()).add(new Recipe(output, 1, Map.of(input, 1), true));
     }
 
+    public static synchronized void register(Recipe recipe) {
+        List<Recipe> recipes = BY_OUTPUT.computeIfAbsent(recipe.output(), key -> new ArrayList<>());
+        if (!recipes.contains(recipe)) {
+            recipes.add(recipe);
+        }
+    }
+
     public static List<Recipe> recipesFor(String output) {
         return BY_OUTPUT.getOrDefault(output, List.of());
     }
