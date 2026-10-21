@@ -912,6 +912,9 @@ public final class Improvements {
             points.add(WorldUtil.bp(farm));
         }
         points.add(colony.depot());
+        if (colony.bunker().entrance() != null) {
+            points.add(colony.bunker().entrance());
+        }
         for (ColonyData.Mine pit : colony.allMines()) {
             if (pit != data().mine && pit.entrance.horizontalDistSq(data().center) > (double) (data().radius + 12) * (data().radius + 12)) {
                 continue;

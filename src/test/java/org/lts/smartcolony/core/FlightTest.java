@@ -63,4 +63,16 @@ class FlightTest {
         assertFalse(Flight.exposed(nodes, List.of(new Flight.Threat(2.5, 64, 6))));
         assertFalse(Flight.exposed(nodes, List.of(new Flight.Threat(2.5, 70, 0.5))));
     }
+
+    @Test
+    void severeThreatsSendPeopleToTheBunkerEvenPastACloserHouse() {
+        Flight.Spot house = new Flight.Spot(10, 64, 0, 1L, 4, false, 0);
+        Flight.Spot bunker = new Flight.Spot(40, 52, 0, 2L, 31, false, 0, true);
+        List<Flight.Spot> spots = List.of(house, bunker);
+        assertEquals(0, Flight.pick(spots, 0, 64, 0, List.of(), 72, false, spot -> false));
+        assertEquals(1, Flight.pick(spots, 0, 64, 0, List.of(), 72, true, spot -> false));
+        Flight.Spot farBunker = new Flight.Spot(100, 52, 0, 3L, 31, false, 0, true);
+        assertEquals(Double.MAX_VALUE, Flight.score(farBunker, 0, 64, 0, List.of(), 72, false));
+        assertTrue(Flight.score(farBunker, 0, 64, 0, List.of(), 72, true) < Double.MAX_VALUE);
+    }
 }

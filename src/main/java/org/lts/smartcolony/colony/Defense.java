@@ -35,6 +35,13 @@ public final class Defense {
     private int raidDeathsBefore;
     private int raidMembersBefore;
     private int raidWave;
+    private static final int SIEGE = 6;
+    private static final int WARN_MARGIN = 48;
+    private static final long SEVERE_HOLD = 400L;
+    private long severeUntil;
+    private long lastWarAnnounce = -100000;
+    private long lastSiegeAnnounce = -100000;
+    private long lastStormAnnounce = -100000;
 
     public Defense(Colony colony) {
         this.colony = colony;
@@ -44,11 +51,16 @@ public final class Defense {
         return level.getGameTime() < alarmUntil;
     }
 
+    public boolean severe(ServerLevel level) {
+        return level.getGameTime() < severeUntil;
+    }
+
     public void tick(ServerLevel level, long ticks) {
         if (ticks % 40 == 3) {
             scan(level);
             alarm(level);
             raid(level);
+            threats(level);
         }
         if (ticks % 1200 == 5) {
             ThreatMap.decay(colony.data().threat, 0.8);
@@ -98,6 +110,85 @@ public final class Defense {
             colony.journal(level, "alarm: " + intruder.getType().toShortString() + " inside the village");
             colony.notify(level, Component.translatable("smartcolony.chat.alarm", intruder.getDisplayName()));
         }
+    }
+
+    private void threats(ServerLevel level) {
+        long now = level.getGameTime();
+        if (raidActive) {
+            severeUntil = now + SEVERE_HOLD;
+        }
+        Colony enemy = incomingRaid(level);
+        if (enemy != null) {
+            severeUntil = now + SEVERE_HOLD;
+            alarmUntil = now + SEVERE_HOLD;
+            hideAll(level, now + SEVERE_HOLD);
+            if (now - lastWarAnnounce > 6000) {
+                lastWarAnnounce = now;
+                colony.journal(level, "raiders from " + enemy.data().name + " are on their way, everyone goes into hiding");
+                colony.notify(level, Component.translatable("smartcolony.chat.war_alarm", enemy.data().name));
+            }
+            return;
+        }
+        BlockPos center = colony.center();
+        double reach = colony.data().radius + 8;
+        int hostile = 0;
+        for (LivingEntity entity : enemies) {
+            if (entity instanceof Enemy && flat(entity, center) <= reach * reach) {
+                hostile++;
+            }
+        }
+        if (hostile >= SIEGE) {
+            severeUntil = now + SEVERE_HOLD;
+            alarmUntil = now + SEVERE_HOLD;
+            hideAll(level, now + SEVERE_HOLD);
+            if (now - lastSiegeAnnounce > 6000) {
+                lastSiegeAnnounce = now;
+                colony.journal(level, "siege: " + hostile + " monsters around the village, everyone goes into hiding");
+                colony.notify(level, Component.translatable("smartcolony.chat.siege_alarm", hostile));
+            }
+            return;
+        }
+        if (SmartColonyConfig.get().stormShelter && level.isThundering() && level.canSeeSky(center.above())) {
+            alarmUntil = now + SEVERE_HOLD;
+            hideAll(level, now + SEVERE_HOLD);
+            if (now - lastStormAnnounce > 12000) {
+                lastStormAnnounce = now;
+                colony.journal(level, "thunderstorm: everyone waits it out under a roof");
+                colony.notify(level, Component.translatable("smartcolony.chat.storm_alarm"));
+            }
+        }
+    }
+
+    private static double flat(LivingEntity entity, BlockPos center) {
+        double dx = entity.getX() - center.getX() - 0.5;
+        double dz = entity.getZ() - center.getZ() - 0.5;
+        return dx * dx + dz * dz;
+    }
+
+    private Colony incomingRaid(ServerLevel level) {
+        BlockPos center = colony.center();
+        double reach = colony.data().radius + WARN_MARGIN;
+        for (Colony other : ColonyManager.all()) {
+            if (other == colony) {
+                continue;
+            }
+            for (ColonyData.Mission mission : other.data().missions) {
+                if (mission.done || !Embassy.RAID.equals(mission.kind) || !colony.id().equals(mission.target) || "home".equals(mission.phase)) {
+                    continue;
+                }
+                java.util.UUID member;
+                try {
+                    member = java.util.UUID.fromString(mission.member);
+                } catch (IllegalArgumentException e) {
+                    continue;
+                }
+                if (level.getEntity(member) instanceof LivingEntity raider && raider.isAlive()
+                        && flat(raider, center) <= reach * reach) {
+                    return other;
+                }
+            }
+        }
+        return null;
     }
 
     private void hideAll(ServerLevel level, long until) {

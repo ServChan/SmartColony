@@ -14,11 +14,17 @@ public final class Flight {
     public static final double HOME_BONUS = 6.0;
     public static final double PATH_CLEAR = 2.5;
     public static final double HOME_PULL = 0.15;
+    public static final double BUNKER_BONUS = 3.0;
+    public static final double BUNKER_SEVERE_BONUS = 40.0;
+    public static final double BUNKER_REACH = 1.5;
 
     public record Threat(double x, double y, double z) {
     }
 
-    public record Spot(int x, int y, int z, long room, int capacity, boolean home, int load) {
+    public record Spot(int x, int y, int z, long room, int capacity, boolean home, int load, boolean bunker) {
+        public Spot(int x, int y, int z, long room, int capacity, boolean home, int load) {
+            this(x, y, z, room, capacity, home, load, false);
+        }
     }
 
     private Flight() {
@@ -48,11 +54,16 @@ public final class Flight {
     }
 
     public static double score(Spot spot, double fromX, double fromY, double fromZ, List<Threat> threats, double maxDistance) {
+        return score(spot, fromX, fromY, fromZ, threats, maxDistance, false);
+    }
+
+    public static double score(Spot spot, double fromX, double fromY, double fromZ, List<Threat> threats, double maxDistance,
+            boolean severe) {
         double dx = spot.x() - fromX;
-        double dy = (spot.y() - fromY) * 2.0;
+        double dy = spot.bunker() ? 0 : (spot.y() - fromY) * 2.0;
         double dz = spot.z() - fromZ;
         double distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
-        if (distance > maxDistance) {
+        if (distance > (spot.bunker() && severe ? maxDistance * BUNKER_REACH : maxDistance)) {
             return Double.MAX_VALUE;
         }
         double score = distance;
@@ -73,11 +84,19 @@ public final class Flight {
         if (spot.home()) {
             score -= HOME_BONUS;
         }
+        if (spot.bunker()) {
+            score -= severe ? BUNKER_SEVERE_BONUS : BUNKER_BONUS;
+        }
         return score;
     }
 
     public static int pick(List<Spot> spots, double fromX, double fromY, double fromZ, List<Threat> threats, double maxDistance,
             java.util.function.Predicate<Spot> skip) {
+        return pick(spots, fromX, fromY, fromZ, threats, maxDistance, false, skip);
+    }
+
+    public static int pick(List<Spot> spots, double fromX, double fromY, double fromZ, List<Threat> threats, double maxDistance,
+            boolean severe, java.util.function.Predicate<Spot> skip) {
         int best = -1;
         double bestScore = Double.MAX_VALUE;
         for (int i = 0; i < spots.size(); i++) {
@@ -85,7 +104,7 @@ public final class Flight {
             if (skip.test(spot)) {
                 continue;
             }
-            double score = score(spot, fromX, fromY, fromZ, threats, maxDistance);
+            double score = score(spot, fromX, fromY, fromZ, threats, maxDistance, severe);
             if (score < bestScore) {
                 bestScore = score;
                 best = i;

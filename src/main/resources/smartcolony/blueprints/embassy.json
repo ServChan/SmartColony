@@ -32,7 +32,9 @@
     "W": "minecraft:white_carpet",
     "_": "minecraft:dirt_path",
     "h": "minecraft:chest[facing=east,type=single]",
-    "A": "minecraft:ladder[facing=west]"
+    "A": "minecraft:ladder[facing=west]",
+    "a": "minecraft:lectern[facing=east,has_book=false,powered=false]",
+    "b": "minecraft:bookshelf"
   },
   "layers": [
     [
@@ -57,7 +59,7 @@
       ".SR..W..RS.",
       ".S...W...S.",
       ".S...u...S.",
-      ".L..wue..L.",
+      ".La.wue.bL.",
       ".S..wue..S.",
       ".S...u...S.",
       ".Sh..v..AS.",

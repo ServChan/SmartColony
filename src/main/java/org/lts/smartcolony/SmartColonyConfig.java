@@ -55,6 +55,8 @@ public final class SmartColonyConfig {
     public boolean diplomacy = true;
     public boolean colonyWars = true;
     public boolean highways = true;
+    public boolean bunkers = true;
+    public boolean stormShelter = true;
     public boolean recruitFromVillages = true;
     public boolean aiEnabled = false;
     public String aiApi = "ollama";

@@ -83,7 +83,17 @@ public final class SafeRooms {
             }
         }
         buildings.keySet().retainAll(alive);
+        if (colony.bunker().ready(level)) {
+            BlockPos spot = colony.bunker().spot();
+            long id = bunkerRoom(spot);
+            out.add(new Flight.Spot(spot.getX(), spot.getY(), spot.getZ(), id, colony.bunker().capacity(), false,
+                    load.getOrDefault(id, 0), true));
+        }
         return out;
+    }
+
+    public static long bunkerRoom(BlockPos spot) {
+        return spot.asLong() ^ 0x5BB5_0000_0000_0000L;
     }
 
     public void claim(UUID uuid, long room) {

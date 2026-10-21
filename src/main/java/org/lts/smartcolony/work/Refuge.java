@@ -66,6 +66,10 @@ final class Refuge {
     private long safeCheckedAt = NEVER;
     private long roomsClearedAt = NEVER;
     private boolean safeHere;
+    private boolean severe;
+    private boolean bunkerSpot;
+    private boolean viaDoor;
+    private static final int BUNKER_DESCENT = 40;
 
     Refuge(Colonist colonist) {
         this.colonist = colonist;
@@ -130,7 +134,9 @@ final class Refuge {
             }
         }
         boolean medicBusy = colonist.job() != null && colonist.job().ignoresDanger();
-        boolean alarmed = alarmUntil > now && role() != Role.MEDIC && !underground(level, villager);
+        boolean wasSevere = severe;
+        severe = colony.defense().severe(level);
+        boolean alarmed = alarmUntil > now && role() != Role.MEDIC && (active || !underground(level, villager));
         boolean wanted = (danger || alarmed) && !medicBusy;
         if (!active) {
             if (!wanted || villager.isSleeping() && !danger || villager.isTrading()) {
@@ -148,6 +154,11 @@ final class Refuge {
             safeCheckedAt = NEVER;
             colony.data().bump(danger ? "refuge_danger" : "refuge_alarm", 1);
             return true;
+        }
+        if (severe && !wasSevere && inPlace && !colony.bunker().inside(villager.blockPosition()) && colony.bunker().ready(level)) {
+            inPlace = false;
+            spot = null;
+            colony.safeRooms().release(colonist.uuid());
         }
         if (wanted) {
             calmSince = 0;
@@ -218,23 +229,41 @@ final class Refuge {
             startEvade(level, villager, now);
             return;
         }
-        Mover.Result result = colonist.mover().tick(level, villager, spot, 1.2, SPEED, false);
+        BlockPos goal = spot;
+        if (bunkerSpot && !viaDoor) {
+            BlockPos door = colony.bunker().entrance();
+            if (door == null || villager.blockPosition().distSqr(door) <= 4 || colony.bunker().inside(villager.blockPosition())) {
+                enterBunker(now);
+            } else {
+                goal = door;
+            }
+        }
+        Mover.Result result = colonist.mover().tick(level, villager, goal, 1.2, SPEED, false);
+        if (result == Mover.Result.ARRIVED && goal != spot) {
+            enterBunker(now);
+            return;
+        }
         if (result == Mover.Result.ARRIVED) {
             villager.getNavigation().stop();
             inPlace = true;
-            colony.data().bump("refuge_reached", 1);
+            colony.data().bump(bunkerSpot ? "refuge_bunker_reached" : "refuge_reached", 1);
             return;
         }
         String note = colonist.mover().note();
         stuckTicks = note.startsWith("partial") || note.startsWith("no path") ? stuckTicks + 1 : 0;
         boolean unreachable = result == Mover.Result.FAILED || stuckTicks > STUCK || now - spotSince > spotBudget;
         boolean exposed = !unreachable && now % CHECK == 0 && exposed(villager);
+        boolean stuck = stuckTicks > STUCK;
         if (unreachable || exposed) {
             stuckTicks = 0;
             badRooms.add(room);
             colony.safeRooms().release(colonist.uuid());
             spot = null;
-            colony.data().bump(unreachable ? "refuge_unreachable" : "refuge_rerouted", 1);
+            colony.data().bump(unreachable ? bunkerSpot ? viaDoor ? "refuge_bunker_descent_failed" : "refuge_bunker_door_failed"
+                    : "refuge_unreachable" : "refuge_rerouted", 1);
+            if (unreachable && bunkerSpot) {
+                colony.data().bump("refuge_bunker_why_" + (result == Mover.Result.FAILED ? "failed" : stuck ? "stuck" : "slow"), 1);
+            }
         }
     }
 
@@ -269,6 +298,9 @@ final class Refuge {
             safeCheckedAt = now;
             safeHere = villager.onGround() && SafeRooms.enclosed(level, villager.blockPosition());
         }
+        if (safeHere && severe && colonist.colony().bunker().ready(level) && !colonist.colony().bunker().inside(villager.blockPosition())) {
+            return false;
+        }
         return safeHere;
     }
 
@@ -280,20 +312,40 @@ final class Refuge {
         BlockPos home = villager.getBrain().getMemory(MemoryModuleType.HOME)
                 .filter(global -> global.dimension() == level.dimension()).map(global -> global.pos()).orElse(null);
         List<Flight.Spot> spots = colony.safeRooms().spots(level, now, home);
-        int index = Flight.pick(spots, villager.getX(), villager.getY(), villager.getZ(), threats, MAX_DISTANCE,
+        int index = Flight.pick(spots, villager.getX(), villager.getY(), villager.getZ(), threats, MAX_DISTANCE, severe,
                 candidate -> badRooms.contains(candidate.room()));
         if (index < 0) {
             return false;
         }
         Flight.Spot chosen = spots.get(index);
+        bunkerSpot = chosen.bunker();
+        if (bunkerSpot) {
+            colony.data().bump("refuge_bunker_chosen", 1);
+        } else if (severe) {
+            colony.data().bump("refuge_severe_elsewhere", 1);
+        }
         spot = new BlockPos(chosen.x(), chosen.y(), chosen.z());
         room = chosen.room();
         spotSince = now;
-        spotBudget = (long) (Math.sqrt(spot.distToCenterSqr(villager.position())) * BUDGET_PER_BLOCK) + BUDGET_BASE;
+        viaDoor = false;
+        BlockPos approach = bunkerSpot ? colony.bunker().entrance() : spot;
+        spotBudget = (long) (Math.sqrt((approach == null ? spot : approach).distToCenterSqr(villager.position())) * BUDGET_PER_BLOCK)
+                + BUDGET_BASE * (bunkerSpot ? 2 : 1);
         stuckTicks = 0;
         colony.safeRooms().claim(colonist.uuid(), room);
         colonist.mover().reset();
         return true;
+    }
+
+    private void enterBunker(long now) {
+        if (viaDoor) {
+            return;
+        }
+        viaDoor = true;
+        spotSince = now;
+        spotBudget = (long) (Math.sqrt(spot.distSqr(colonist.colony().bunker().entrance())) + BUNKER_DESCENT) * BUDGET_PER_BLOCK + BUDGET_BASE;
+        stuckTicks = 0;
+        colonist.mover().reset();
     }
 
     private void startEvade(ServerLevel level, Villager villager, long now) {

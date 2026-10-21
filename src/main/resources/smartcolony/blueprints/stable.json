@@ -19,7 +19,10 @@
     "J": "minecraft:wall_torch[facing=north]",
     "K": "minecraft:$wood_log[axis=x]",
     "L": "minecraft:$wood_stairs[facing=south,half=bottom]",
-    "M": "minecraft:$wood_stairs[facing=north,half=bottom]"
+    "M": "minecraft:$wood_stairs[facing=north,half=bottom]",
+    "a": "minecraft:wall_torch[facing=west]",
+    "b": "minecraft:wall_torch[facing=east]",
+    "d": "minecraft:wall_torch[facing=south]"
   },
   "layers": [
     [
@@ -50,9 +53,9 @@
     ],
     [
       ".............",
-      ".............",
+      "............J",
       "D...D...D...D",
-      "E...........E",
+      "E...d.......E",
       "F...........F",
       "E...........E",
       "D...........D",
@@ -91,7 +94,7 @@
       ".............",
       ".............",
       "LLLLLLLLLLLLL",
-      ".E.........E.",
+      "aE.........Eb",
       ".E.........E.",
       ".E.........E.",
       ".E.........E.",

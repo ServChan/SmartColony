@@ -27,7 +27,8 @@
     "R": "minecraft:wall_torch[facing=north]",
     "S": "minecraft:$wood_log[axis=z]",
     "T": "minecraft:$wood_stairs[facing=south,half=bottom]",
-    "U": "minecraft:$wood_stairs[facing=north,half=bottom]"
+    "U": "minecraft:$wood_stairs[facing=north,half=bottom]",
+    "a": "minecraft:wall_torch[facing=west]"
   },
   "layers": [
     [
@@ -113,7 +114,7 @@
       ".........",
       ".........",
       "TTTTTTTTT",
-      ".C.....C.",
+      "aC.....C.",
       ".C.....C.",
       ".C.....C.",
       ".C.....C.",

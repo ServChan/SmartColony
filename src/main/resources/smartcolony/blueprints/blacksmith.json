@@ -29,7 +29,10 @@
     "^": "minecraft:$wood_stairs[facing=west,half=bottom]",
     "O": "minecraft:$wood_log[axis=z]",
     "B": "minecraft:$wood_slab[type=bottom]",
-    "S": "minecraft:cobblestone_wall"
+    "S": "minecraft:cobblestone_wall",
+    "a": "minecraft:anvil[facing=west]",
+    "b": "minecraft:smithing_table",
+    "g": "minecraft:water_cauldron[level=3]"
   },
   "layers": [
     [
@@ -52,9 +55,9 @@
       "...........",
       ".GCCGDGCCG.",
       "UCF......C.",
-      "UC.......C.",
+      "UCb....a.C.",
       "UC......PC.",
-      "UG.......G.",
+      "UGg......G.",
       "UCK.....PC.",
       "UCPPRRRPCC.",
       ".GCCCCCCCG.",
@@ -63,7 +66,7 @@
     [
       "...........",
       ".X.......X.",
-      "..VV...VV..",
+      ".MVV...VVM.",
       ".GLWGTGWLG.",
       "UL.......L.",
       "UW.......W.",

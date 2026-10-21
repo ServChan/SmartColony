@@ -66,6 +66,7 @@ public final class ColonyCommand {
                 .then(DiplomacyCommand.diplomacy())
                 .then(DecreeCommand.decree())
                 .then(DecreeCommand.order(context))
+                .then(Commands.literal("bunker").executes(ColonyCommand::bunker))
                 .then(Commands.literal("build")
                         .then(Commands.argument("blueprint", StringArgumentType.word()).suggests(BLUEPRINTS)
                                 .executes(ColonyCommand::build)))
@@ -360,6 +361,32 @@ public final class ColonyCommand {
         int value = colony.reputation(player.getUUID());
         source.sendSuccess(() -> Component.translatable("smartcolony.command.reputation", value,
                 Component.translatable("smartcolony.status." + Reputation.status(value).key())), false);
+        return 1;
+    }
+
+    private static int bunker(CommandContext<CommandSourceStack> context) {
+        CommandSourceStack source = context.getSource();
+        Colony colony = colony(source);
+        if (colony == null) {
+            return 0;
+        }
+        org.lts.smartcolony.colony.Bunker bunker = colony.bunker();
+        if (bunker.finished()) {
+            source.sendSuccess(() -> Component.translatable("smartcolony.command.bunker.ready", bunker.capacity(),
+                    bunker.spot().toShortString()), false);
+            return 1;
+        }
+        if (bunker.exists()) {
+            source.sendSuccess(() -> Component.translatable("smartcolony.command.bunker.progress", bunker.progress(), bunker.total(),
+                    bunker.entrance().toShortString()), false);
+            return 1;
+        }
+        if (!bunker.plan(source.getLevel())) {
+            source.sendFailure(Component.translatable("smartcolony.command.bunker.no_site"));
+            return 0;
+        }
+        source.sendSuccess(() -> Component.translatable("smartcolony.command.bunker.planned", bunker.capacity(),
+                bunker.entrance().toShortString()), false);
         return 1;
     }
 

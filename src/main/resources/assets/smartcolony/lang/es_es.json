@@ -467,5 +467,16 @@
   "smartcolony.highway.sign.blocks": "%s bloques",
   "smartcolony.ui.diplomacy.road.route": "Camino: los agrimensores eligen el trazado",
   "smartcolony.ui.diplomacy.road.blocked": "Camino: bloqueado por agua o acantilados",
-  "smartcolony.ui.diplomacy.road.build": "Camino: %s de %s bloques, campamentos %s de %s"
+  "smartcolony.ui.diplomacy.road.build": "Camino: %s de %s bloques, campamentos %s de %s",
+  "smartcolony.chat.bunker_planned": "La colonia está cavando un búnker: una sala subterránea para %s personas donde esperar asaltos y asedios.",
+  "smartcolony.chat.bunker_done": "El búnker está listo. %s personas pueden refugiarse allí.",
+  "smartcolony.chat.war_alarm": "¡Vienen asaltantes de %s! Todos a esconderse.",
+  "smartcolony.chat.siege_alarm": "Hay %s monstruos alrededor de la aldea. Todos a esconderse.",
+  "smartcolony.chat.storm_alarm": "Se acerca una tormenta eléctrica. Todos esperan bajo techo.",
+  "smartcolony.command.bunker.ready": "El búnker está listo: sitio para %s personas en %s.",
+  "smartcolony.command.bunker.progress": "Se está cavando el búnker: %s de %s pasos hechos. La entrada está en %s.",
+  "smartcolony.command.bunker.planned": "La colonia cavará un búnker para %s personas. La entrada está en %s.",
+  "smartcolony.command.bunker.no_site": "No hay sitio para un búnker: el suelo cerca del almacén está demasiado húmedo, hueco o edificado.",
+  "smartcolony.bunker.sign.title": "Búnker",
+  "smartcolony.bunker.sign.places": "%s plazas"
 }

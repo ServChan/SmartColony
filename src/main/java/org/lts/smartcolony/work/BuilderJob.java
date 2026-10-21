@@ -172,6 +172,14 @@ public final class BuilderJob extends Job {
             case PLACE -> {
                 return place(level, villager);
             }
+            case BUNKER -> {
+                if (!colony().bunker().build(level, villager, colonist.digger(), drops -> stashDug(level, villager, drops))) {
+                    task = null;
+                    wait = 100;
+                    return false;
+                }
+                return true;
+            }
             case HIGHWAY -> {
                 if (!colony().highways().build(level, villager, pos)) {
                     task = null;
@@ -367,6 +375,26 @@ public final class BuilderJob extends Job {
         villager.teleportTo(best.getX() + 0.5, best.getY(), best.getZ() + 0.5);
         villager.resetFallDistance();
         return true;
+    }
+
+    private static final java.util.Set<String> RUBBLE = java.util.Set.of("cobblestone", "cobbled_deepslate", "dirt", "coarse_dirt",
+            "rooted_dirt", "andesite", "diorite", "granite", "tuff", "gravel", "sand", "red_sand", "calcite", "dripstone_block");
+
+    private void stashDug(ServerLevel level, Villager villager, List<ItemStack> drops) {
+        List<ItemStack> spill = new java.util.ArrayList<>();
+        for (ItemStack drop : rubble(level, villager, drops)) {
+            ItemStack rest = Inv.add(villager, drop);
+            if (rest.isEmpty()) {
+                continue;
+            }
+            String path = org.lts.smartcolony.core.Ids.path(org.lts.smartcolony.util.ItemIds.id(rest));
+            if (RUBBLE.contains(path)) {
+                colony().data().bump("rubble_discarded", rest.getCount());
+            } else {
+                spill.add(rest);
+            }
+        }
+        stash(level, villager, spill);
     }
 
     private List<ItemStack> rubble(ServerLevel level, Villager villager, List<ItemStack> drops) {

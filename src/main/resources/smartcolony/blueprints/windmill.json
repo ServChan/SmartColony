@@ -33,7 +33,9 @@
     "Y": "minecraft:hay_block",
     "#": "minecraft:white_wool",
     "_": "minecraft:dirt_path",
-    "A": "minecraft:ladder[facing=north]"
+    "A": "minecraft:ladder[facing=north]",
+    "b": "minecraft:composter[level=0]",
+    "d": "minecraft:wall_torch[facing=north]"
   },
   "layers": [
     [
@@ -49,7 +51,7 @@
     [
       ".........",
       ".CCCDCCC.",
-      ".C....KC.",
+      ".Cb...KC.",
       ".C.....C.",
       ".C.....C.",
       ".CY...RC.",
@@ -138,13 +140,13 @@
     ],
     [
       "FFFFZFFFF",
-      "....Z....",
+      "..d.Z....",
       "..LPPPL..",
       "..Pt.tP..",
       "..G...G..",
       "..P...P..",
       "..LPGPL..",
-      "........."
+      "..t......"
     ],
     [
       "###.F....",

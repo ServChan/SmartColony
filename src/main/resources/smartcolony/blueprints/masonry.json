@@ -27,7 +27,8 @@
     "R": "minecraft:$wood_log[axis=x]",
     "S": "minecraft:$wood_stairs[facing=south,half=bottom]",
     "T": "minecraft:$wood_stairs[facing=north,half=bottom]",
-    "U": "minecraft:cobblestone_wall"
+    "U": "minecraft:cobblestone_wall",
+    "a": "minecraft:wall_torch[facing=north]"
   },
   "layers": [
     [
@@ -58,7 +59,7 @@
     ],
     [
       "...........",
-      "...........",
+      "....a......",
       ".ECHCGCHCE.",
       ".C.......C.",
       ".C.......C.",

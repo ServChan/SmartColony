@@ -84,6 +84,7 @@ public final class Colony {
     private final Stable stable;
     private final Embassy embassy;
     private final Highways highways;
+    private final Bunker bunker;
     private boolean dirty;
     private long ticks;
     private long lastStorageWarning;
@@ -122,6 +123,7 @@ public final class Colony {
         this.stable = new Stable(this);
         this.embassy = new Embassy(this);
         this.highways = new Highways(this);
+        this.bunker = new Bunker(this);
         for (Map.Entry<String, ColonyData.Member> entry : data.members.entrySet()) {
             UUID uuid = UUID.fromString(entry.getKey());
             Colonist colonist = new Colonist(uuid, this);
@@ -243,6 +245,10 @@ public final class Colony {
 
     public Embassy embassy() {
         return embassy;
+    }
+
+    public Bunker bunker() {
+        return bunker;
     }
 
     public Highways highways() {
@@ -540,6 +546,9 @@ public final class Colony {
             return true;
         }
         if (!data.zones.isEmpty() && org.lts.smartcolony.core.Decree.inAny(data.zones, p.x(), p.z(), 0)) {
+            return true;
+        }
+        if (bunker.covers(p, 1)) {
             return true;
         }
         for (ColonyData.Building building : data.buildings) {
@@ -1085,6 +1094,7 @@ public final class Colony {
         stable.tick(level, ticks);
         embassy.tick(level, ticks);
         highways.tick(level, ticks);
+        bunker.tick(level, ticks);
         if (ticks % 200 == 7) {
             planRoles(level);
         }

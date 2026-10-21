@@ -67,7 +67,8 @@ public final class Construction {
         PLACE,
         ROAD,
         ORDER,
-        HIGHWAY
+        HIGHWAY,
+        BUNKER
     }
 
     public record Task(Kind kind, BlockPos pos, BlockState state, BlockPos partner, BlockState partnerState, BlockPos stand,
@@ -186,7 +187,7 @@ public final class Construction {
 
     public boolean hasWork(ServerLevel level) {
         return !active().isEmpty() || !data().pendingRoad.isEmpty() || colony.improvements().hasWork(level)
-                || colony.chores().snowPending() || colony.highways().hasWork(level);
+                || colony.chores().snowPending() || colony.highways().hasWork(level) || colony.bunker().hasWork(level);
     }
 
     public int backlog(ServerLevel level) {
@@ -1370,6 +1371,19 @@ public final class Construction {
                 return trail;
             }
         }
+        if (crew && colony.bunker().hasWork(level)) {
+            int lanes = builderSeen.size() >= 5 ? 2 : 1;
+            for (int lane = 0; lane < lanes; lane++) {
+                String name = lane == 0 ? "bunker" : "bunker" + lane;
+                if (holdsLane(name, builder, now)) {
+                    Task dig = fromLane(name, builder, now, colony.bunker().task(level));
+                    if (dig != null) {
+                        return dig;
+                    }
+                    break;
+                }
+            }
+        }
         if (crew && builderSeen.size() >= 3 && colony.improvements().wallPending() && holdsLane("wall", builder, now)) {
             Task wall = fromLane("wall", builder, now, colony.improvements().nextWall(level));
             if (wall != null) {
@@ -1439,6 +1453,10 @@ public final class Construction {
         Task trail = highwayTask(level, now);
         if (trail != null) {
             return trail;
+        }
+        Task dig = colony.bunker().task(level);
+        if (dig != null) {
+            return dig;
         }
         Task order = colony.improvements().next(level);
         if (order != null) {
@@ -1687,6 +1705,8 @@ public final class Construction {
             }
             case ORDER -> colony.improvements().completed(task);
             case HIGHWAY -> colony.highways().done(task.pos());
+            case BUNKER -> {
+            }
         }
         colony.markDirty();
     }

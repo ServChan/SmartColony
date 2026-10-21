@@ -1,0 +1,92 @@
+{
+  "id": "bunker_hut",
+  "kind": "bunker",
+  "beds": 0,
+  "door": [2, 1],
+  "palette": {
+    "B": "minecraft:stone_bricks",
+    "m": "minecraft:mossy_stone_bricks",
+    "C": "minecraft:chiseled_stone_bricks",
+    "L": "minecraft:$wood_log[axis=y]",
+    "D": "minecraft:$wood_door[facing=south,half=lower,hinge=left,open=false]",
+    "U": "minecraft:$wood_door[facing=south,half=upper,hinge=left,open=false]",
+    "G": "minecraft:glass_pane",
+    "e": "minecraft:stone_brick_stairs[facing=east,half=bottom]",
+    "w": "minecraft:stone_brick_stairs[facing=west,half=bottom]",
+    "E": "minecraft:stone_brick_stairs[facing=east,half=top]",
+    "V": "minecraft:stone_brick_stairs[facing=west,half=top]",
+    "s": "minecraft:stone_brick_slab[type=bottom]",
+    "F": "minecraft:$wood_fence",
+    "l": "minecraft:lantern[hanging=false]",
+    "H": "minecraft:lantern[hanging=true]",
+    "N": "minecraft:$wood_wall_sign[facing=north]",
+    "R": "minecraft:barrel[facing=up]",
+    "o": "minecraft:stone_brick_slab[type=top]",
+    ".": "minecraft:air"
+  },
+  "layers": [
+    [
+      "     ",
+      "BBBBB",
+      "BBBBB",
+      "BB BB",
+      "BB BB",
+      "BB BB",
+      "BBBBB"
+    ],
+    [
+      " F F ",
+      "LBDmL",
+      "BR..B",
+      "BF.FB",
+      "mF.FB",
+      "BF.Fm",
+      "LBBmL"
+    ],
+    [
+      " l l ",
+      "LBUBL",
+      "Bl..B",
+      "G...G",
+      "G...G",
+      "B...B",
+      "LBGBL"
+    ],
+    [
+      "  N  ",
+      "LmCBL",
+      "m...B",
+      "B...m",
+      "B.H.B",
+      "B...B",
+      "LmBBL"
+    ],
+    [
+      "eEoVw",
+      "eBBBw",
+      "eooow",
+      "eooow",
+      "eooow",
+      "eooow",
+      "eBBBw"
+    ],
+    [
+      " esw ",
+      " eBw ",
+      " e.w ",
+      " e.w ",
+      " e.w ",
+      " e.w ",
+      " eBw "
+    ],
+    [
+      "  s  ",
+      "  s  ",
+      "  s  ",
+      "  s  ",
+      "  s  ",
+      "  s  ",
+      "  s  "
+    ]
+  ]
+}

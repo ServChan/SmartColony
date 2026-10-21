@@ -46,6 +46,7 @@ public final class ColonyData {
     public boolean forgeUpgraded;
     public boolean aiOff;
     public Wall wall;
+    public Bunker bunker;
     public List<Mine> mines = new ArrayList<>();
     public boolean villageSurveyed;
     public int surveyVersion;
@@ -256,6 +257,22 @@ public final class ColonyData {
         public boolean inPlace;
         public long since;
         public int style;
+    }
+
+    public static final class Bunker {
+        public Pos entrance = new Pos(0, 0, 0);
+        public int dirX = 1;
+        public int dirZ;
+        public int depth = BunkerPlan.DEPTH;
+        public int done;
+        public boolean finished;
+        public long planned;
+        public String wood = "oak";
+        public int version;
+
+        public BunkerPlan.Layout layout() {
+            return BunkerPlan.Layout.standard(entrance.x(), entrance.y(), entrance.z(), dirX, dirZ, depth);
+        }
     }
 
     public static final class Wall {
