@@ -19,6 +19,7 @@ public final class AirDefenseLink {
     private static Method present;
     private static Method positions;
     private static Method airThreats;
+    private static Method dangerousAirThreats;
     private static Method soundSirens;
     private static Method ammoNeeds;
     private static Method deliver;
@@ -49,6 +50,7 @@ public final class AirDefenseLink {
             present = api.getMethod("present", ServerLevel.class, BlockPos.class, int.class);
             positions = api.getMethod("positions", ServerLevel.class, BlockPos.class, int.class);
             airThreats = api.getMethod("airThreats", ServerLevel.class, BlockPos.class, double.class);
+            dangerousAirThreats = optional(api, "dangerousAirThreats", ServerLevel.class, BlockPos.class, double.class);
             soundSirens = api.getMethod("soundSirens", ServerLevel.class, BlockPos.class, int.class);
             ammoNeeds = api.getMethod("ammoNeeds", ServerLevel.class, BlockPos.class, int.class);
             deliver = api.getMethod("deliver", ServerLevel.class, BlockPos.class, int.class, ItemStack.class);
@@ -59,6 +61,22 @@ public final class AirDefenseLink {
             LOG.warn("Air Defense link turned off: {}", ModLog.describe(failure));
             return false;
         }
+    }
+
+    private static Method optional(Class<?> api, String name, Class<?>... parameters) {
+        try {
+            return api.getMethod(name, parameters);
+        } catch (NoSuchMethodException missing) {
+            return null;
+        }
+    }
+
+    public static int dangerousAirThreats(ServerLevel level, BlockPos center, double radius) {
+        if (!available()) {
+            return 0;
+        }
+        Method method = dangerousAirThreats == null ? airThreats : dangerousAirThreats;
+        return (Integer) call(method, 0, level, center, radius);
     }
 
     public static boolean present(ServerLevel level, BlockPos center, int radius) {

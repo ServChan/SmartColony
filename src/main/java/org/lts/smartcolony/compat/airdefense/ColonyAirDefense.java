@@ -12,6 +12,7 @@ import net.minecraft.world.level.block.Block;
 import org.lts.smartcolony.colony.Colony;
 import org.lts.smartcolony.core.Recipe;
 import org.lts.smartcolony.core.RecipeBook;
+import org.lts.smartcolony.core.Stock;
 import org.lts.smartcolony.util.ItemIds;
 
 public final class ColonyAirDefense {
@@ -23,6 +24,13 @@ public final class ColonyAirDefense {
     private static final int THREAT_MARGIN = 32;
     private static final int INSTALLATION_MARGIN = 24;
     private static final int MAX_BATCH = 32;
+    private static final Map<String, Integer> RESERVE = Map.of(
+            "minecraft:iron_ingot", 48,
+            "minecraft:gunpowder", 16,
+            "minecraft:copper_ingot", 16,
+            "minecraft:redstone", 8,
+            "minecraft:glowstone_dust", 4,
+            "minecraft:white_wool", 4);
 
     private static final class State {
         private boolean present;
@@ -107,7 +115,11 @@ public final class ColonyAirDefense {
     }
 
     private static void watchTheSky(Colony colony, ServerLevel level, State state, BlockPos center, int reach, long now) {
-        state.threats = AirDefenseLink.airThreats(level, center, colony.data().radius + THREAT_MARGIN);
+        int flying = AirDefenseLink.airThreats(level, center, colony.data().radius + THREAT_MARGIN);
+        state.threats = AirDefenseLink.dangerousAirThreats(level, center, colony.data().radius);
+        if (flying > 0 && state.threats == 0) {
+            AirDefenseLink.soundSirens(level, center, reach);
+        }
         if (state.threats > 0) {
             state.airRaidUntil = now + AIR_RAID_HOLD;
             if (now - state.lastAnnounce > ANNOUNCE_GAP) {
@@ -122,6 +134,23 @@ public final class ColonyAirDefense {
         }
     }
 
+    static boolean canSpare(Stock stock, String output, int amount) {
+        List<Recipe> recipes = RecipeBook.recipesFor(output);
+        if (recipes.isEmpty()) {
+            return false;
+        }
+        Recipe recipe = recipes.getFirst();
+        int batches = (amount + recipe.count() - 1) / recipe.count();
+        for (Map.Entry<String, Integer> input : recipe.inputs().entrySet()) {
+            String id = input.getKey().equals("minecraft:iron_nugget") ? "minecraft:iron_ingot" : input.getKey();
+            int need = input.getKey().equals("minecraft:iron_nugget") ? (input.getValue() * batches + 8) / 9 : input.getValue() * batches;
+            if (RESERVE.containsKey(id) && stock.get(id) < need + RESERVE.get(id)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     private static void supply(Colony colony, ServerLevel level, BlockPos center, int reach) {
         Map<String, Integer> needs = AirDefenseLink.ammoNeeds(level, center, reach);
         if (needs.isEmpty()) {
@@ -132,7 +161,7 @@ public final class ColonyAirDefense {
         for (Map.Entry<String, Integer> need : needs.entrySet()) {
             String id = need.getKey();
             int batch = Math.min(MAX_BATCH, need.getValue());
-            if (colony.warehouse().stock(level).get(id) < batch) {
+            if (colony.warehouse().stock(level).get(id) < batch && canSpare(colony.warehouse().stock(level), id, batch)) {
                 colony.craft(level, id, batch);
             }
             List<ItemStack> taken = colony.warehouse().extract(level, stack -> id.equals(ItemIds.id(stack)), batch);
