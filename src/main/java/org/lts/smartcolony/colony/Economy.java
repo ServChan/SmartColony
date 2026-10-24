@@ -201,7 +201,30 @@ public final class Economy {
         colony.notify(level, Component.translatable("smartcolony.chat.birth"));
     }
 
+    private static final int BREED_BREAD = 3;
+
+    private void reclaimBread(ServerLevel level) {
+        String bread = Ids.mc("bread");
+        int returned = 0;
+        for (Villager villager : colony.loadedVillagers(level)) {
+            int extra = org.lts.smartcolony.work.Inv.count(villager, bread) - BREED_BREAD;
+            if (extra > 0) {
+                int removed = org.lts.smartcolony.work.Inv.remove(villager, stack -> stack.is(net.minecraft.world.item.Items.BREAD), extra);
+                if (removed > 0) {
+                    colony.warehouse().give(level, bread, removed);
+                    returned += removed;
+                }
+            }
+        }
+        if (returned > 0) {
+            colony.data().bump("bread_returned", returned);
+            colony.journal(level, "took " + returned + " spare bread back from villagers' pockets");
+            colony.markDirty();
+        }
+    }
+
     private void feed(ServerLevel level) {
+        reclaimBread(level);
         int radius = colony.data().radius;
         long freeBeds = level.getPoiManager().getCountInRange(type -> type.is(PoiTypes.HOME), colony.center(), radius,
                 PoiManager.Occupancy.HAS_SPACE);
@@ -216,7 +239,8 @@ public final class Economy {
             if (fed >= 2) {
                 break;
             }
-            if (villager.isBaby() || villager.canBreed() || villager.getAge() != 0) {
+            if (villager.isBaby() || villager.isSleeping() || villager.canBreed() || villager.getAge() != 0
+                    || org.lts.smartcolony.work.Inv.count(villager, Ids.mc("bread")) >= BREED_BREAD) {
                 continue;
             }
             if (colony.warehouse().stock(level).get(Ids.mc("bread")) < 3) {

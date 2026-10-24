@@ -134,7 +134,7 @@ public final class Improvements {
             inspect(level);
         }
         if (level.getGameTime() % 1200 < 100) {
-            furnishingFirst();
+            urgentFirst();
         }
         if (level.getGameTime() % 1200 < 100 && data().orders.removeIf(order -> DECOR.equals(order.tag) && Ids.isSapling(order.state)
                 && !colony.treeAllowed(level, WorldUtil.bp(order.pos)))) {
@@ -558,23 +558,29 @@ public final class Improvements {
         }
     }
 
-    private void furnishingFirst() {
+    private static boolean urgent(ColonyData.Order order) {
+        return FURNISH.equals(order.tag) || REPAIR.equals(order.tag);
+    }
+
+    private void urgentFirst() {
         List<ColonyData.Order> orders = data().orders;
-        List<ColonyData.Order> furnish = new ArrayList<>();
-        for (int i = 0; i < orders.size(); i++) {
-            if (FURNISH.equals(orders.get(i).tag)) {
-                if (furnish.size() == i) {
-                    furnish.add(orders.get(i));
-                    continue;
-                }
-                furnish.clear();
-                orders.stream().filter(order -> FURNISH.equals(order.tag)).forEach(furnish::add);
-                orders.removeIf(order -> FURNISH.equals(order.tag));
-                orders.addAll(0, furnish);
-                colony.markDirty();
-                return;
-            }
+        int leading = 0;
+        while (leading < orders.size() && urgent(orders.get(leading))) {
+            leading++;
         }
+        boolean behind = false;
+        for (int i = leading; i < orders.size() && !behind; i++) {
+            behind = urgent(orders.get(i));
+        }
+        if (!behind) {
+            return;
+        }
+        List<ColonyData.Order> urgent = new ArrayList<>();
+        orders.stream().filter(Improvements::urgent).forEach(urgent::add);
+        orders.removeIf(Improvements::urgent);
+        orders.addAll(0, urgent);
+        blockedUntil = 0;
+        colony.markDirty();
     }
 
     private void inspect(ServerLevel level) {
@@ -1676,10 +1682,6 @@ public final class Improvements {
                 }
                 colony.request(item);
                 waitingFor = item;
-                if (FURNISH.equals(order.tag)) {
-                    i++;
-                    continue;
-                }
                 orders.add(orders.remove(i));
                 continue;
             }

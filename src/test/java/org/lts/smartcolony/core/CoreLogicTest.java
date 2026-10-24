@@ -263,6 +263,17 @@ class CoreLogicTest {
     }
 
     @Test
+    void advisorCannotPutCraftersToWorkWithoutMaterials() {
+        Set<Role> gear = Set.of(Role.MINER, Role.GUARD);
+        RoleAllocator.Needs noIron = new RoleAllocator.Needs(21, 300, 300, 0, 500, 0, 100, true, gear, 0, false, false, true);
+        Map<Role, Integer> targets = RoleAllocator.workableTargets(Map.of(Role.SMITH, 3, Role.BUILDER, 6, Role.COOK, 1), noIron);
+        assertFalse(targets.containsKey(Role.SMITH));
+        assertEquals(6, targets.get(Role.BUILDER));
+        assertEquals(1, targets.get(Role.COOK));
+        assertEquals(0, RoleAllocator.withTargets(RoleAllocator.desired(noIron), targets, 21).get(Role.SMITH));
+    }
+
+    @Test
     void craftersAreAllocatedOnlyWhenReadyAndLargeEnough() {
         Set<Role> gear = Set.of(Role.MINER, Role.FISHERMAN, Role.GUARD);
         RoleAllocator.Needs none = new RoleAllocator.Needs(30, 300, 300, 10, 500, 0, 0, true, gear, 0, false, false, false);

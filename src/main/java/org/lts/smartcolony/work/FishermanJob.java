@@ -61,6 +61,7 @@ public final class FishermanJob extends Job {
             return;
         }
         if (!onShift(level, villager)) {
+            status = "";
             wait = 100;
             return;
         }

@@ -3,7 +3,7 @@
 [![Minecraft Version](https://img.shields.io/badge/Minecraft-26.3-brightgreen?style=flat-square&logo=minecraft)](README.md)
 [![Platform](https://img.shields.io/badge/Platform-Fabric-blue?style=flat-square&logo=fabric)](README.md)
 [![Java Target](https://img.shields.io/badge/Java-25-orange?style=flat-square&logo=openjdk)](README.md)
-[![Mod Version](https://img.shields.io/badge/Version-1.0.0-purple?style=flat-square)](README.md)
+[![Mod Version](https://img.shields.io/badge/Version-1.0.1-purple?style=flat-square)](README.md)
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
 
 Turns a vanilla village into a self-managing colony: categorized storage, lumberjacks, miners, farmers, fishermen, herders, builders, roads, torches, guards, golems, an internal market and theft detection. Singleplayer.
@@ -77,7 +77,7 @@ Turns a vanilla village into a self-managing colony: categorized storage, lumber
 
 ### Установка
 
-Положите `smart-colony-1.0.0.jar` в папку `mods` профиля Minecraft 26.3 с Fabric Loader и Fabric API.
+Положите `smart-colony-1.0.1.jar` в папку `mods` профиля Minecraft 26.3 с Fabric Loader и Fabric API.
 
 **Требования:** Minecraft 26.3, Fabric Loader 0.19.3+, Fabric API, Java 25.
 
@@ -87,7 +87,7 @@ Turns a vanilla village into a self-managing colony: categorized storage, lumber
 .\gradlew.bat clean build
 ```
 
-Готовый файл: `build/libs/smart-colony-1.0.0.jar`.
+Готовый файл: `build/libs/smart-colony-1.0.1.jar`.
 
 ### Для разработки: MCP-мост
 
@@ -168,7 +168,7 @@ Turns a vanilla village into a self-managing colony: categorized storage, lumber
 
 ### Installation
 
-Put `smart-colony-1.0.0.jar` into the `mods` folder of a Minecraft 26.3 profile with Fabric Loader and Fabric API.
+Put `smart-colony-1.0.1.jar` into the `mods` folder of a Minecraft 26.3 profile with Fabric Loader and Fabric API.
 
 **Requirements:** Minecraft 26.3, Fabric Loader 0.19.3+, Fabric API, Java 25.
 
@@ -178,7 +178,7 @@ Put `smart-colony-1.0.0.jar` into the `mods` folder of a Minecraft 26.3 profile 
 .\gradlew.bat clean build
 ```
 
-Output: `build/libs/smart-colony-1.0.0.jar`.
+Output: `build/libs/smart-colony-1.0.1.jar`.
 
 ### Development: MCP bridge
 

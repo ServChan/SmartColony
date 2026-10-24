@@ -78,6 +78,7 @@ public final class Colony {
     private final FireWatch fire;
     private final Chores chores;
     private final Gifts gifts;
+    private final Burns burns;
     private final Overgrowth overgrowth;
     private final Doors doors;
     private final SafeRooms safeRooms;
@@ -118,6 +119,7 @@ public final class Colony {
         this.fire = new FireWatch(this);
         this.chores = new Chores(this);
         this.gifts = new Gifts(this);
+        this.burns = new Burns(this);
         this.overgrowth = new Overgrowth(this);
         this.doors = new Doors(this);
         this.safeRooms = new SafeRooms(this);
@@ -179,6 +181,10 @@ public final class Colony {
 
     public Defense defense() {
         return defense;
+    }
+
+    public Burns burns() {
+        return burns;
     }
 
     public Improvements improvements() {
@@ -1092,6 +1098,7 @@ public final class Colony {
         fire.tick(level, ticks);
         chores.tick(level, ticks);
         gifts.tick(level, ticks);
+        burns.tick(level, ticks);
         overgrowth.tick(level, ticks);
         contracts.tick(level, ticks);
         stable.tick(level, ticks);
@@ -1281,7 +1288,7 @@ public final class Colony {
         EnumMap<Role, Integer> baseline = RoleAllocator.reserveMedics(
                 org.lts.smartcolony.core.TavernRules.withInnkeeper(RoleAllocator.desired(needs), tavern.built(), adults),
                 org.lts.smartcolony.core.Hospital.medicsFor(adults, ward.stage() > 0, SmartColonyConfig.get().adultsPerMedic));
-        desired = RoleAllocator.withTargets(baseline, advisor.roleTargets(level.getGameTime()), adults);
+        desired = RoleAllocator.withTargets(baseline, RoleAllocator.workableTargets(advisor.roleTargets(level.getGameTime()), needs), adults);
         desired = RoleAllocator.withUndertaker(desired, graveyard.undertakersWanted(level), adults);
         desired = Prospecting.settle(desired, deposits().size(), adults, equippable.contains(Role.MINER));
         desired = org.lts.smartcolony.core.PorterPlan.settle(desired, outposts.porterDemand(level));

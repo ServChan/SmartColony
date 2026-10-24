@@ -314,6 +314,9 @@ public final class GuardJob extends Job {
             if (!bow.isEmpty()) {
                 Inv.add(villager, bow);
                 hasBow = true;
+            } else {
+                colony().request(Ids.mc("bow"));
+                colony().request(Ids.mc("string"));
             }
         }
         if (Inv.find(villager, Tools.SWORD).isEmpty() && !Tools.SWORD.test(hand)) {

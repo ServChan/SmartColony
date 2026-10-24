@@ -202,6 +202,20 @@ public final class RoleAllocator {
         };
     }
 
+    public static Map<Role, Integer> workableTargets(Map<Role, Integer> targets, Needs needs) {
+        Map<Role, Integer> result = new java.util.LinkedHashMap<>(targets);
+        if (!needs.fletcherReady()) {
+            result.remove(Role.FLETCHER);
+        }
+        if (!needs.smithReady()) {
+            result.remove(Role.SMITH);
+        }
+        if (!needs.cookReady()) {
+            result.remove(Role.COOK);
+        }
+        return result;
+    }
+
     public static EnumMap<Role, Integer> withTargets(EnumMap<Role, Integer> base, Map<Role, Integer> targets, int adults) {
         if (targets.isEmpty() || adults <= 0) {
             return base;

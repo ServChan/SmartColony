@@ -5,6 +5,7 @@
   "mixins": [
     "AbstractHorseAccessor",
     "AbstractVillagerMixin",
+    "FireBlockMixin",
     "MobAccessor",
     "VillagerMixin",
     "VillagerProfessionMixin",
