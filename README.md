@@ -8,6 +8,10 @@
 
 Turns a vanilla village into a self-managing colony: categorized storage, lumberjacks, miners, farmers, fishermen, herders, builders, roads, torches, guards, golems, an internal market and theft detection. Singleplayer.
 
+> **Эксперимент.** Smart Colony — экспериментальный проект по изучению того, как ИИ работает в Minecraft. Поведение колонии может меняться от версии к версии, а старые миры могут вести себя иначе после обновления.
+>
+> **Experiment.** Smart Colony is an experimental project studying how AI works in Minecraft. Colony behaviour may change between versions, and existing worlds may behave differently after an update.
+
 ## Русский
 
 ### Что это
