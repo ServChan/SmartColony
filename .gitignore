@@ -25,3 +25,5 @@ replay_pid*
 Thumbs.db
 desktop.ini
 *.err
+
+/.mcp.json

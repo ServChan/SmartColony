@@ -1,8 +1,0 @@
-{
-  "mcpServers": {
-    "smartcolony-dev": {
-      "type": "http",
-      "url": "http://127.0.0.1:25599/mcp"
-    }
-  }
-}
