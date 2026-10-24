@@ -12,6 +12,8 @@ Turns a vanilla village into a self-managing colony: categorized storage, lumber
 >
 > **Experiment.** Smart Colony is an experimental project studying how AI works in Minecraft. Colony behaviour may change between versions, and existing worlds may behave differently after an update.
 
+**Руководство / User guide:** [Русский](docs/USER_GUIDE_RU.md) · [English](docs/USER_GUIDE_EN.md)
+
 ## Русский
 
 ### Что это
